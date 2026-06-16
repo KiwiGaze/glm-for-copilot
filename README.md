@@ -19,6 +19,7 @@ Use your own GLM API key (BYOK) to bring Zhipu AI's GLM models into GitHub Copil
 
 - **Don't replace Copilot — power it up.** GLM models appear alongside GPT-4o, Claude, and others in the existing model picker.
 - **Agent mode, tool calling, instructions, MCP — all still work.** Copilot's full stack now runs on GLM.
+- **Watch GLM think.** The model's step-by-step reasoning streams into the chat — a transparency Copilot's built-in BYOK doesn't expose.
 - **BYOK, your bill.** Your API key lives in the OS keychain, never in `settings.json` or your Git history.
 - **Dual API.** Use your GLM Coding Plan subscription or the pay-as-you-go Standard API, whichever fits your workflow.
 - **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins. No Python, no Docker, no local server.
@@ -97,7 +98,7 @@ The picker shows only the models available for your selected **API Mode**, so yo
 | Setting | Default | Description |
 |---|---|---|
 | `glm-copilot.apiMode` | `coding-plan` | Which GLM API to use: `coding-plan` or `standard`. See below. |
-| `glm-copilot.region` | `international` | Region for Standard API mode: `international` (z.ai) or `china` (bigmodel.cn). Ignored in Coding Plan mode. |
+| `glm-copilot.region` | `international` | Server region for **both** API modes: `international` (z.ai) or `china` (bigmodel.cn). Ignored only when `baseUrl` is set. |
 | `glm-copilot.baseUrl` | *(empty)* | Override the API base URL. Overrides `apiMode` and `region`. Use for proxies or compatible APIs. |
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.thinking` | `enabled` | Step-by-step reasoning: `enabled` (higher quality) or `disabled` (faster). Applies to models that support thinking. |
@@ -109,13 +110,14 @@ The picker shows only the models available for your selected **API Mode**, so yo
 
 ### Coding Plan
 
-Requires a [Z.ai GLM Coding Plan](https://z.ai/manage-apikey/subscription) subscription. All requests go to:
+Requires a GLM Coding Plan subscription. The endpoint depends on your `region`:
 
-```
-https://api.z.ai/api/coding/paas/v4
-```
+| Region | Endpoint | Key page |
+|---|---|---|
+| International | `https://api.z.ai/api/coding/paas/v4` | [z.ai/manage-apikey/subscription](https://z.ai/manage-apikey/subscription) |
+| Mainland China | `https://open.bigmodel.cn/api/coding/paas/v4` | [bigmodel.cn/coding-plan](https://bigmodel.cn/coding-plan/personal/overview) |
 
-The `region` setting is ignored in this mode. Best for teams or high-volume coding workflows.
+Best for teams or high-volume coding workflows.
 
 ### Standard API
 

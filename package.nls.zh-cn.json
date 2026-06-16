@@ -12,20 +12,20 @@
   "glm-copilot.walkthrough.setApiKey.description": "[获取 API 密钥](command:glm-copilot.getApiKey)（来自 z.ai 或 bigmodel.cn）。\n[设置 API 密钥](command:glm-copilot.setApiKey)",
 
   "glm-copilot.walkthrough.chooseApi.title": "选择 GLM API 模式",
-  "glm-copilot.walkthrough.chooseApi.description": "在 GLM 编程计划和标准 API 之间选择，并在使用标准模式时选择您的区域。\n[打开设置](command:glm-copilot.openSettings)",
+  "glm-copilot.walkthrough.chooseApi.description": "在 GLM 编程计划和标准 API 之间选择，并选择您的区域。\n[打开设置](command:glm-copilot.openSettings)",
 
   "glm-copilot.walkthrough.showModels.title": "在选择器中查看 GLM 模型",
   "glm-copilot.walkthrough.showModels.description": "你的 GLM 模型将根据所选的 API 模式出现在 Copilot Chat 的模型选择器中。如果看不到，请打开语言模型管理器以显示它们。\n[打开语言模型](command:workbench.action.chat.manage)",
 
   "glm-copilot.config.title": "GLM Copilot",
 
-  "glm-copilot.config.apiMode.description": "选择要使用的 GLM API。\n\n- **编程计划** — 使用您的 [Z.ai GLM 编程计划](https://z.ai/manage-apikey/subscription)订阅，端点为 `api.z.ai/api/coding/paas/v4`，适合团队或高频编码场景。\n- **标准 API** — 按量付费，通过 GLM 开放平台访问，实际端点取决于 `region` 设置。",
+  "glm-copilot.config.apiMode.description": "选择要使用的 GLM API。\n\n- **编程计划** — 使用您的 GLM 编程计划订阅（[Z.ai](https://z.ai/manage-apikey/subscription) 国际版或 [bigmodel.cn](https://bigmodel.cn/coding-plan/personal/overview) 中国大陆）。实际端点取决于 `region` 设置，适合团队或高频编码场景。\n- **标准 API** — 按量付费，通过 GLM 开放平台访问，实际端点取决于 `region` 设置。",
   "glm-copilot.config.apiMode.codingPlan.label": "编程计划",
-  "glm-copilot.config.apiMode.codingPlan.description": "使用 Z.ai GLM 编程计划订阅（`api.z.ai/api/coding/paas/v4`）。此模式下 `region` 设置将被忽略。",
+  "glm-copilot.config.apiMode.codingPlan.description": "使用 GLM 编程计划订阅。端点取决于 `region`：国际版 → `api.z.ai/api/coding/paas/v4`，中国大陆 → `open.bigmodel.cn/api/coding/paas/v4`。",
   "glm-copilot.config.apiMode.standard.label": "标准 API",
   "glm-copilot.config.apiMode.standard.description": "通过 GLM 开放平台按量付费访问，实际端点由 `region` 设置决定。",
 
-  "glm-copilot.config.region.description": "**标准 API** 模式下使用的区域，`apiMode` 为编程计划时忽略此设置。\n\n- **国际版** — `api.z.ai/api/paas/v4`（需要 Z.ai 账号）\n- **中国大陆** — `open.bigmodel.cn/api/paas/v4`（需要智谱 AI 账号）",
+  "glm-copilot.config.region.description": "**编程计划**与**标准 API** 模式下使用的服务器区域（设置 `baseUrl` 时忽略）。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 

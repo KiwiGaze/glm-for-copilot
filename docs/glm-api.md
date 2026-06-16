@@ -25,7 +25,8 @@ Append `/chat/completions` to any base URL below.
 
 | Mode | Region | Base URL |
 | --- | --- | --- |
-| Coding Plan | — (z.ai only) | `https://api.z.ai/api/coding/paas/v4` |
+| Coding Plan | International | `https://api.z.ai/api/coding/paas/v4` |
+| Coding Plan | Mainland China | `https://open.bigmodel.cn/api/coding/paas/v4` |
 | Standard | International | `https://api.z.ai/api/paas/v4` |
 | Standard | Mainland China | `https://open.bigmodel.cn/api/paas/v4` |
 
@@ -74,7 +75,8 @@ sent back as `role: "tool"` messages with the matching `tool_call_id`.
 
 | Mode / Region | Where to get a key |
 | --- | --- |
-| Coding Plan | <https://z.ai/manage-apikey/subscription> |
+| Coding Plan — International | <https://z.ai/manage-apikey/subscription> |
+| Coding Plan — Mainland China | <https://bigmodel.cn/coding-plan/personal/overview> |
 | Standard — International | <https://z.ai/manage-apikey/apikey-list> |
 | Standard — Mainland China | <https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys> |
 

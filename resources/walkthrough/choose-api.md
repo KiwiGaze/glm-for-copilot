@@ -1,8 +1,8 @@
 ## Coding Plan
 
-Use this if you have a [Z.ai GLM Coding Plan](https://z.ai/manage-apikey/subscription) subscription. All requests go to `api.z.ai/api/coding/paas/v4`. The `region` setting is ignored in this mode.
+Use this if you have a GLM Coding Plan subscription. The endpoint follows your `region`: International (`z.ai`) → `api.z.ai/api/coding/paas/v4`, Mainland China (`bigmodel.cn`) → `open.bigmodel.cn/api/coding/paas/v4`. Get your key at [z.ai/manage-apikey/subscription](https://z.ai/manage-apikey/subscription) (International) or [bigmodel.cn/coding-plan](https://bigmodel.cn/coding-plan/personal/overview) (Mainland China).
 
-Set `glm-copilot.apiMode` to **Coding Plan** in settings.
+Set `glm-copilot.apiMode` to **Coding Plan** and pick the matching `glm-copilot.region` in settings.
 
 ## Standard API
 

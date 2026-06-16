@@ -26,16 +26,18 @@ export const LANGUAGE_MODEL_CHAT_SYSTEM_ROLE = 3;
 /** Default maximum number of tools accepted in one request. */
 export const DEFAULT_TOOLS_LIMIT = 128;
 
-/** Base hostnames + endpoint paths for each API mode. */
+/** Base hostnames + endpoint paths for each API mode × region. */
 export const ENDPOINTS = {
-	codingPlan: 'https://api.z.ai/api/coding/paas/v4',
+	codingPlanInternational: 'https://api.z.ai/api/coding/paas/v4',
+	codingPlanChina: 'https://open.bigmodel.cn/api/coding/paas/v4',
 	standardInternational: 'https://api.z.ai/api/paas/v4',
 	standardChina: 'https://open.bigmodel.cn/api/paas/v4',
 } as const;
 
 /** External URLs the extension links to. */
 export const EXTERNAL_URLS = {
-	codingPlanKeys: 'https://z.ai/manage-apikey/subscription',
+	codingPlanKeysInternational: 'https://z.ai/manage-apikey/subscription',
+	codingPlanKeysChina: 'https://bigmodel.cn/coding-plan/personal/overview',
 	standardKeysInternational: 'https://z.ai/manage-apikey/apikey-list',
 	standardKeysChina: 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',
 	docs: 'https://docs.z.ai',
