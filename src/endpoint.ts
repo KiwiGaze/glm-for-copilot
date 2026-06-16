@@ -14,18 +14,18 @@ export function resolveBaseUrl(): string {
 	if (override) {
 		return normalizeBaseUrl(override);
 	}
+	const china = getRegion() === 'china';
 	if (getApiMode() === 'coding-plan') {
-		return ENDPOINTS.codingPlan;
+		return china ? ENDPOINTS.codingPlanChina : ENDPOINTS.codingPlanInternational;
 	}
-	return getRegion() === 'china' ? ENDPOINTS.standardChina : ENDPOINTS.standardInternational;
+	return china ? ENDPOINTS.standardChina : ENDPOINTS.standardInternational;
 }
 
 /** The key-management page that matches the current apiMode/region. */
 export function resolveKeyPageUrl(): string {
+	const china = getRegion() === 'china';
 	if (getApiMode() === 'coding-plan') {
-		return EXTERNAL_URLS.codingPlanKeys;
+		return china ? EXTERNAL_URLS.codingPlanKeysChina : EXTERNAL_URLS.codingPlanKeysInternational;
 	}
-	return getRegion() === 'china'
-		? EXTERNAL_URLS.standardKeysChina
-		: EXTERNAL_URLS.standardKeysInternational;
+	return china ? EXTERNAL_URLS.standardKeysChina : EXTERNAL_URLS.standardKeysInternational;
 }
