@@ -19,6 +19,7 @@ Use your own GLM API key (BYOK) to bring Zhipu AI's GLM models into GitHub Copil
 
 - **Don't replace Copilot — power it up.** GLM models appear alongside GPT-4o, Claude, and others in the existing model picker.
 - **Agent mode, tool calling, instructions, MCP — all still work.** Copilot's full stack now runs on GLM.
+- **Watch GLM think.** The model's step-by-step reasoning streams into the chat — a transparency Copilot's built-in BYOK doesn't expose.
 - **BYOK, your bill.** Your API key lives in the OS keychain, never in `settings.json` or your Git history.
 - **Dual API.** Use your GLM Coding Plan subscription or the pay-as-you-go Standard API, whichever fits your workflow.
 - **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins. No Python, no Docker, no local server.

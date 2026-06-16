@@ -1,7 +1,7 @@
 {
 	"name": "glm-for-copilot",
 	"displayName": "GLM for Copilot Chat",
-	"description": "Use GLM (Z.ai / Zhipu) models in GitHub Copilot Chat — your GLM Coding Plan or the standard GLM API. Thinking mode, tool calling, BYOK.",
+	"description": "Bring GLM (Z.ai / Zhipu) models into GitHub Copilot Chat with visible thinking. Coding Plan or Standard API.",
 	"icon": "resources/icon.png",
 	"version": "0.2.1",
 	"publisher": "QiYijiazhen",

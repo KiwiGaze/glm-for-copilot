@@ -2,6 +2,8 @@
 
 All notable changes to GLM for Copilot Chat are documented here.
 
+## Unreleased
+
 ## 0.2.1
 
 - **Live thinking stream fix** — request `Accept-Encoding: identity` so z.ai's (nginx) edge does not gzip-buffer the SSE stream. Without it, `reasoning_content` deltas arrived batched and the "Thinking…" block only appeared after reasoning finished; now thinking tokens render live as they generate.
