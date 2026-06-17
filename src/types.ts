@@ -4,11 +4,22 @@ export type ThinkingMode = 'enabled' | 'disabled';
 export type ApiMode = 'coding-plan' | 'standard';
 export type Region = 'international' | 'china';
 
+export type ThinkingEffort = 'none' | 'high' | 'max';
+
+export interface ThinkingEffortSpec {
+	/** Levels shown in the picker, in order. */
+	levels: ThinkingEffort[];
+	/** Level used when the user has not chosen one. */
+	default: ThinkingEffort;
+}
+
 export interface GLMModelCapabilities {
 	/** `true` enables tool calling with the default cap; a number sets a custom cap. */
 	toolCalling: number | boolean;
 	imageInput: boolean;
 	thinking: boolean;
+	/** Present ⇒ model supports thinking-effort selection. Absent ⇒ binary thinking only. */
+	thinkingEffort?: ThinkingEffortSpec;
 }
 
 /** A GLM model exposed in the Copilot Chat picker. */
@@ -71,6 +82,7 @@ export interface GLMChatRequest {
 	tool_choice?: 'auto' | 'none';
 	max_tokens?: number;
 	thinking?: { type: ThinkingMode };
+	reasoning_effort?: Exclude<ThinkingEffort, 'none'>;
 	stream_options?: { include_usage: boolean };
 }
 

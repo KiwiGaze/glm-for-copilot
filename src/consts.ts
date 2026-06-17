@@ -1,4 +1,4 @@
-import type { GLMModel } from './types';
+import type { GLMModel, ThinkingEffortSpec } from './types';
 
 /**
  * Compile-time constants shared across the extension. These do not depend on
@@ -49,6 +49,8 @@ export const URI_PATHS = {
 	showLogs: '/showLogs',
 } as const;
 
+const GLM_5_2_EFFORT: ThinkingEffortSpec = { levels: ['none', 'high', 'max'], default: 'high' };
+
 /** Built-in GLM models exposed through the language model provider. */
 export const MODELS: GLMModel[] = [
 	{
@@ -89,11 +91,16 @@ export const MODELS: GLMModel[] = [
 		name: 'GLM-5.2',
 		family: 'glm',
 		version: '5.2',
-		detail: 'Top Coding Plan model',
-		maxInputTokens: 200000,
+		detail: 'Flagship coding model, 1M context',
+		maxInputTokens: 1000000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: false, thinking: true },
-		availableIn: ['coding-plan'],
+		capabilities: {
+			toolCalling: DEFAULT_TOOLS_LIMIT,
+			imageInput: false,
+			thinking: true,
+			thinkingEffort: GLM_5_2_EFFORT,
+		},
+		availableIn: ['coding-plan', 'standard'],
 	},
 	{
 		id: 'glm-4.5-air',

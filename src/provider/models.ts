@@ -1,11 +1,33 @@
 import * as vscode from 'vscode';
 import { t } from '../i18n';
-import type { GLMModel } from '../types';
+import type { GLMModel, ThinkingEffortSpec } from '../types';
+
+function buildEffortSchema(spec: ThinkingEffortSpec) {
+	return {
+		properties: {
+			reasoningEffort: {
+				type: 'string',
+				title: t('effort.title'),
+				enum: spec.levels,
+				enumItemLabels: spec.levels.map((level) => t(`effort.${level}.label`)),
+				enumDescriptions: spec.levels.map((level) => t(`effort.${level}.desc`)),
+				default: spec.default,
+				group: 'navigation',
+			},
+		},
+	} as const;
+}
+
+/** Non-public `configurationSchema` field the Copilot host reads at runtime (intersection type). */
+type EffortChatInformation = vscode.LanguageModelChatInformation & {
+	readonly configurationSchema?: ReturnType<typeof buildEffortSchema>;
+};
 
 /** Build the Copilot Chat model picker entry for a GLM model. */
-export function toChatInfo(model: GLMModel, hasApiKey: boolean): vscode.LanguageModelChatInformation {
+export function toChatInfo(model: GLMModel, hasApiKey: boolean): EffortChatInformation {
 	const detail = resolveModelText(model, 'detail') ?? model.detail;
 	const tooltip = resolveModelText(model, 'tooltip');
+	const spec = model.capabilities.thinkingEffort;
 	return {
 		id: model.id,
 		name: model.name,
@@ -19,6 +41,7 @@ export function toChatInfo(model: GLMModel, hasApiKey: boolean): vscode.Language
 			toolCalling: model.capabilities.toolCalling,
 			imageInput: model.capabilities.imageInput,
 		},
+		...(spec ? { configurationSchema: buildEffortSchema(spec) } : {}),
 	};
 }
 
