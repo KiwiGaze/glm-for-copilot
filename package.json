@@ -3,7 +3,7 @@
 	"displayName": "GLM for Copilot Chat",
 	"description": "Bring GLM (Z.ai / Zhipu) models into GitHub Copilot Chat with visible thinking. Coding Plan or Standard API.",
 	"icon": "resources/icon.png",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"publisher": "QiYijiazhen",
 	"license": "MIT",
 	"repository": {

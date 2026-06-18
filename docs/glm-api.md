@@ -55,6 +55,22 @@ Top-level request field, binary:
 Enabled by default. In this extension, the `glm-copilot.thinking` setting maps
 directly to `thinking.type` on every request.
 
+### Reasoning effort
+
+GLM-5.2 also accepts a top-level `reasoning_effort` string that tunes how much the
+model reasons. It only takes effect when thinking is enabled and is GLM-5.2 only.
+
+```json
+{ "reasoning_effort": "max" }
+```
+
+Accepted values are `max` (the API default), `xhigh`, `high`, `medium`, `low`,
+`minimal`, and `none`. The API folds `low`/`medium` into `high` and `xhigh` into
+`max`; `none` and `minimal` skip thinking entirely. The extension surfaces three of
+these — `none` / `high` / `max` — through the Copilot model picker: `none` sends
+`thinking: { type: "disabled" }` with no `reasoning_effort`, while `high` and `max`
+send `thinking: { type: "enabled" }` plus the matching `reasoning_effort`.
+
 ## Tools
 
 OpenAI function-calling format:

@@ -40,7 +40,7 @@ Add your own GLM model ids with the `glm-copilot.customModels` setting — usefu
 
 ### Thinking mode
 
-GLM models support a thinking (step-by-step reasoning) mode, controlled by the `glm-copilot.thinking` setting (`enabled` by default). Set it to `disabled` for faster responses on simple edits.
+GLM models support a thinking (step-by-step reasoning) mode, controlled by the `glm-copilot.thinking` setting (`enabled` by default). Set it to `disabled` for faster responses on simple edits. GLM-5.2 adds a per-model **Thinking Effort** picker (None / High / Max) in the Copilot model picker, and the choice persists per model.
 
 ### Secure API key storage
 
@@ -88,10 +88,10 @@ To update or remove the key later, use **GLM: Set API Key** or **GLM: Clear API 
 | **GLM-4.7** | 200K | 128K | Coding Plan + Standard | Yes | Yes |
 | **GLM-5** | 200K | 128K | Standard only | Yes | Yes |
 | **GLM-5.1** | 200K | 128K | Standard only | Yes | Yes |
-| **GLM-5.2** | 200K | 128K | Coding Plan only | Yes | Yes |
+| **GLM-5.2** | 1M | 128K | Coding Plan + Standard | Yes | Yes (effort) |
 | **GLM-4.5 Air** | 128K | 96K | Coding Plan + Standard | Yes | Yes |
 
-The picker shows only the models available for your selected **API Mode**, so you never pick a model your plan can't serve. GLM-5/5.1 are Standard-API only; GLM-5.2 is Coding-Plan only; GLM-4.7 and GLM-4.5 Air work on both. Need another model? Add it with [`glm-copilot.customModels`](#settings).
+The picker shows only the models available for your selected **API Mode**, so you never pick a model your plan can't serve. GLM-5/5.1 are Standard-API only; GLM-4.7, GLM-5.2, and GLM-4.5 Air work on both. Need another model? Add it with [`glm-copilot.customModels`](#settings).
 
 ## Settings
 
@@ -160,7 +160,7 @@ Pick **Coding Plan** if you have a [Z.ai GLM Coding Plan](https://z.ai/manage-ap
 
 ### Why don't I see a model I expected in the picker?
 
-The picker shows only the models available for your selected **API Mode**. GLM-5 and GLM-5.1 are Standard-API only; GLM-5.2 is Coding-Plan only; GLM-4.7 and GLM-4.5 Air work on both. To force-add any model (including new or proxy-hosted ones), use the [`glm-copilot.customModels`](#settings) setting.
+The picker shows only the models available for your selected **API Mode**. GLM-5 and GLM-5.1 are Standard-API only; GLM-4.7, GLM-5.2, and GLM-4.5 Air work on both. To force-add any model (including new or proxy-hosted ones), use the [`glm-copilot.customModels`](#settings) setting.
 
 ### Does agent mode, tool calling, and MCP work?
 

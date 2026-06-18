@@ -10,8 +10,9 @@ const en: Record<string, string> = {
 	'model.glm-5.tooltip': 'GLM-5 — 200K context, advanced reasoning and coding. Standard API only.',
 	'model.glm-5.1.detail': 'Latest GLM-5 series flagship',
 	'model.glm-5.1.tooltip': 'GLM-5.1 — latest GLM-5 series, 200K context. Standard API only.',
-	'model.glm-5.2.detail': 'Top Coding Plan model',
-	'model.glm-5.2.tooltip': 'GLM-5.2 — top GLM model on the Coding Plan, 200K context. Coding Plan only.',
+	'model.glm-5.2.detail': 'Flagship coding model, 1M context',
+	'model.glm-5.2.tooltip':
+		'GLM-5.2 — flagship GLM coding model, 1M context, selectable thinking effort. Available on Coding Plan and Standard API.',
 	'model.glm-4.5-air.detail': 'Fast and economical',
 	'model.glm-4.5-air.tooltip': 'GLM-4.5 Air — lightweight, fast, and low-cost. Available on both plans.',
 	'model.custom.detail': 'Custom model',
@@ -32,6 +33,15 @@ const en: Record<string, string> = {
 	'thinking.off': 'Off',
 	'thinking.on.desc': 'Enable step-by-step reasoning (recommended)',
 	'thinking.off.desc': 'Disable reasoning for faster responses',
+
+	// Thinking effort control
+	'effort.title': 'Thinking Effort',
+	'effort.none.label': 'None',
+	'effort.none.desc': 'No reasoning — fastest, lowest quota',
+	'effort.high.label': 'High',
+	'effort.high.desc': 'Balanced reasoning (recommended)',
+	'effort.max.label': 'Max',
+	'effort.max.desc': 'Deepest reasoning — best for hard coding, uses more quota',
 
 	// Request limits
 	'request.toolsLimitExceeded':
@@ -89,8 +99,8 @@ const zh: Record<string, string> = {
 	'model.glm-5.tooltip': 'GLM-5 — 20 万上下文，先进的推理与编程。仅标准 API 可用。',
 	'model.glm-5.1.detail': '最新 GLM-5 系列旗舰',
 	'model.glm-5.1.tooltip': 'GLM-5.1 — 最新 GLM-5 系列，20 万上下文。仅标准 API 可用。',
-	'model.glm-5.2.detail': '编程计划顶级模型',
-	'model.glm-5.2.tooltip': 'GLM-5.2 — 编程计划中的顶级 GLM 模型，20 万上下文。仅编程计划可用。',
+	'model.glm-5.2.detail': '旗舰编程模型，100 万上下文',
+	'model.glm-5.2.tooltip': 'GLM-5.2 — 旗舰 GLM 编程模型，100 万上下文，可选思考强度。编程计划和标准 API 均可用。',
 	'model.glm-4.5-air.detail': '快速且经济',
 	'model.glm-4.5-air.tooltip': 'GLM-4.5 Air — 轻量、快速、低成本。两种计划均可用。',
 	'model.custom.detail': '自定义模型',
@@ -108,6 +118,14 @@ const zh: Record<string, string> = {
 	'thinking.off': '关闭',
 	'thinking.on.desc': '启用逐步推理（推荐）',
 	'thinking.off.desc': '关闭推理以获得更快响应',
+
+	'effort.title': '思考强度',
+	'effort.none.label': '关闭',
+	'effort.none.desc': '不进行推理——最快、消耗最低',
+	'effort.high.label': '高',
+	'effort.high.desc': '均衡推理（推荐）',
+	'effort.max.label': '最高',
+	'effort.max.desc': '最深入的推理——适合复杂编程，消耗更多额度',
 
 	'request.toolsLimitExceeded':
 		'GLM 单次请求最多支持 {0} 个工具，但本次请求包含 {1} 个。请使用 VS Code 的“配置工具”关闭不常用的工具。',

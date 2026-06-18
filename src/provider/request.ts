@@ -4,7 +4,14 @@ import { findModelDefinition, getApiModelId, getMaxTokens, getThinking } from '.
 import { DEFAULT_TOOLS_LIMIT } from '../consts';
 import { resolveBaseUrl } from '../endpoint';
 import { t } from '../i18n';
-import type { GLMChatRequest, GLMTool, IAuthManager, ThinkingMode } from '../types';
+import type {
+	GLMChatRequest,
+	GLMTool,
+	IAuthManager,
+	ThinkingEffort,
+	ThinkingEffortSpec,
+	ThinkingMode,
+} from '../types';
 import { convertMessages, convertTools, countMessageChars } from './convert';
 
 interface PrepareChatRequestArgs {
@@ -45,6 +52,17 @@ export async function prepareChatRequest({
 		throw new Error(t('request.toolsLimitExceeded', String(toolLimit), String(tools.length)));
 	}
 	const hasTools = !!(tools && tools.length > 0);
+	const effortSpec = modelDef?.capabilities.thinkingEffort;
+	let thinkingFields: Pick<GLMChatRequest, 'thinking' | 'reasoning_effort'> = {};
+	if (effortSpec) {
+		const effort = resolveEffort(options as EffortOptions, effortSpec);
+		thinkingFields =
+			effort === 'none'
+				? { thinking: { type: 'disabled' } }
+				: { thinking: { type: 'enabled' }, reasoning_effort: effort };
+	} else if (isThinkingModel) {
+		thinkingFields = { thinking: { type: resolveThinking(options) } };
+	}
 	const request: GLMChatRequest = {
 		model: getApiModelId(modelInfo.id),
 		messages: glmMessages,
@@ -52,10 +70,20 @@ export async function prepareChatRequest({
 		tools: hasTools ? tools : undefined,
 		tool_choice: hasTools ? 'auto' : undefined,
 		max_tokens: getMaxTokens(),
-		...(isThinkingModel ? { thinking: { type: resolveThinking(options) } } : {}),
+		...thinkingFields,
 	};
 	const totalRequestChars = countMessageChars(glmMessages);
 	return { client, request, totalRequestChars, isThinkingModel };
+}
+
+type EffortOptions = vscode.ProvideLanguageModelChatResponseOptions & {
+	readonly modelConfiguration?: { readonly reasoningEffort?: ThinkingEffort };
+	readonly configuration?: { readonly reasoningEffort?: ThinkingEffort };
+};
+
+function resolveEffort(options: EffortOptions, spec: ThinkingEffortSpec): ThinkingEffort {
+	const picked = options.modelConfiguration?.reasoningEffort ?? options.configuration?.reasoningEffort;
+	return picked && spec.levels.includes(picked) ? picked : spec.default;
 }
 
 /** Thinking mode from a per-request override (modelOptions), else the setting. */

@@ -7,6 +7,7 @@ tsconfig.json
 .gitignore
 .npmrc
 .vscodeignore
+.claude/**
 PLAN.md
 pnpm-lock.yaml
 dist/**
