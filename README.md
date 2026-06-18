@@ -1,7 +1,7 @@
 # GLM for Copilot Chat
 
-[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/QiYijiazhen.glm-for-copilot?label=Marketplace&color=1f6feb)](https://marketplace.visualstudio.com/items?itemName=QiYijiazhen.glm-for-copilot)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/QiYijiazhen.glm-for-copilot?label=Installs)](https://marketplace.visualstudio.com/items?itemName=QiYijiazhen.glm-for-copilot)
+[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/YijiazhenQi.glm-for-copilot?label=Marketplace&color=1f6feb)](https://marketplace.visualstudio.com/items?itemName=YijiazhenQi.glm-for-copilot)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/YijiazhenQi.glm-for-copilot?label=Installs)](https://marketplace.visualstudio.com/items?itemName=YijiazhenQi.glm-for-copilot)
 [![CI](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
@@ -65,10 +65,10 @@ Because this extension plugs into Copilot's native Language Model Provider API, 
 
 ### Installation
 
-Install from the **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=QiYijiazhen.glm-for-copilot)**, or search for **"GLM for Copilot Chat"** in the Extensions panel (`Cmd/Ctrl + Shift + X`). From the command line:
+Install from the **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=YijiazhenQi.glm-for-copilot)**, or search for **"GLM for Copilot Chat"** in the Extensions panel (`Cmd/Ctrl + Shift + X`). From the command line:
 
 ```bash
-code --install-extension QiYijiazhen.glm-for-copilot
+code --install-extension YijiazhenQi.glm-for-copilot
 ```
 
 ### Usage

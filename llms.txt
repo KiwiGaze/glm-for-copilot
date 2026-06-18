@@ -8,7 +8,7 @@
 
 Key facts:
 
-- **Type:** VS Code extension (Marketplace), published under the `glm-copilot` publisher.
+- **Type:** VS Code extension (Marketplace), published under the `YijiazhenQi` publisher.
 - **What it does:** lets you use GLM models inside GitHub Copilot Chat without replacing Copilot's UI.
 - **How it works:** implements `vscode.LanguageModelChatProvider`; streams OpenAI-compatible SSE from the GLM API.
 - **Dual API:** choose your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`).
