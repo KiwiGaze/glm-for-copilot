@@ -1,4 +1,4 @@
-# GLM for Copilot Chat
+# GLM for GitHub Copilot Chat
 
 > A Visual Studio Code extension that adds GLM (Z.ai / Zhipu) models to the GitHub Copilot Chat
 > model picker using your own API key (BYOK). It registers GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, and

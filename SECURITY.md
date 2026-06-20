@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest published version of **GLM for Copilot Chat** on the VS Code Marketplace receives
+The latest published version of **GLM for GitHub Copilot Chat** on the VS Code Marketplace receives
 security fixes. Please update to the newest version before reporting an issue.
 
 | Version | Supported |

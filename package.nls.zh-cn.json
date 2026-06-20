@@ -5,7 +5,7 @@
   "glm-copilot.command.openSettings": "GLM: 打开设置",
   "glm-copilot.command.showLogs": "GLM: 显示日志",
 
-  "glm-copilot.walkthrough.title": "GLM for Copilot Chat",
+  "glm-copilot.walkthrough.title": "GLM for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "在 GitHub Copilot Chat 中使用 GLM 模型。",
 
   "glm-copilot.walkthrough.setApiKey.title": "设置 GLM API 密钥",

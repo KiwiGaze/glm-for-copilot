@@ -1,4 +1,4 @@
-GLM for Copilot Chat uses your own GLM API key to make GLM models available in the Copilot model picker.
+GLM for GitHub Copilot Chat uses your own GLM API key to make GLM models available in the Copilot model picker.
 
 Your key is stored in VS Code's SecretStorage (the OS keychain). It is never written to `settings.json` or your Git history.
 

@@ -1,6 +1,6 @@
-# Contributing to GLM for Copilot Chat
+# Contributing to GLM for GitHub Copilot Chat
 
-Thanks for your interest in improving **GLM for Copilot Chat** — a VS Code extension that
+Thanks for your interest in improving **GLM for GitHub Copilot Chat** — a VS Code extension that
 brings GLM (Z.ai / Zhipu) models into the GitHub Copilot Chat model picker. Contributions of
 all kinds are welcome: bug reports, feature requests, documentation fixes, and code.
 

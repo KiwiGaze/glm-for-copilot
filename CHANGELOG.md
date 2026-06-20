@@ -1,10 +1,11 @@
 # Changelog
 
-All notable changes to GLM for Copilot Chat are documented here.
+All notable changes to GLM for GitHub Copilot Chat are documented here.
 
-## Unreleased
+## 0.2.3
 
 - **Mainland China Coding Plan** — `region: china` now routes Coding Plan requests to `open.bigmodel.cn/api/coding/paas/v4` instead of z.ai, and `GLM: Get API Key` opens the bigmodel.cn coding-plan console. International Coding Plan and all Standard endpoints are unchanged; `region` defaults to `international`, so existing users are unaffected.
+- **Renamed to "GLM for GitHub Copilot Chat"** — updated the extension's marketplace display name. No functional changes.
 
 ## 0.2.2
 
