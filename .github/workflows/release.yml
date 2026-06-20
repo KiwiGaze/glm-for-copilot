@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Package and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          EXPECTED_TAG="v${VERSION}"
+
+          if [ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${VERSION}. Push ${EXPECTED_TAG} or update package.json before releasing." >&2
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "asset=dist/glm-for-copilot-chat-${VERSION}.vsix" >> "$GITHUB_OUTPUT"
+
+      - name: Typecheck
+        run: pnpm exec tsc -p ./ --noEmit
+
+      - name: Package extension
+        env:
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: |
+          mkdir -p dist
+          pnpm exec vsce package --no-dependencies -o "$ASSET"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ steps.version.outputs.asset }}
+        run: gh release create "${GITHUB_REF_NAME}" "$ASSET" --title "${GITHUB_REF_NAME}" --generate-notes --verify-tag
