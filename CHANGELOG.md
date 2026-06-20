@@ -2,6 +2,10 @@
 
 All notable changes to GLM for GitHub Copilot Chat are documented here.
 
+## 0.2.4
+
+- **README badges** — replaced the retired Marketplace version and installs badges with active Marketplace links.
+
 ## 0.2.3
 
 - **Mainland China Coding Plan** — `region: china` now routes Coding Plan requests to `open.bigmodel.cn/api/coding/paas/v4` instead of z.ai, and `GLM: Get API Key` opens the bigmodel.cn coding-plan console. International Coding Plan and all Standard endpoints are unchanged; `region` defaults to `international`, so existing users are unaffected.
