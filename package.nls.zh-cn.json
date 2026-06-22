@@ -5,7 +5,7 @@
   "glm-copilot.command.openSettings": "GLM: 打开设置",
   "glm-copilot.command.showLogs": "GLM: 显示日志",
 
-  "glm-copilot.walkthrough.title": "GLM for GitHub Copilot Chat",
+  "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "在 GitHub Copilot Chat 中使用 GLM 模型。",
 
   "glm-copilot.walkthrough.setApiKey.title": "设置 GLM API 密钥",
@@ -17,7 +17,7 @@
   "glm-copilot.walkthrough.showModels.title": "在选择器中查看 GLM 模型",
   "glm-copilot.walkthrough.showModels.description": "你的 GLM 模型将根据所选的 API 模式出现在 Copilot Chat 的模型选择器中。如果看不到，请打开语言模型管理器以显示它们。\n[打开语言模型](command:workbench.action.chat.manage)",
 
-  "glm-copilot.config.title": "GLM Copilot",
+  "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
   "glm-copilot.config.apiMode.description": "选择要使用的 GLM API。\n\n- **编程计划** — 使用您的 GLM 编程计划订阅（[Z.ai](https://z.ai/manage-apikey/subscription) 国际版或 [bigmodel.cn](https://bigmodel.cn/coding-plan/personal/overview) 中国大陆）。实际端点取决于 `region` 设置，适合团队或高频编码场景。\n- **标准 API** — 按量付费，通过 GLM 开放平台访问，实际端点取决于 `region` 设置。",
   "glm-copilot.config.apiMode.codingPlan.label": "编程计划",

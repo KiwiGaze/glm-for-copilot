@@ -5,7 +5,7 @@
   "glm-copilot.command.openSettings": "GLM: Open Settings",
   "glm-copilot.command.showLogs": "GLM: Show Logs",
 
-  "glm-copilot.walkthrough.title": "GLM for GitHub Copilot Chat",
+  "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "Set up GLM models in GitHub Copilot Chat.",
 
   "glm-copilot.walkthrough.setApiKey.title": "Set your GLM API key",
@@ -17,7 +17,7 @@
   "glm-copilot.walkthrough.showModels.title": "Show GLM models in the picker",
   "glm-copilot.walkthrough.showModels.description": "Your GLM models appear in the Copilot Chat model picker, filtered by your selected API Mode. If they are hidden, open the Language Models manager to show them.\n[Open Language Models](command:workbench.action.chat.manage)",
 
-  "glm-copilot.config.title": "GLM Copilot",
+  "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
   "glm-copilot.config.apiMode.description": "Which GLM API to use.\n\n- **Coding Plan** — uses your GLM Coding Plan subscription ([Z.ai](https://z.ai/manage-apikey/subscription) International or [bigmodel.cn](https://bigmodel.cn/coding-plan/personal/overview) Mainland China). The active endpoint depends on the `region` setting. Best for teams or heavy coding use.\n- **Standard API** — pay-as-you-go access via the GLM Open Platform. The active endpoint depends on the `region` setting.",
   "glm-copilot.config.apiMode.codingPlan.label": "Coding Plan",

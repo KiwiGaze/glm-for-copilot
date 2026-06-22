@@ -1,4 +1,4 @@
-# GLM for GitHub Copilot Chat
+# GLM Models for GitHub Copilot Chat
 
 > A Visual Studio Code extension that adds GLM (Z.ai / Zhipu) models to the GitHub Copilot Chat
 > model picker using your own API key (BYOK). It registers GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, and
@@ -8,7 +8,7 @@
 
 Key facts:
 
-- **Type:** VS Code extension (Marketplace), published under the `YijiazhenQi` publisher.
+- **Type:** VS Code extension (Marketplace), published as `yijiazhen-qi.glm-for-github-copilot-chat`.
 - **What it does:** lets you use GLM models inside GitHub Copilot Chat without replacing Copilot's UI.
 - **How it works:** implements `vscode.LanguageModelChatProvider`; streams OpenAI-compatible SSE from the GLM API.
 - **Dual API:** choose your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`).
@@ -23,7 +23,7 @@ Key facts:
 - [Models and settings](README.md#models): which GLM models are available per API mode, and all configuration options.
 - [Coding Plan vs Standard API](README.md#coding-plan-vs-standard-api): endpoint routing and when to use each.
 - [Changelog](CHANGELOG.md): release history.
-- [Implementation plan](PLAN.md): architecture, file map, and design decisions.
+- [Contributing guide](CONTRIBUTING.md): project layout, setup, and development conventions.
 
 ## Contributing
 

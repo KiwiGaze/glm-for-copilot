@@ -41,4 +41,4 @@ jobs:
         run: pnpm exec tsc -p ./ --noEmit
 
       - name: Package extension
-        run: pnpm exec vsce package --no-dependencies -o glm-for-copilot-chat.vsix
+        run: pnpm exec vsce package --no-dependencies -o glm-for-github-copilot-chat.vsix

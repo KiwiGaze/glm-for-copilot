@@ -11,7 +11,7 @@ let activeProvider: GLMChatProvider | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	try {
-		logger.info('Activating GLM for GitHub Copilot Chat');
+		logger.info('Activating GLM Models for GitHub Copilot Chat');
 		registerCommands(context);
 		registerActionUrls(context);
 		activeProvider = await registerProvider(context);

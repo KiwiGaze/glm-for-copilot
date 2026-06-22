@@ -1,6 +1,6 @@
 # Support
 
-Thanks for using **GLM for GitHub Copilot Chat**. Here is how to get help.
+Thanks for using **GLM Models for GitHub Copilot Chat**. Here is how to get help.
 
 ## Before you ask
 

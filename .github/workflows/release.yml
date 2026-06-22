@@ -49,7 +49,7 @@ jobs:
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "asset=dist/glm-for-copilot-chat-${VERSION}.vsix" >> "$GITHUB_OUTPUT"
+          echo "asset=dist/glm-for-github-copilot-chat-${VERSION}.vsix" >> "$GITHUB_OUTPUT"
 
       - name: Typecheck
         run: pnpm exec tsc -p ./ --noEmit

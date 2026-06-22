@@ -1,7 +1,7 @@
-# GLM for GitHub Copilot Chat
+# GLM Models for GitHub Copilot Chat
 
-[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.2.4-1f6feb)](https://marketplace.visualstudio.com/items?itemName=YijiazhenQi.glm-for-copilot-chat)
-[![Install from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-007ACC)](https://marketplace.visualstudio.com/items?itemName=YijiazhenQi.glm-for-copilot-chat)
+[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.2.5-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
+[![Install from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-007ACC)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![CI](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
@@ -65,10 +65,17 @@ Because this extension plugs into Copilot's native Language Model Provider API, 
 
 ### Installation
 
-Install from the **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=YijiazhenQi.glm-for-copilot-chat)**, or search for **"GLM for GitHub Copilot Chat"** in the Extensions panel (`Cmd/Ctrl + Shift + X`). From the command line:
+Install from the **[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)**, or search for **"GLM Models for GitHub Copilot Chat"** in the Extensions panel (`Cmd/Ctrl + Shift + X`). From the command line:
 
 ```bash
-code --install-extension YijiazhenQi.glm-for-copilot-chat
+code --install-extension yijiazhen-qi.glm-for-github-copilot-chat
+```
+
+If you installed an older Marketplace listing, uninstall it before installing this one. The old and new extension IDs can both register the same `glm-copilot.*` commands and settings.
+
+```bash
+code --uninstall-extension YijiazhenQi.glm-for-copilot-chat
+code --install-extension yijiazhen-qi.glm-for-github-copilot-chat
 ```
 
 ### Usage
@@ -189,4 +196,4 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
 
-[MIT](LICENSE.txt) © GLM for GitHub Copilot Chat contributors
+[MIT](LICENSE.txt) © GLM Models for GitHub Copilot Chat contributors

@@ -1,6 +1,13 @@
 # Changelog
 
-All notable changes to GLM for GitHub Copilot Chat are documented here.
+All notable changes to GLM Models for GitHub Copilot Chat are documented here.
+
+## 0.2.5
+
+- **Marketplace identity** - moved the extension package to `yijiazhen-qi.glm-for-github-copilot-chat` and updated install links, package metadata, and release artifact names.
+- **Display name** - changed the visible Marketplace name to `GLM Models for GitHub Copilot Chat`.
+- **Migration note** - documented uninstalling the old `YijiazhenQi.glm-for-copilot-chat` listing before installing the new one.
+- **Docs cleanup** - aligned the settings title with the product name, refreshed the walkthrough model examples, and removed a stale project-plan reference from the contributing guide.
 
 ## 0.2.4
 
@@ -9,7 +16,7 @@ All notable changes to GLM for GitHub Copilot Chat are documented here.
 ## 0.2.3
 
 - **Mainland China Coding Plan** — `region: china` now routes Coding Plan requests to `open.bigmodel.cn/api/coding/paas/v4` instead of z.ai, and `GLM: Get API Key` opens the bigmodel.cn coding-plan console. International Coding Plan and all Standard endpoints are unchanged; `region` defaults to `international`, so existing users are unaffected.
-- **Renamed to "GLM for GitHub Copilot Chat"** — updated the extension's marketplace display name. No functional changes.
+- **Display name update** — clarified the extension's GitHub Copilot Chat integration in the Marketplace name. No functional changes.
 
 ## 0.2.2
 

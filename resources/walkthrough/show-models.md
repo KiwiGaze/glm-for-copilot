@@ -1,4 +1,4 @@
-Your GLM models appear in the Copilot Chat model picker as soon as the extension is active. The picker shows only the models available for your selected **API Mode** — for example GLM-4.7, GLM-5.2, and GLM-4.5 Air on the Coding Plan, or GLM-4.7, GLM-5, GLM-5.1, and GLM-4.5 Air on the Standard API.
+Your GLM models appear in the Copilot Chat model picker as soon as the extension is active. The picker shows only the models available for your selected **API Mode** — for example GLM-4.7, GLM-5.2, and GLM-4.5 Air on the Coding Plan, or GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, and GLM-4.5 Air on the Standard API.
 
 Until you run `GLM: Set API Key`, the models appear with a reminder to set your key. If you do not see them right away, the model list may be long — scroll down and look for the GLM models.
 

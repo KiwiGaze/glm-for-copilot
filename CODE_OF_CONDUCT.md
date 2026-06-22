@@ -2,7 +2,7 @@
 
 ## Our pledge
 
-We want taking part in the GLM for GitHub Copilot Chat project to be a welcoming and respectful
+We want taking part in the GLM Models for GitHub Copilot Chat project to be a welcoming and respectful
 experience for everyone, regardless of background or identity.
 
 ## Our standards

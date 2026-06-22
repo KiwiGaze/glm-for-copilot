@@ -1,6 +1,6 @@
-# Contributing to GLM for GitHub Copilot Chat
+# Contributing to GLM Models for GitHub Copilot Chat
 
-Thanks for your interest in improving **GLM for GitHub Copilot Chat** — a VS Code extension that
+Thanks for your interest in improving **GLM Models for GitHub Copilot Chat** — a VS Code extension that
 brings GLM (Z.ai / Zhipu) models into the GitHub Copilot Chat model picker. Contributions of
 all kinds are welcome: bug reports, feature requests, documentation fixes, and code.
 
@@ -23,8 +23,7 @@ there.
 
 ## Project layout
 
-The implementation is plain TypeScript with **zero runtime dependencies**. The design and the
-full file map live in [`PLAN.md`](PLAN.md). At a glance:
+The implementation is plain TypeScript with **zero runtime dependencies**. Key directories:
 
 - `src/extension.ts` — activation entry point.
 - `src/client/` — OpenAI-compatible SSE streaming client for the GLM API.

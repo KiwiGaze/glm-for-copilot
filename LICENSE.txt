@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 GLM for GitHub Copilot Chat contributors
+Copyright (c) 2026 GLM Models for GitHub Copilot Chat contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
