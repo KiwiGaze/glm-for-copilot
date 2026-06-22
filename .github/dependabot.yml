@@ -12,8 +12,10 @@ updates:
       # Ignore major bumps so types can't drift ahead of the declared runtime.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
-      # Type-only dev dependency; bumps aren't worth the PR noise.
+      # Type-only dev dependency; ignore major bumps so types track the
+      # declared API surface (engines.vscode ^1.116.0) without PR noise.
       - dependency-name: "@types/vscode"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
