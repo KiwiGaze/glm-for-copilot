@@ -47,6 +47,39 @@ export interface CustomModelConfig {
 	thinking?: boolean;
 }
 
+// ---- Usage tracking (z.ai Coding Plan quota) ----
+
+export type UsageMetricKind = 'session' | 'weekly' | 'web-searches';
+
+export interface UsageMetric {
+	kind: UsageMetricKind;
+	/** Percentage (0-100) for session/weekly; count used for web-searches. */
+	used: number;
+	/** 100 for session/weekly; monthly total for web-searches. */
+	limit: number;
+	/** Epoch-ms when the window resets. */
+	resetsAt?: number;
+}
+
+export type UsageStatus =
+	| 'ok'
+	| 'no-data'
+	| 'auth-error'
+	| 'network-error'
+	| 'server-error'
+	| 'loading';
+
+export interface UsageSnapshot {
+	status: UsageStatus;
+	planName?: string;
+	/** ISO date string from the subscription response. */
+	renewsAt?: string;
+	/** 0..3 metrics, ordered session, weekly, web-searches. */
+	metrics: UsageMetric[];
+	/** Epoch-ms of the fetch that produced this snapshot. */
+	fetchedAt: number;
+}
+
 // ---- OpenAI-compatible wire types ----
 
 export interface GLMToolFunction {
