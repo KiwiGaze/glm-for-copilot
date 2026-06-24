@@ -43,6 +43,22 @@ export const EXTERNAL_URLS = {
 	docs: 'https://docs.z.ai',
 } as const;
 
+/** Hosts + paths for the z.ai usage API (v1: international only; China is unverified and gated off). */
+export const USAGE_HOSTS = {
+	international: 'https://api.z.ai',
+} as const;
+
+export const USAGE_PATHS = {
+	subscription: '/api/biz/subscription/list',
+	quota: '/api/monitor/usage/quota/limit',
+} as const;
+
+export const USAGE_MIN_REFRESH_MINUTES = 5;
+export const USAGE_DEFAULT_REFRESH_MINUTES = 15;
+export const USAGE_CACHE_STALE_MS = 60 * 60 * 1000;
+export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
+export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
+
 /** URI paths handled by this extension (onUri activation). */
 export const URI_PATHS = {
 	setApiKey: '/setApiKey',

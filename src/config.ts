@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, MODELS } from './consts';
+import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, MODELS, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
 import { t } from './i18n';
 import type { ApiMode, CustomModelConfig, GLMModel, Region, ThinkingMode } from './types';
 
@@ -95,4 +95,15 @@ export function listProviderModels(): GLMModel[] {
 /** Find a model definition by id, searching custom models then built-ins. */
 export function findModelDefinition(id: string): GLMModel | undefined {
 	return getCustomModels().find((model) => model.id === id) ?? MODELS.find((model) => model.id === id);
+}
+
+/** Status-bar usage refresh interval in minutes (clamped to the minimum). */
+export function getUsageRefreshIntervalMinutes(): number {
+	const value = cfg().get<number>('usageRefreshIntervalMinutes', USAGE_DEFAULT_REFRESH_MINUTES);
+	return Math.max(USAGE_MIN_REFRESH_MINUTES, value);
+}
+
+/** Whether the usage status-bar item should be shown. */
+export function getShowUsageStatusBar(): boolean {
+	return cfg().get<boolean>('showUsageStatusBar', true);
 }
