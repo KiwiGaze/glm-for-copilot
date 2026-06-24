@@ -77,6 +77,10 @@
 			{
 				"command": "glm-copilot.refreshUsage",
 				"title": "%glm-copilot.command.refreshUsage%"
+			},
+			{
+				"command": "glm-copilot.openUsageDetail",
+				"title": "%glm-copilot.command.openUsageDetail%"
 			}
 		],
 		"walkthroughs": [

@@ -5,6 +5,7 @@
   "glm-copilot.command.openSettings": "GLM: Open Settings",
   "glm-copilot.command.showLogs": "GLM: Show Logs",
   "glm-copilot.command.refreshUsage": "GLM: Refresh Usage",
+  "glm-copilot.command.openUsageDetail": "GLM: Show Usage Details",
 
   "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "Set up GLM models in GitHub Copilot Chat.",
