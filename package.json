@@ -73,6 +73,10 @@
 			{
 				"command": "glm-copilot.showLogs",
 				"title": "%glm-copilot.command.showLogs%"
+			},
+			{
+				"command": "glm-copilot.refreshUsage",
+				"title": "%glm-copilot.command.refreshUsage%"
 			}
 		],
 		"walkthroughs": [
@@ -230,6 +234,17 @@
 					"type": "boolean",
 					"default": false,
 					"markdownDescription": "%glm-copilot.config.debugLogging.description%"
+				},
+				"glm-copilot.usageRefreshIntervalMinutes": {
+					"type": "number",
+					"default": 15,
+					"minimum": 5,
+					"markdownDescription": "%glm-copilot.config.usageRefreshIntervalMinutes.description%"
+				},
+				"glm-copilot.showUsageStatusBar": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "%glm-copilot.config.showUsageStatusBar.description%"
 				}
 			}
 		}

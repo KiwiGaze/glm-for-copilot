@@ -4,6 +4,7 @@
   "glm-copilot.command.clearApiKey": "GLM: Clear API Key",
   "glm-copilot.command.openSettings": "GLM: Open Settings",
   "glm-copilot.command.showLogs": "GLM: Show Logs",
+  "glm-copilot.command.refreshUsage": "GLM: Refresh Usage",
 
   "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "Set up GLM models in GitHub Copilot Chat.",
@@ -40,5 +41,7 @@
   "glm-copilot.config.thinking.enabled.label": "On",
   "glm-copilot.config.thinking.disabled.label": "Off",
 
-  "glm-copilot.config.debugLogging.description": "Enable verbose debug logging to the GLM output channel. Use [`GLM: Show Logs`](command:glm-copilot.showLogs) to view the channel. Logs may include request metadata but not prompt text."
+  "glm-copilot.config.debugLogging.description": "Enable verbose debug logging to the GLM output channel. Use [`GLM: Show Logs`](command:glm-copilot.showLogs) to view the channel. Logs may include request metadata but not prompt text.",
+  "glm-copilot.config.usageRefreshIntervalMinutes.description": "How often (in minutes) to refresh the GLM Coding Plan usage status bar. Minimum 5. The status bar only appears for the Coding Plan on the International (z.ai) region.",
+  "glm-copilot.config.showUsageStatusBar.description": "Show the GLM Coding Plan usage status-bar item. Only applies to Coding Plan keys on the International (z.ai) region."
 }
