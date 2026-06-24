@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { IAuthManager } from '../types';
 import type { IUsageClient } from '../client/usage';
 import type { UsageSnapshot } from '../types';
@@ -9,7 +9,30 @@ const subscriptions: { dispose(): void }[] = [];
 
 vi.mock('vscode', () => ({
 	StatusBarAlignment: { Right: 2 },
-	window: { createStatusBarItem: vi.fn(() => statusBar) },
+	ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 },
+	EventEmitter: class<T> {
+		private listeners: ((e: T) => void)[] = [];
+		get event() {
+			return (listener: (e: T) => void) => {
+				this.listeners.push(listener);
+				return { dispose: () => {
+					this.listeners = this.listeners.filter((l) => l !== listener);
+				} };
+			};
+		}
+		fire(data: T): void {
+			for (const listener of this.listeners) {
+				listener(data);
+			}
+		}
+		dispose(): void {
+			this.listeners = [];
+		}
+	},
+	window: {
+		createStatusBarItem: vi.fn(() => statusBar),
+		activeColorTheme: { kind: 1 },
+	},
 	workspace: {
 		onDidChangeConfiguration: vi.fn(() => ({ dispose: () => undefined })),
 		getConfiguration: vi.fn(() => ({ get: () => undefined })),
@@ -181,6 +204,76 @@ describe('UsageStatusBar cache-stale rendering', () => {
 		vi.advanceTimersByTime(31_000);
 		await bar.refresh();
 		expect(statusBar.text).toContain('42');
+		bar.dispose();
+	});
+});
+
+describe('UsageStatusBar snapshot emitter', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		subscriptions.length = 0;
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-06-23T00:00:00Z'));
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('fires a message on ok render and getSnapshot returns it', async () => {
+		setConfig('coding-plan', 'international');
+		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => okSnapshot()) };
+		const bar = new UsageStatusBar(
+			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
+			makeAuth(true),
+			client,
+		);
+		const seen: unknown[] = [];
+		const sub = bar.onDidChangeSnapshot((m) => seen.push(m));
+		await bar.refresh();
+		expect(seen.length).toBeGreaterThan(0);
+		expect((seen[seen.length - 1] as { status: string }).status).toBe('ok');
+		expect(bar.getSnapshot()?.status).toBe('ok');
+		sub.dispose();
+		bar.dispose();
+	});
+
+	it('fires null when gate fails', async () => {
+		setConfig('standard', 'international');
+		const client: IUsageClient = { fetchSnapshot: vi.fn() };
+		const bar = new UsageStatusBar(
+			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
+			makeAuth(true),
+			client,
+		);
+		const seen: unknown[] = [];
+		const sub = bar.onDidChangeSnapshot((m) => seen.push(m));
+		await bar.refresh();
+		expect(seen).toContain(null);
+		sub.dispose();
+		bar.dispose();
+	});
+
+	it('fires effective message with offline true on cache-fallback network error', async () => {
+		setConfig('coding-plan', 'international');
+		const ok = okSnapshot();
+		const networkError: UsageSnapshot = { status: 'network-error', metrics: [], fetchedAt: Date.now() };
+		const client: IUsageClient = { fetchSnapshot: vi.fn().mockResolvedValueOnce(ok).mockResolvedValueOnce(networkError) };
+		const bar = new UsageStatusBar(
+			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
+			makeAuth(true),
+			client,
+		);
+		const seen: ({ offline: boolean; status: string } | null)[] = [];
+		const sub = bar.onDidChangeSnapshot((m) => seen.push(m as typeof seen[number]));
+		await bar.refresh();
+		seen.length = 0;
+		vi.advanceTimersByTime(31_000);
+		await bar.refresh();
+		const last = seen[seen.length - 1];
+		expect(last?.status).toBe('ok');
+		expect(last?.offline).toBe(true);
+		sub.dispose();
 		bar.dispose();
 	});
 });

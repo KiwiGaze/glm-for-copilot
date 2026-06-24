@@ -5,6 +5,7 @@ import { t } from '../i18n';
 import { logger } from '../logger';
 import type { IAuthManager, UsageSnapshot } from '../types';
 import type { IUsageClient } from '../client/usage';
+import { buildUsageMessage, type UsagePanelStrings } from './usage-detail-html';
 
 /**
  * Status-bar item showing z.ai Coding Plan quota usage. Constructed inside
@@ -25,6 +26,9 @@ export class UsageStatusBar implements vscode.Disposable {
 	private lastOk: UsageSnapshot | null = null;
 	private intervalHandle: ReturnType<typeof setInterval> | null = null;
 	private controller: AbortController | null = null;
+	private readonly _onDidChange = new vscode.EventEmitter<import('./usage-detail-html').UsagePanelMessage | null>();
+	readonly onDidChangeSnapshot = this._onDidChange.event;
+	private lastRendered: import('./usage-detail-html').UsagePanelMessage | null = null;
 
 	constructor(
 		context: vscode.ExtensionContext,
@@ -80,6 +84,8 @@ export class UsageStatusBar implements vscode.Disposable {
 		if (!gate.passed) {
 			this.item.hide();
 			this.stopInterval();
+			this.lastRendered = null;
+			this._onDidChange.fire(null);
 			return;
 		}
 		this.lastFetchAt = Date.now();
@@ -122,14 +128,22 @@ export class UsageStatusBar implements vscode.Disposable {
 	private render(snapshot: UsageSnapshot): void {
 		const now = Date.now();
 		const cacheUsable = this.lastOk && now - this.lastOk.fetchedAt < USAGE_CACHE_STALE_MS;
-		switch (snapshot.status) {
+		let offline = false;
+
+		let effective: UsageSnapshot = snapshot;
+		if ((snapshot.status === 'network-error' || snapshot.status === 'server-error') && cacheUsable) {
+			effective = { ...this.lastOk!, fetchedAt: snapshot.fetchedAt };
+			offline = true;
+		}
+
+		switch (effective.status) {
 			case 'loading':
 				this.item.text = '$(pulse) GLM';
 				this.item.tooltip = t('usage.status.loading');
 				this.item.show();
 				break;
 			case 'ok':
-				this.renderOk(snapshot, /* offlineNote */ false);
+				this.renderOkBar(effective, offline);
 				break;
 			case 'no-data':
 				this.item.text = '$(dash) GLM';
@@ -143,21 +157,18 @@ export class UsageStatusBar implements vscode.Disposable {
 				break;
 			case 'network-error':
 			case 'server-error':
-				if (cacheUsable) {
-					this.renderOk(this.lastOk!, /* offlineNote */ true);
-				} else {
-					this.item.text = snapshot.status === 'network-error' ? '$(plug) GLM' : '$(warning) GLM';
-					this.item.tooltip =
-						snapshot.status === 'network-error'
-							? t('usage.status.network-error')
-							: t('usage.status.server-error');
-					this.item.show();
-				}
+				this.item.text = snapshot.status === 'network-error' ? '$(plug) GLM' : '$(warning) GLM';
+				this.item.tooltip =
+					snapshot.status === 'network-error' ? t('usage.status.network-error') : t('usage.status.server-error');
+				this.item.show();
 				break;
 		}
+
+		this.fireEffective(effective, offline);
 	}
 
-	private renderOk(snapshot: UsageSnapshot, offlineNote: boolean): void {
+	/** Status-bar rendering for the ok state (text + tooltip). Pane gets the structured message via fireEffective. */
+	private renderOkBar(snapshot: UsageSnapshot, offline: boolean): void {
 		const primary = snapshot.metrics.find((m) => m.kind === 'session') ?? snapshot.metrics[0];
 		this.item.text = primary ? t('usage.status.ok.short', String(primary.used)) : '$(sparkle) GLM';
 		const lines: string[] = [];
@@ -181,7 +192,7 @@ export class UsageStatusBar implements vscode.Disposable {
 			}
 		}
 		lines.push(t('usage.tooltip.lastUpdated', new Date(snapshot.fetchedAt).toLocaleTimeString()));
-		if (offlineNote) {
+		if (offline) {
 			lines.push(t('usage.status.network-error'));
 		}
 		this.item.tooltip = lines.join('\n');
@@ -193,6 +204,8 @@ export class UsageStatusBar implements vscode.Disposable {
 		if (!gate.passed) {
 			this.item.hide();
 			this.stopInterval();
+			this.lastRendered = null;
+			this._onDidChange.fire(null);
 			return;
 		}
 		this.stopInterval();
@@ -218,9 +231,58 @@ export class UsageStatusBar implements vscode.Disposable {
 		this.stopInterval();
 		this.controller?.abort();
 		this.item.dispose();
+		this._onDidChange.dispose();
+	}
+
+	/** Latest effective snapshot message (post-cache-fallback), or null before first render / after gate fail. */
+	getSnapshot(): import('./usage-detail-html').UsagePanelMessage | null {
+		return this.lastRendered;
+	}
+
+	/** Build a UsagePanelMessage from the effective state and fire the emitter + cache it. */
+	private fireEffective(snapshot: UsageSnapshot, offline: boolean): void {
+		const message = buildUsageMessage(snapshot, offline, usagePanelStrings(), currentThemeKind());
+		this.lastRendered = message;
+		this._onDidChange.fire(message);
 	}
 }
 
 function isAbortError(error: unknown): boolean {
 	return error instanceof Error && error.name === 'AbortError';
+}
+
+function usagePanelStrings(): UsagePanelStrings {
+	return {
+		title: t('usage.panel.title'),
+		refresh: t('usage.panel.refresh'),
+		setKey: t('usage.panel.setKey'),
+		offline: t('usage.panel.offline'),
+		unavailable: t('usage.panel.unavailable'),
+		lastUpdated: t('usage.panel.lastUpdated'),
+		resetsIn: t('usage.metric.resetsIn'),
+		plan: t('usage.plan.label'),
+		renewsAt: t('usage.plan.renewsAt'),
+		window: {
+			session: t('usage.metric.window.session'),
+			weekly: t('usage.metric.window.weekly'),
+			'web-searches': t('usage.metric.window.webSearches'),
+		},
+		label: {
+			session: t('usage.metric.session'),
+			weekly: t('usage.metric.weekly'),
+			'web-searches': t('usage.metric.webSearches'),
+		},
+		status: {
+			ok: '',
+			loading: t('usage.status.loading'),
+			'no-data': t('usage.status.no-data'),
+			'auth-error': t('usage.status.auth-error'),
+			'network-error': t('usage.status.network-error'),
+			'server-error': t('usage.status.server-error'),
+		},
+	};
+}
+
+function currentThemeKind(): 'dark' | 'light' {
+	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 }
