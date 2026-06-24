@@ -5,7 +5,7 @@ import { t } from '../i18n';
 import { logger } from '../logger';
 import type { IAuthManager, UsageSnapshot } from '../types';
 import type { IUsageClient } from '../client/usage';
-import { buildUsageMessage, type UsagePanelStrings } from './usage-detail-html';
+import { buildUsageMessage, type UsagePanelMessage, type UsagePanelStrings } from './usage-detail-html';
 import { UsageDetailPanel } from './usage-detail-panel';
 
 /**
@@ -27,9 +27,9 @@ export class UsageStatusBar implements vscode.Disposable {
 	private lastOk: UsageSnapshot | null = null;
 	private intervalHandle: ReturnType<typeof setInterval> | null = null;
 	private controller: AbortController | null = null;
-	private readonly _onDidChange = new vscode.EventEmitter<import('./usage-detail-html').UsagePanelMessage | null>();
+	private readonly _onDidChange = new vscode.EventEmitter<UsagePanelMessage | null>();
 	readonly onDidChangeSnapshot = this._onDidChange.event;
-	private lastRendered: import('./usage-detail-html').UsagePanelMessage | null = null;
+	private lastRendered: UsagePanelMessage | null = null;
 
 	constructor(
 		context: vscode.ExtensionContext,
@@ -239,7 +239,7 @@ export class UsageStatusBar implements vscode.Disposable {
 	}
 
 	/** Latest effective snapshot message (post-cache-fallback), or null before first render / after gate fail. */
-	getSnapshot(): import('./usage-detail-html').UsagePanelMessage | null {
+	getSnapshot(): UsagePanelMessage | null {
 		return this.lastRendered;
 	}
 

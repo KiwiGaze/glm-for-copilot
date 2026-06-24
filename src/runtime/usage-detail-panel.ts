@@ -68,13 +68,14 @@ export class UsageDetailPanel {
 
 	private buildHtml(message: UsagePanelMessage | null): string {
 		const nonce = getNonce();
+		const theme = themeKind();
 		const gateFailed = message === null;
 		const strings = message?.strings;
 		const effective: UsagePanelMessage = message ?? {
 			status: 'no-data',
 			metrics: [],
 			offline: false,
-			theme: themeKind(),
+			theme,
 			strings: emptyFallbackStrings(),
 		};
 		const body = gateFailed
@@ -91,7 +92,7 @@ export class UsageDetailPanel {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>${escapeHtml(strings?.title ?? 'GLM Usage')}</title>
 	<style nonce="${nonce}">
-		${themeCss(effective.theme)}
+		${themeCss(theme)}
 	</style>
 </head>
 <body>
@@ -103,16 +104,18 @@ export class UsageDetailPanel {
 	<script nonce="${nonce}">
 		const vscode = acquireVsCodeApi();
 		document.getElementById('refresh').addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
+		const setKeyBtn = document.getElementById('setKey');
+		if (setKeyBtn) setKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'setKey' }));
 		const resetsAtTimes = ${JSON.stringify(resetsAtMap(effective))};
 		if (resetsAtTimes && Object.keys(resetsAtTimes).length > 0) {
 			const fmt = (ms) => {
 				if (ms <= 0) return '0m';
-				const h = Math.floor(ms / 3600000);
+				const d = Math.floor(ms / 86400000);
+				const h = Math.floor((ms % 86400000) / 3600000);
 				const m = Math.round((ms % 3600000) / 60000);
+				if (d > 0) return d + 'd ' + h + 'h';
 				if (h > 0 && m > 0) return h + 'h ' + m + 'm';
 				if (h > 0) return h + 'h';
-				const d = Math.floor(h / 24);
-				if (d > 0) return d + 'd ' + (h % 24) + 'h';
 				return m + 'm';
 			};
 			const tick = () => {
@@ -170,7 +173,7 @@ function renderStatusBody(msg: UsagePanelMessage): string {
 	if (msg.status === 'auth-error') {
 		return `<div class="status-message">
 			<p>${escapeHtml(s.status['auth-error'])}</p>
-			<button id="setKey" class="btn" onclick="var vscode = acquireVsCodeApi(); vscode.postMessage({ type: 'setKey' });">${escapeHtml(s.setKey)}</button>
+			<button id="setKey" class="btn">${escapeHtml(s.setKey)}</button>
 		</div>`;
 	}
 	const text = msg.status === 'no-data' && msg.metrics.length === 0
