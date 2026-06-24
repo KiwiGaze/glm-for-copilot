@@ -34,6 +34,14 @@ GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, and GLM-4.5 Air appear in Copilot Chat's model
 
 Choose between your Z.ai GLM Coding Plan subscription or the pay-as-you-go Standard API. For Standard, pick International (`z.ai`) or Mainland China (`bigmodel.cn`) as your region. See [Coding Plan vs Standard API](#coding-plan-vs-standard-api) below.
 
+### Coding Plan usage tracking
+
+If you're on a GLM Coding Plan (International / `z.ai` region), a status-bar item shows your live quota, and **GLM: Show Usage Details** opens the full panel: session (5-hour rolling) and weekly (7-day rolling) limits, monthly web searches, your plan, and when each resets. It refreshes automatically, and the status-bar item can be hidden if you prefer.
+
+<p align="center">
+  <img src="docs/glm-usage-panel.png" alt="GLM Usage panel showing session, weekly, and web-search quota with reset countdowns for a GLM Coding plan" width="760">
+</p>
+
 ### Custom models
 
 Add your own GLM model ids with the `glm-copilot.customModels` setting — useful for newly released models, fine-tunes, or proxy-hosted models. Each entry is a model id string or an object with optional `name`, `maxInputTokens`, `maxOutputTokens`, `toolCalling`, `vision`, and `thinking`. Custom models always appear in the picker and are sent to your active endpoint.
@@ -41,6 +49,10 @@ Add your own GLM model ids with the `glm-copilot.customModels` setting — usefu
 ### Thinking mode
 
 GLM models support a thinking (step-by-step reasoning) mode, controlled by the `glm-copilot.thinking` setting (`enabled` by default). Set it to `disabled` for faster responses on simple edits. GLM-5.2 adds a per-model **Thinking Effort** picker (None / High / Max) in the Copilot model picker, and the choice persists per model.
+
+<p align="center">
+  <img src="docs/thinking-effort-picker.png" alt="GLM-5.2 Thinking Effort picker in the Copilot model picker, showing None, High (default), and Max options" width="760">
+</p>
 
 ### Secure API key storage
 
@@ -112,6 +124,8 @@ The picker shows only the models available for your selected **API Mode**, so yo
 | `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, vision?, thinking? }`. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
 | `glm-copilot.debugLogging` | `false` | Write verbose debug logs to the GLM output channel. View with **GLM: Show Logs**. |
+| `glm-copilot.usageRefreshIntervalMinutes` | `15` | How often (in minutes) to refresh the Coding Plan usage status bar. Minimum `5`. Coding Plan on the International (z.ai) region only. |
+| `glm-copilot.showUsageStatusBar` | `true` | Show the Coding Plan usage status-bar item. Coding Plan on the International (z.ai) region only. |
 
 ## Coding Plan vs Standard API
 
