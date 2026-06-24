@@ -74,3 +74,18 @@ function toMetricView(this: UsagePanelStrings, metric: UsageMetric): UsageMetric
 		resetsAt: metric.resetsAt,
 	};
 }
+
+/** Bar fill width for a metric, as a clamped 0..100 integer percent. */
+export function metricPercent(view: UsageMetricView): number {
+	const raw = view.isPercent ? view.used : Math.round((view.used / Math.max(view.limit, 1)) * 100);
+	return Math.min(Math.max(raw, 0), 100);
+}
+
+/**
+ * CSS rules that size each bar fill, one `#fill-<kind>{width:N%}` per metric. Injected into the
+ * panel's nonce'd <style> element so the width survives the webview CSP, which strips inline
+ * style="" attributes (a nonce authorizes <style> elements, never style attributes).
+ */
+export function barWidthCss(metrics: UsageMetricView[]): string {
+	return metrics.map((m) => `#fill-${m.kind}{width:${metricPercent(m)}%}`).join('\n');
+}

@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildUsageMessage } from './usage-detail-html';
+import { buildUsageMessage, metricPercent, barWidthCss } from './usage-detail-html';
 import type { UsageSnapshot } from '../types';
-import type { UsagePanelStrings } from './usage-detail-html';
+import type { UsageMetricView, UsagePanelStrings } from './usage-detail-html';
+
+function view(m: Omit<UsageMetricView, 'label' | 'window' | 'resetsAt'>): UsageMetricView {
+	return { label: '', window: '', ...m };
+}
 
 const strings: UsagePanelStrings = {
 	title: 'GLM Usage',
@@ -90,5 +94,42 @@ describe('buildUsageMessage', () => {
 		};
 		const msg = buildUsageMessage(snap, false, strings, 'dark');
 		expect(msg?.metrics[0].resetsAt).toBe(9_999_999);
+	});
+});
+
+describe('metricPercent', () => {
+	it('passes percent metrics through unchanged', () => {
+		expect(metricPercent(view({ kind: 'session', used: 28, limit: 100, isPercent: true }))).toBe(28);
+	});
+
+	it('clamps percent metrics to 0..100', () => {
+		expect(metricPercent(view({ kind: 'session', used: 150, limit: 100, isPercent: true }))).toBe(100);
+		expect(metricPercent(view({ kind: 'weekly', used: -5, limit: 100, isPercent: true }))).toBe(0);
+	});
+
+	it('computes a ratio percent for count metrics', () => {
+		expect(metricPercent(view({ kind: 'web-searches', used: 21, limit: 4000, isPercent: false }))).toBe(1);
+		expect(metricPercent(view({ kind: 'web-searches', used: 1828, limit: 4000, isPercent: false }))).toBe(46);
+	});
+
+	it('avoids divide-by-zero when limit is 0', () => {
+		expect(metricPercent(view({ kind: 'web-searches', used: 5, limit: 0, isPercent: false }))).toBe(100);
+	});
+});
+
+describe('barWidthCss', () => {
+	it('emits one width rule per metric keyed by fill id', () => {
+		const css = barWidthCss([
+			view({ kind: 'session', used: 28, limit: 100, isPercent: true }),
+			view({ kind: 'weekly', used: 20, limit: 100, isPercent: true }),
+			view({ kind: 'web-searches', used: 21, limit: 4000, isPercent: false }),
+		]);
+		expect(css).toContain('#fill-session{width:28%}');
+		expect(css).toContain('#fill-weekly{width:20%}');
+		expect(css).toContain('#fill-web-searches{width:1%}');
+	});
+
+	it('returns an empty string when there are no metrics', () => {
+		expect(barWidthCss([])).toBe('');
 	});
 });

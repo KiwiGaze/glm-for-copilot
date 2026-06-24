@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { t } from '../i18n';
+import { barWidthCss } from './usage-detail-html';
 import type { UsagePanelMessage, UsagePanelStrings } from './usage-detail-html';
 import type { UsageStatusBar } from './usage-bar';
 
@@ -91,6 +92,7 @@ export class UsageDetailPanel {
 	<title>${escapeHtml(effective.strings.title)}</title>
 	<style nonce="${nonce}">
 		${themeCss(theme)}
+		${barWidthCss(effective.metrics)}
 	</style>
 </head>
 <body>
@@ -149,11 +151,10 @@ function renderOkBody(msg: UsagePanelMessage): string {
 		lines.push(`<div class="plan">${escapeHtml(s.renewsAt.replace('{0}', msg.renewsAt))}</div>`);
 	}
 	for (const metric of msg.metrics) {
-		const pct = metric.isPercent ? metric.used : Math.round((metric.used / Math.max(metric.limit, 1)) * 100);
 		const valueLabel = metric.isPercent ? `${metric.used}%` : `${metric.used} / ${metric.limit}`;
 		lines.push(`<div class="metric">
 			<div class="metric-head"><span class="metric-label">${escapeHtml(metric.label)}</span><span class="metric-window">${escapeHtml(metric.window)}</span></div>
-			<div class="bar"><div class="bar-fill" style="width:${Math.min(Math.max(pct, 0), 100)}%"></div></div>
+			<div class="bar"><div class="bar-fill" id="fill-${escapeHtml(metric.kind)}"></div></div>
 			<div class="metric-value">${escapeHtml(valueLabel)}</div>
 			${metric.resetsAt ? `<div id="resets-${escapeHtml(metric.kind)}" class="resets"></div>` : ''}
 		</div>`);
@@ -210,7 +211,7 @@ function themeCss(theme: 'dark' | 'light'): string {
 		.metric-label { font-weight: 600; }
 		.metric-window { color: ${muted}; font-size: 0.85rem; }
 		.bar { background: ${barBg}; border-radius: 2px; height: 8px; overflow: hidden; }
-		.bar-fill { background: ${accent}; height: 100%; transition: width 0.2s; }
+		.bar-fill { background: ${accent}; height: 100%; width: 0; transition: width 0.2s; }
 		.metric-value { margin-top: 4px; font-size: 0.9rem; }
 		.resets { color: ${muted}; font-size: 0.8rem; margin-top: 2px; }
 		.last-updated { color: ${muted}; font-size: 0.8rem; margin-top: 12px; }
