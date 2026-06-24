@@ -6,6 +6,7 @@ import { logger } from '../logger';
 import type { IAuthManager, UsageSnapshot } from '../types';
 import type { IUsageClient } from '../client/usage';
 import { buildUsageMessage, type UsagePanelStrings } from './usage-detail-html';
+import { UsageDetailPanel } from './usage-detail-panel';
 
 /**
  * Status-bar item showing z.ai Coding Plan quota usage. Constructed inside
@@ -38,13 +39,16 @@ export class UsageStatusBar implements vscode.Disposable {
 		this.auth = auth;
 		this.client = client;
 		this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
-		this.item.command = 'glm-copilot.refreshUsage';
+		this.item.command = 'glm-copilot.openUsageDetail';
 		this.item.name = 'GLM Usage';
 
 		context.subscriptions.push(
 			this.item,
 			vscode.commands.registerCommand('glm-copilot.refreshUsage', () => {
 				void this.refresh();
+			}),
+			vscode.commands.registerCommand('glm-copilot.openUsageDetail', () => {
+				UsageDetailPanel.createOrShow(context, this);
 			}),
 			vscode.workspace.onDidChangeConfiguration((event) => {
 				if (event.affectsConfiguration('glm-copilot')) {
