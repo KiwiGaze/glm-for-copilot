@@ -105,6 +105,16 @@ const en: Record<string, string> = {
 	'usage.metric.resetsAt': 'Resets: {0}',
 	'usage.plan.label': 'Plan: {0}',
 	'usage.plan.renewsAt': 'Renews: {0}',
+	'usage.panel.title': 'GLM Usage',
+	'usage.panel.refresh': 'Refresh',
+	'usage.panel.setKey': 'Set API Key',
+	'usage.panel.offline': 'Offline · showing last data',
+	'usage.panel.unavailable': 'Usage unavailable. Open a GLM Coding Plan key to view details.',
+	'usage.metric.window.session': '5h rolling',
+	'usage.metric.window.weekly': '7-day rolling',
+	'usage.metric.window.webSearches': 'Monthly',
+	'usage.metric.resetsIn': 'Resets in {0}',
+	'usage.panel.lastUpdated': 'Last updated: {0}',
 };
 
 const zh: Record<string, string> = {
@@ -187,6 +197,16 @@ const zh: Record<string, string> = {
 	'usage.metric.resetsAt': '重置时间：{0}',
 	'usage.plan.label': '套餐：{0}',
 	'usage.plan.renewsAt': '续期时间：{0}',
+	'usage.panel.title': 'GLM 用量',
+	'usage.panel.refresh': '刷新',
+	'usage.panel.setKey': '设置 API 密钥',
+	'usage.panel.offline': '离线 · 显示上次数据',
+	'usage.panel.unavailable': '暂无用量数据。请打开 GLM 编程计划密钥以查看详情。',
+	'usage.metric.window.session': '5 小时滚动',
+	'usage.metric.window.weekly': '7 天滚动',
+	'usage.metric.window.webSearches': '每月',
+	'usage.metric.resetsIn': '{0} 后重置',
+	'usage.panel.lastUpdated': '最后更新：{0}',
 };
 
 function isZh(): boolean {
