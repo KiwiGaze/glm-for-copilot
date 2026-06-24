@@ -90,6 +90,21 @@ const en: Record<string, string> = {
 
 	// Lifecycle
 	'extension.activateFailed': 'GLM failed to activate. Run "GLM: Show Logs" for details.',
+
+	// Usage status bar
+	'usage.status.loading': 'Refreshing…',
+	'usage.status.ok.short': '$(sparkle) GLM {0}%',
+	'usage.status.no-data': 'No usage data for this key (Coding Plan required).',
+	'usage.status.auth-error': 'API key invalid. Click to set your key.',
+	'usage.status.network-error': 'Usage unavailable (offline). Showing last data.',
+	'usage.status.server-error': 'Usage request failed. Try again later.',
+	'usage.tooltip.lastUpdated': 'Last updated: {0}',
+	'usage.metric.session': 'Session',
+	'usage.metric.weekly': 'Weekly',
+	'usage.metric.webSearches': 'Web Searches',
+	'usage.metric.resetsAt': 'Resets: {0}',
+	'usage.plan.label': 'Plan: {0}',
+	'usage.plan.renewsAt': 'Renews: {0}',
 };
 
 const zh: Record<string, string> = {
@@ -157,6 +172,21 @@ const zh: Record<string, string> = {
 	'error.action.viewDetails': '查看日志',
 
 	'extension.activateFailed': 'GLM 激活失败。请运行“GLM: Show Logs”查看详情。',
+
+	// 用量状态栏
+	'usage.status.loading': '刷新中…',
+	'usage.status.ok.short': '$(sparkle) GLM {0}%',
+	'usage.status.no-data': '此密钥暂无用量数据（需要编程计划）。',
+	'usage.status.auth-error': 'API 密钥无效。点击设置密钥。',
+	'usage.status.network-error': '无法获取用量（离线）。显示上次数据。',
+	'usage.status.server-error': '用量请求失败，请稍后重试。',
+	'usage.tooltip.lastUpdated': '最后更新：{0}',
+	'usage.metric.session': '本次会话',
+	'usage.metric.weekly': '本周',
+	'usage.metric.webSearches': '网页搜索',
+	'usage.metric.resetsAt': '重置时间：{0}',
+	'usage.plan.label': '套餐：{0}',
+	'usage.plan.renewsAt': '续期时间：{0}',
 };
 
 function isZh(): boolean {
