@@ -3,18 +3,18 @@ import * as vscode from 'vscode';
 /** Runtime UI strings (toasts, prompts, errors, picker labels). */
 const en: Record<string, string> = {
 	// Model picker
-	'model.glm-4.7.detail': 'Flagship model for coding and agentic tasks',
+	'model.glm-4.7.detail': 'Legacy model',
 	'model.glm-4.7.tooltip':
-		'GLM-4.7 — 200K context, strong agentic coding and reasoning. Available on Coding Plan and Standard API.',
-	'model.glm-5.detail': 'Next-generation flagship',
-	'model.glm-5.tooltip': 'GLM-5 — 200K context, advanced reasoning and coding. Standard API only.',
-	'model.glm-5.1.detail': 'Latest GLM-5 series flagship',
-	'model.glm-5.1.tooltip': 'GLM-5.1 — latest GLM-5 series, 200K context. Standard API only.',
+		'Legacy model. GLM-4.7 — 200K context, strong agentic coding and reasoning. Available on Coding Plan and Standard API.',
+	'model.glm-5.detail': 'Legacy model',
+	'model.glm-5.tooltip': 'Legacy model. GLM-5 — 200K context, advanced reasoning and coding. Standard API only.',
+	'model.glm-5.1.detail': 'Legacy model',
+	'model.glm-5.1.tooltip': 'Legacy model. GLM-5.1 — latest GLM-5 series, 200K context. Standard API only.',
 	'model.glm-5.2.detail': 'Flagship coding model, 1M context',
 	'model.glm-5.2.tooltip':
 		'GLM-5.2 — flagship GLM coding model, 1M context, selectable thinking effort. Available on Coding Plan and Standard API.',
-	'model.glm-4.5-air.detail': 'Fast and economical',
-	'model.glm-4.5-air.tooltip': 'GLM-4.5 Air — lightweight, fast, and low-cost. Available on both plans.',
+	'model.glm-4.5-air.detail': 'Legacy model',
+	'model.glm-4.5-air.tooltip': 'Legacy model. GLM-4.5 Air — lightweight, fast, and low-cost. Available on both plans.',
 	'model.custom.detail': 'Custom model',
 
 	// Auth
@@ -118,16 +118,16 @@ const en: Record<string, string> = {
 };
 
 const zh: Record<string, string> = {
-	'model.glm-4.7.detail': '面向编程与智能体任务的旗舰模型',
-	'model.glm-4.7.tooltip': 'GLM-4.7 — 20 万上下文，强大的智能体编程与推理。编程计划和标准 API 均可用。',
-	'model.glm-5.detail': '新一代旗舰',
-	'model.glm-5.tooltip': 'GLM-5 — 20 万上下文，先进的推理与编程。仅标准 API 可用。',
-	'model.glm-5.1.detail': '最新 GLM-5 系列旗舰',
-	'model.glm-5.1.tooltip': 'GLM-5.1 — 最新 GLM-5 系列，20 万上下文。仅标准 API 可用。',
+	'model.glm-4.7.detail': '旧版模型',
+	'model.glm-4.7.tooltip': '旧版模型。GLM-4.7 — 20 万上下文，强大的智能体编程与推理。编程计划和标准 API 均可用。',
+	'model.glm-5.detail': '旧版模型',
+	'model.glm-5.tooltip': '旧版模型。GLM-5 — 20 万上下文，先进的推理与编程。仅标准 API 可用。',
+	'model.glm-5.1.detail': '旧版模型',
+	'model.glm-5.1.tooltip': '旧版模型。GLM-5.1 — 最新 GLM-5 系列，20 万上下文。仅标准 API 可用。',
 	'model.glm-5.2.detail': '旗舰编程模型，100 万上下文',
 	'model.glm-5.2.tooltip': 'GLM-5.2 — 旗舰 GLM 编程模型，100 万上下文，可选思考强度。编程计划和标准 API 均可用。',
-	'model.glm-4.5-air.detail': '快速且经济',
-	'model.glm-4.5-air.tooltip': 'GLM-4.5 Air — 轻量、快速、低成本。两种计划均可用。',
+	'model.glm-4.5-air.detail': '旧版模型',
+	'model.glm-4.5-air.tooltip': '旧版模型。GLM-4.5 Air — 轻量、快速、低成本。两种计划均可用。',
 	'model.custom.detail': '自定义模型',
 
 	'auth.apiKeyRequiredDetail': '请运行“GLM: Set API Key”进行配置。',
