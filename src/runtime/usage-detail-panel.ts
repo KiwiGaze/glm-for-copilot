@@ -14,6 +14,7 @@ export class UsageDetailPanel {
 	private readonly panel: vscode.WebviewPanel;
 	private readonly bar: UsageStatusBar;
 	private subscription: vscode.Disposable | undefined;
+	private themeSub: vscode.Disposable | undefined;
 
 	private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, bar: UsageStatusBar) {
 		this.panel = panel;
@@ -23,9 +24,7 @@ export class UsageDetailPanel {
 
 		this.subscription = bar.onDidChangeSnapshot((message) => this.render(message));
 
-		context.subscriptions.push(
-			vscode.window.onDidChangeActiveColorTheme(() => this.render(this.bar.getSnapshot())),
-		);
+		this.themeSub = vscode.window.onDidChangeActiveColorTheme(() => this.render(this.bar.getSnapshot()));
 
 		this.panel.webview.onDidReceiveMessage(
 			(message: { type: string }) => this.onMessage(message),
@@ -70,7 +69,6 @@ export class UsageDetailPanel {
 		const nonce = getNonce();
 		const theme = themeKind();
 		const gateFailed = message === null;
-		const strings = message?.strings;
 		const effective: UsagePanelMessage = message ?? {
 			status: 'no-data',
 			metrics: [],
@@ -90,15 +88,15 @@ export class UsageDetailPanel {
 	<meta charset="UTF-8" />
 	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>${escapeHtml(strings?.title ?? 'GLM Usage')}</title>
+	<title>${escapeHtml(effective.strings.title)}</title>
 	<style nonce="${nonce}">
 		${themeCss(theme)}
 	</style>
 </head>
 <body>
 	<div class="header">
-		<h1>${escapeHtml(strings?.title ?? 'GLM Usage')}</h1>
-		<button id="refresh" class="btn">${escapeHtml(strings?.refresh ?? 'Refresh')}</button>
+		<h1>${escapeHtml(effective.strings.title)}</h1>
+		<button id="refresh" class="btn">${escapeHtml(effective.strings.refresh)}</button>
 	</div>
 	<div id="content">${body}</div>
 	<script nonce="${nonce}">
@@ -122,7 +120,7 @@ export class UsageDetailPanel {
 				const now = Date.now();
 				for (const [key, ts] of Object.entries(resetsAtTimes)) {
 					const el = document.getElementById('resets-' + key);
-					if (el) el.textContent = '${escapeAttr(strings?.resetsIn ?? 'Resets in {0}')}'.replace('{0}', fmt(ts - now));
+					if (el) el.textContent = '${escapeAttr(effective.strings.resetsIn)}'.replace('{0}', fmt(ts - now));
 				}
 			};
 			tick();
@@ -135,6 +133,7 @@ export class UsageDetailPanel {
 
 	dispose(): void {
 		this.subscription?.dispose();
+		this.themeSub?.dispose();
 		this.panel.dispose();
 		UsageDetailPanel.currentPanel = undefined;
 	}
