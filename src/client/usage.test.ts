@@ -8,6 +8,7 @@ vi.mock('vscode', () => ({
 }));
 
 import { UsageClient } from './usage';
+import { USAGE_REQUEST_TIMEOUT_MS } from '../consts';
 
 const SUBSCRIPTION_OK = JSON.stringify({
 	data: [{ productName: 'GLM Coding Max', nextRenewTime: '2026-03-12' }],
@@ -138,6 +139,23 @@ describe('UsageClient.fetchSnapshot', () => {
 		const snap = await client.fetchSnapshot('k');
 		// subscription failure is swallowed; quota failure determines status
 		expect(snap.status).toBe('network-error');
+	});
+
+	it('maps internal request timeout to network-error', async () => {
+		vi.useFakeTimers();
+		try {
+			const abortingFetch = vi.fn((_url: URL | string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+				init?.signal?.addEventListener('abort', () => {
+					reject(new DOMException('The operation was aborted.', 'AbortError'));
+				}, { once: true });
+			})) as unknown as typeof fetch;
+			const client = new UsageClient('https://api.z.ai', abortingFetch);
+			const snapshot = client.fetchSnapshot('k');
+			await vi.advanceTimersByTimeAsync(USAGE_REQUEST_TIMEOUT_MS);
+			await expect(snapshot).resolves.toMatchObject({ status: 'network-error' });
+		} finally {
+			vi.useRealTimers();
+		}
 	});
 
 	it('maps unparsable 2xx body to server-error', async () => {

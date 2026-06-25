@@ -180,6 +180,39 @@ describe('UsageStatusBar debounce', () => {
 		expect(client.fetchSnapshot).toHaveBeenCalledTimes(2);
 		bar.dispose();
 	});
+
+	it('starts a fresh fetch after config changes while a refresh is pending', async () => {
+		setConfig('standard', 'international');
+		const pendingFetches: Array<{ signal?: AbortSignal; resolve: (snapshot: UsageSnapshot) => void }> = [];
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn((_apiKey, signal) => new Promise<UsageSnapshot>((resolve) => {
+				pendingFetches.push({ signal, resolve });
+			})),
+		};
+		const bar = new UsageStatusBar(
+			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
+			makeAuth(true),
+			client,
+		);
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(client.fetchSnapshot).not.toHaveBeenCalled();
+		setConfig('coding-plan', 'international');
+		void bar.refresh();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(client.fetchSnapshot).toHaveBeenCalledTimes(1);
+		const onConfigOrKeyChange = (bar as unknown as { onConfigOrKeyChange(): Promise<void> }).onConfigOrKeyChange.bind(bar);
+		await onConfigOrKeyChange();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(pendingFetches[0].signal?.aborted).toBe(true);
+		expect(client.fetchSnapshot).toHaveBeenCalledTimes(2);
+		pendingFetches[0].resolve(okSnapshot());
+		pendingFetches[1].resolve(okSnapshot());
+		await Promise.resolve();
+		bar.dispose();
+	});
 });
 
 describe('UsageStatusBar cache-stale rendering', () => {

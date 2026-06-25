@@ -76,11 +76,15 @@ export class UsageStatusBar implements vscode.Disposable {
 		if (now - this.lastFetchAt < USAGE_MANUAL_DEBOUNCE_MS) {
 			return Promise.resolve();
 		}
-		this.refreshPromise = this.runRefresh()
+		const refresh = this.runRefresh()
 			.catch((error) => logger.warn('Usage refresh failed', error))
 			.finally(() => {
+				if (this.refreshPromise !== refresh) {
+					return;
+				}
 				this.refreshPromise = null;
 			});
+		this.refreshPromise = refresh;
 		return this.refreshPromise;
 	}
 
@@ -211,6 +215,7 @@ export class UsageStatusBar implements vscode.Disposable {
 	 */
 	private async onConfigOrKeyChange(): Promise<void> {
 		this.controller?.abort();
+		this.refreshPromise = null;
 		this.lastOk = null;
 		const gate = await this.evaluateGate();
 		if (!gate.passed) {

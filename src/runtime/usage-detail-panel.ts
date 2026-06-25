@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { t } from '../i18n';
 import { barWidthCss } from './usage-detail-html';
@@ -233,12 +234,7 @@ function themeKind(): 'dark' | 'light' {
 }
 
 function getNonce(): string {
-	let text = '';
-	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-	for (let i = 0; i < 32; i++) {
-		text += possible.charAt(Math.floor(Math.random() * possible.length));
-	}
-	return text;
+	return randomBytes(16).toString('base64');
 }
 
 function escapeHtml(s: string): string {

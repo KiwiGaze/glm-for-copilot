@@ -103,10 +103,14 @@ export class UsageClient implements IUsageClient {
 
 	private async get(url: string, apiKey: string, signal?: AbortSignal): Promise<Response> {
 		const controller = new AbortController();
+		let didTimeout = false;
 		if (signal?.aborted) {
 			controller.abort();
 		}
-		const timer = setTimeout(() => controller.abort(), USAGE_REQUEST_TIMEOUT_MS);
+		const timer = setTimeout(() => {
+			didTimeout = true;
+			controller.abort();
+		}, USAGE_REQUEST_TIMEOUT_MS);
 		timer.unref?.();
 		const onCallerAbort = () => controller.abort();
 		signal?.addEventListener('abort', onCallerAbort, { once: true });
@@ -119,6 +123,13 @@ export class UsageClient implements IUsageClient {
 				},
 				signal: controller.signal,
 			});
+		} catch (error) {
+			if (didTimeout && isAbortError(error)) {
+				throw Object.assign(new TypeError('fetch timed out'), {
+					cause: { code: 'UND_ERR_CONNECT_TIMEOUT' },
+				});
+			}
+			throw error;
 		} finally {
 			clearTimeout(timer);
 			signal?.removeEventListener('abort', onCallerAbort);
