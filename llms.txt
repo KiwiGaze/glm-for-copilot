@@ -1,8 +1,9 @@
 # GLM Models for GitHub Copilot Chat
 
 > A Visual Studio Code extension that adds GLM (Z.ai / Zhipu) models to the GitHub Copilot Chat
-> model picker using your own API key (BYOK). It registers GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, and
-> GLM-4.5 Air as language models through the native VS Code Language Model Provider API, so they
+> model picker using your own API key (BYOK). It registers GLM-5.2 (the flagship, with a 1M-token
+> context window) plus GLM-5.1, GLM-5, GLM-4.7, and GLM-4.5 Air as language models through the
+> native VS Code Language Model Provider API, so they
 > appear alongside GPT and Claude in the picker you already use — with agent mode, tool calling,
 > and thinking (reasoning) mode all working out of the box.
 

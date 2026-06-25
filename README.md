@@ -9,7 +9,7 @@
   <img src="docs/glm-for-copilot.png" alt="GLM-5.2 answering a question in the GitHub Copilot Chat panel, selected from the Copilot model picker" width="860">
 </p>
 
-**Pick GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, or GLM-4.5 Air from the Copilot Chat model picker — and keep everything else Copilot already gives you.**
+**Pick GLM-5.2 — Zhipu's flagship 1M-context coding model — right from the Copilot Chat model picker, alongside the full GLM lineup (GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). And keep everything else Copilot already gives you.**
 
 Use your own GLM API key (BYOK) to bring Zhipu AI's GLM models into GitHub Copilot Chat. No new sidebar, no new chat UI. Just new models in the picker you already use — with agent mode, tool calling, and thinking mode all working out of the box.
 
@@ -26,9 +26,9 @@ Use your own GLM API key (BYOK) to bring Zhipu AI's GLM models into GitHub Copil
 
 ## Features
 
-### GLM-4.7, GLM-5 series, and GLM-4.5 Air in the model picker
+### GLM-5.2 and the full GLM lineup in the model picker
 
-GLM-4.7, GLM-5, GLM-5.1, GLM-5.2, and GLM-4.5 Air appear in Copilot Chat's model selector. The picker **automatically shows only the models available for your selected API Mode** (some models are exclusive to the Coding Plan or the Standard API — see the [Models](#models) table). Switch models mid-chat without losing history.
+GLM-5.2 — the flagship, with a 1M-token context window — plus GLM-5.1, GLM-5, GLM-4.7, and GLM-4.5 Air appear in Copilot Chat's model selector. The picker **automatically shows only the models available for your selected API Mode** (some models are exclusive to the Coding Plan or the Standard API — see the [Models](#models) table). Switch models mid-chat without losing history.
 
 ### Dual API: Coding Plan and Standard
 
@@ -95,22 +95,22 @@ code --install-extension yijiazhen-qi.glm-for-github-copilot-chat
 1. Open the Command Palette (`Cmd/Ctrl + Shift + P`) and run **GLM: Set API Key**.
 2. Paste your GLM API key. GLM key format is `{id}.{secret}`.
 3. (Optional) Open **GLM: Open Settings** to choose your API mode and region.
-4. Open Copilot Chat, click the model picker, and select a GLM model (e.g. **GLM-4.7** or **GLM-5.2**).
+4. Open Copilot Chat, click the model picker, and select a GLM model (e.g. **GLM-5.2**, the flagship).
 5. Start chatting.
 
 To update or remove the key later, use **GLM: Set API Key** or **GLM: Clear API Key** from the Command Palette.
 
 ## Models
 
-| Model | Context | Max Output | Available on | Tools | Thinking |
-|---|---|---|---|---|---|
-| **GLM-4.7** | 200K | 128K | Coding Plan + Standard | Yes | Yes |
-| **GLM-5** | 200K | 128K | Standard only | Yes | Yes |
-| **GLM-5.1** | 200K | 128K | Standard only | Yes | Yes |
-| **GLM-5.2** | 1M | 128K | Coding Plan + Standard | Yes | Yes (effort) |
-| **GLM-4.5 Air** | 128K | 96K | Coding Plan + Standard | Yes | Yes |
+| Model | Tier | Context | Max Output | Available on | Tools | Thinking |
+|---|---|---|---|---|---|---|
+| **GLM-5.2** | Flagship | 1M | 128K | Coding Plan + Standard | Yes | Yes (effort) |
+| **GLM-5.1** | Legacy | 200K | 128K | Standard only | Yes | Yes |
+| **GLM-5** | Legacy | 200K | 128K | Standard only | Yes | Yes |
+| **GLM-4.7** | Legacy | 200K | 128K | Coding Plan + Standard | Yes | Yes |
+| **GLM-4.5 Air** | Legacy | 128K | 96K | Coding Plan + Standard | Yes | Yes |
 
-The picker shows only the models available for your selected **API Mode**, so you never pick a model your plan can't serve. GLM-5/5.1 are Standard-API only; GLM-4.7, GLM-5.2, and GLM-4.5 Air work on both. Need another model? Add it with [`glm-copilot.customModels`](#settings).
+Lead with the flagship **GLM-5.2** — a 1M-token context window and a per-model Thinking Effort control. The picker shows only the models available for your selected **API Mode**, so you never pick a model your plan can't serve. GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both the Coding Plan and Standard API; GLM-5 and GLM-5.1 are Standard-API only. Need another model? Add it with [`glm-copilot.customModels`](#settings).
 
 ## Settings
 
@@ -181,7 +181,7 @@ Pick **Coding Plan** if you have a [Z.ai GLM Coding Plan](https://z.ai/manage-ap
 
 ### Why don't I see a model I expected in the picker?
 
-The picker shows only the models available for your selected **API Mode**. GLM-5 and GLM-5.1 are Standard-API only; GLM-4.7, GLM-5.2, and GLM-4.5 Air work on both. To force-add any model (including new or proxy-hosted ones), use the [`glm-copilot.customModels`](#settings) setting.
+The picker shows only the models available for your selected **API Mode**. GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-API only. To force-add any model (including new or proxy-hosted ones), use the [`glm-copilot.customModels`](#settings) setting.
 
 ### Does agent mode, tool calling, and MCP work?
 
