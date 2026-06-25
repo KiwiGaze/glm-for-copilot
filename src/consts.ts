@@ -55,6 +55,7 @@ export const USAGE_PATHS = {
 
 export const USAGE_MIN_REFRESH_MINUTES = 5;
 export const USAGE_DEFAULT_REFRESH_MINUTES = 15;
+export const USAGE_MAX_REFRESH_MINUTES = 1440;
 export const USAGE_CACHE_STALE_MS = 60 * 60 * 1000;
 export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
 export const USAGE_REQUEST_TIMEOUT_MS = 10_000;

@@ -5,8 +5,9 @@ import { t } from '../i18n';
 import { logger } from '../logger';
 import type { IAuthManager, UsageSnapshot } from '../types';
 import type { IUsageClient } from '../client/usage';
-import { buildUsageMessage, type UsagePanelMessage, type UsagePanelStrings } from './usage-detail-html';
+import { buildUsageMessage, type UsagePanelMessage } from './usage-detail-html';
 import { UsageDetailPanel } from './usage-detail-panel';
+import { usagePanelStrings } from './usage-strings';
 
 /**
  * Status-bar item showing z.ai Coding Plan quota usage. Constructed inside
@@ -136,7 +137,7 @@ export class UsageStatusBar implements vscode.Disposable {
 
 		let effective: UsageSnapshot = snapshot;
 		if ((snapshot.status === 'network-error' || snapshot.status === 'server-error') && cacheUsable) {
-			effective = { ...this.lastOk!, fetchedAt: snapshot.fetchedAt };
+			effective = { ...this.lastOk! };
 			offline = true;
 		}
 
@@ -197,13 +198,20 @@ export class UsageStatusBar implements vscode.Disposable {
 		}
 		lines.push(t('usage.tooltip.lastUpdated', new Date(snapshot.fetchedAt).toLocaleTimeString()));
 		if (offline) {
-			lines.push(t('usage.status.network-error'));
+			lines.push(t('usage.tooltip.offline'));
 		}
 		this.item.tooltip = lines.join('\n');
 		this.item.show();
 	}
 
+	/**
+	 * Re-evaluate the gate after settings or the stored key change. Aborts any in-flight fetch,
+	 * drops the cached snapshot from the previous key/region, and bypasses the manual debounce so
+	 * the next render reflects the new configuration immediately.
+	 */
 	private async onConfigOrKeyChange(): Promise<void> {
+		this.controller?.abort();
+		this.lastOk = null;
 		const gate = await this.evaluateGate();
 		if (!gate.passed) {
 			this.item.hide();
@@ -214,6 +222,7 @@ export class UsageStatusBar implements vscode.Disposable {
 		}
 		this.stopInterval();
 		this.startInterval();
+		this.lastFetchAt = 0;
 		void this.refresh();
 	}
 
@@ -253,38 +262,6 @@ export class UsageStatusBar implements vscode.Disposable {
 
 function isAbortError(error: unknown): boolean {
 	return error instanceof Error && error.name === 'AbortError';
-}
-
-function usagePanelStrings(): UsagePanelStrings {
-	return {
-		title: t('usage.panel.title'),
-		refresh: t('usage.panel.refresh'),
-		setKey: t('usage.panel.setKey'),
-		offline: t('usage.panel.offline'),
-		unavailable: t('usage.panel.unavailable'),
-		lastUpdated: t('usage.panel.lastUpdated'),
-		resetsIn: t('usage.metric.resetsIn'),
-		plan: t('usage.plan.label'),
-		renewsAt: t('usage.plan.renewsAt'),
-		window: {
-			session: t('usage.metric.window.session'),
-			weekly: t('usage.metric.window.weekly'),
-			'web-searches': t('usage.metric.window.webSearches'),
-		},
-		label: {
-			session: t('usage.metric.session'),
-			weekly: t('usage.metric.weekly'),
-			'web-searches': t('usage.metric.webSearches'),
-		},
-		status: {
-			ok: '',
-			loading: t('usage.status.loading'),
-			'no-data': t('usage.status.no-data'),
-			'auth-error': t('usage.status.auth-error'),
-			'network-error': t('usage.status.network-error'),
-			'server-error': t('usage.status.server-error'),
-		},
-	};
 }
 
 function currentThemeKind(): 'dark' | 'light' {

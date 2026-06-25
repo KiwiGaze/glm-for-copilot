@@ -37,8 +37,11 @@ export class UsageClient implements IUsageClient {
 	) {}
 
 	async fetchSnapshot(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
-		const subscription = await this.fetchSubscription(apiKey, signal);
-		return this.fetchQuota(apiKey, signal, subscription);
+		const [subscription, snapshot] = await Promise.all([
+			this.fetchSubscription(apiKey, signal),
+			this.fetchQuota(apiKey, signal),
+		]);
+		return { ...snapshot, ...subscription };
 	}
 
 	private async fetchSubscription(
@@ -64,11 +67,7 @@ export class UsageClient implements IUsageClient {
 		}
 	}
 
-	private async fetchQuota(
-		apiKey: string,
-		signal: AbortSignal | undefined,
-		subscription: { planName?: string; renewsAt?: string },
-	): Promise<UsageSnapshot> {
+	private async fetchQuota(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
 		const fetchedAt = Date.now();
 		let response: Response;
 		try {
@@ -79,27 +78,27 @@ export class UsageClient implements IUsageClient {
 			if (isAbortError(error)) {
 				throw error;
 			}
-			return this.toErrorSnapshot(error, fetchedAt, subscription);
+			return this.toErrorSnapshot(error, fetchedAt);
 		}
 		if (!response.ok) {
 			const error = await createHttpError(response, { baseUrl: this.host });
-			return this.toErrorSnapshot(error, fetchedAt, subscription);
+			return this.toErrorSnapshot(error, fetchedAt);
 		}
 		let parsed: ZaiQuotaResponse;
 		try {
 			parsed = (await response.json()) as ZaiQuotaResponse;
 		} catch {
-			return { status: 'server-error', metrics: [], fetchedAt, ...subscription };
+			return { status: 'server-error', metrics: [], fetchedAt };
 		}
 		const limits = extractLimits(parsed);
 		if (!Array.isArray(limits) || limits.length === 0) {
-			return { status: 'no-data', metrics: [], fetchedAt, ...subscription };
+			return { status: 'no-data', metrics: [], fetchedAt };
 		}
 		const metrics = buildMetrics(limits);
 		if (metrics.length === 0) {
-			return { status: 'no-data', metrics: [], fetchedAt, ...subscription };
+			return { status: 'no-data', metrics: [], fetchedAt };
 		}
-		return { status: 'ok', metrics, fetchedAt, ...subscription };
+		return { status: 'ok', metrics, fetchedAt };
 	}
 
 	private async get(url: string, apiKey: string, signal?: AbortSignal): Promise<Response> {
@@ -126,11 +125,7 @@ export class UsageClient implements IUsageClient {
 		}
 	}
 
-	private toErrorSnapshot(
-		error: unknown,
-		fetchedAt: number,
-		subscription: { planName?: string; renewsAt?: string },
-	): UsageSnapshot {
+	private toErrorSnapshot(error: unknown, fetchedAt: number): UsageSnapshot {
 		const normalized = normalizeRequestError(error, { baseUrl: this.host });
 		let status: UsageStatus;
 		if (normalized instanceof Error && 'kind' in normalized) {
@@ -148,7 +143,7 @@ export class UsageClient implements IUsageClient {
 		} else {
 			status = 'server-error';
 		}
-		return { status, metrics: [], fetchedAt, ...subscription };
+		return { status, metrics: [], fetchedAt };
 	}
 }
 

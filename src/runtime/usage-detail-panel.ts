@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { t } from '../i18n';
 import { barWidthCss } from './usage-detail-html';
-import type { UsagePanelMessage, UsagePanelStrings } from './usage-detail-html';
+import type { UsagePanelMessage } from './usage-detail-html';
 import type { UsageStatusBar } from './usage-bar';
+import { usagePanelStrings } from './usage-strings';
 
 /**
  * Singleton webview panel showing z.ai Coding Plan quota detail. Clicking the GLM Usage
@@ -16,6 +17,7 @@ export class UsageDetailPanel {
 	private readonly bar: UsageStatusBar;
 	private subscription: vscode.Disposable | undefined;
 	private themeSub: vscode.Disposable | undefined;
+	private lastMessage: UsagePanelMessage | null | undefined;
 
 	private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, bar: UsageStatusBar) {
 		this.panel = panel;
@@ -62,6 +64,10 @@ export class UsageDetailPanel {
 	}
 
 	private render(message: UsagePanelMessage | null): void {
+		if (message?.status === 'loading' && this.lastMessage != null && this.lastMessage.status !== 'loading') {
+			return;
+		}
+		this.lastMessage = message;
 		this.panel.title = t('usage.panel.title');
 		this.panel.webview.html = this.buildHtml(message);
 	}
@@ -75,7 +81,7 @@ export class UsageDetailPanel {
 			metrics: [],
 			offline: false,
 			theme,
-			strings: emptyFallbackStrings(),
+			strings: usagePanelStrings(),
 		};
 		const body = gateFailed
 			? `<div class="status-message"><p>${escapeHtml(effective.strings.unavailable)}</p></div>`
@@ -106,7 +112,7 @@ export class UsageDetailPanel {
 		document.getElementById('refresh').addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
 		const setKeyBtn = document.getElementById('setKey');
 		if (setKeyBtn) setKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'setKey' }));
-		const resetsAtTimes = ${JSON.stringify(resetsAtMap(effective))};
+		const resetsAtTimes = ${jsonForScript(resetsAtMap(effective))};
 		if (resetsAtTimes && Object.keys(resetsAtTimes).length > 0) {
 			const fmt = (ms) => {
 				if (ms <= 0) return '0m';
@@ -122,7 +128,7 @@ export class UsageDetailPanel {
 				const now = Date.now();
 				for (const [key, ts] of Object.entries(resetsAtTimes)) {
 					const el = document.getElementById('resets-' + key);
-					if (el) el.textContent = '${escapeAttr(effective.strings.resetsIn)}'.replace('{0}', fmt(ts - now));
+					if (el) el.textContent = ${jsonForScript(effective.strings.resetsIn)}.replace('{0}', fmt(ts - now));
 				}
 			};
 			tick();
@@ -222,31 +228,8 @@ function themeCss(theme: 'dark' | 'light'): string {
 }
 
 function themeKind(): 'dark' | 'light' {
-	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-}
-
-function emptyFallbackStrings(): UsagePanelStrings {
-	return {
-		title: t('usage.panel.title'),
-		refresh: t('usage.panel.refresh'),
-		setKey: t('usage.panel.setKey'),
-		offline: t('usage.panel.offline'),
-		unavailable: t('usage.panel.unavailable'),
-		lastUpdated: t('usage.panel.lastUpdated'),
-		resetsIn: t('usage.metric.resetsIn'),
-		plan: t('usage.plan.label'),
-		renewsAt: t('usage.plan.renewsAt'),
-		window: { session: '', weekly: '', 'web-searches': '' },
-		label: { session: '', weekly: '', 'web-searches': '' },
-		status: {
-			ok: '',
-			loading: t('usage.status.loading'),
-			'no-data': t('usage.status.no-data'),
-			'auth-error': t('usage.status.auth-error'),
-			'network-error': t('usage.status.network-error'),
-			'server-error': t('usage.status.server-error'),
-		},
-	};
+	const kind = vscode.window.activeColorTheme.kind;
+	return kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
 }
 
 function getNonce(): string {
@@ -262,6 +245,6 @@ function escapeHtml(s: string): string {
 	return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
-function escapeAttr(s: string): string {
-	return escapeHtml(s);
+function jsonForScript(value: unknown): string {
+	return JSON.stringify(value).replace(/</g, '\\u003c');
 }

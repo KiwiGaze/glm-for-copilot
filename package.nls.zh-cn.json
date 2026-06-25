@@ -43,6 +43,6 @@
   "glm-copilot.config.thinking.disabled.label": "关闭",
 
   "glm-copilot.config.debugLogging.description": "启用详细调试日志，输出到 GLM 输出频道。使用 [`GLM: 显示日志`](command:glm-copilot.showLogs) 查看。日志包含请求元数据，但不包含提示词文本。",
-  "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 编程计划用量状态栏的间隔（分钟），最小值为 5。状态栏仅在编程计划 + 国际版（z.ai）区域下显示。",
+  "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 编程计划用量状态栏的间隔（分钟），最小值为 5，最大值为 1440（24 小时）。状态栏仅在编程计划 + 国际版（z.ai）区域下显示。",
   "glm-copilot.config.showUsageStatusBar.description": "是否显示 GLM 编程计划用量状态栏。仅在编程计划 + 国际版（z.ai）区域下生效。"
 }

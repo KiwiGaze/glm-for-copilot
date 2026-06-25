@@ -37,8 +37,8 @@ export interface UsagePanelStrings {
 }
 
 /**
- * Convert a UsageSnapshot (the bar's effective state) into the render-ready JSON payload
- * posted to the detail-panel webview. Returns null when there is no snapshot to show
+ * Convert a UsageSnapshot (the bar's effective state) into the render-ready view model that the
+ * detail panel bakes into its HTML server-side. Returns null when there is no snapshot to show
  * (gate failed while pane is open). Pure: no VS Code dependency.
  */
 export function buildUsageMessage(

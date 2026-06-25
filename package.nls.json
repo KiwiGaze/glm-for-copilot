@@ -43,6 +43,6 @@
   "glm-copilot.config.thinking.disabled.label": "Off",
 
   "glm-copilot.config.debugLogging.description": "Enable verbose debug logging to the GLM output channel. Use [`GLM: Show Logs`](command:glm-copilot.showLogs) to view the channel. Logs may include request metadata but not prompt text.",
-  "glm-copilot.config.usageRefreshIntervalMinutes.description": "How often (in minutes) to refresh the GLM Coding Plan usage status bar. Minimum 5. The status bar only appears for the Coding Plan on the International (z.ai) region.",
+  "glm-copilot.config.usageRefreshIntervalMinutes.description": "How often (in minutes) to refresh the GLM Coding Plan usage status bar. Minimum 5, maximum 1440 (24 hours). The status bar only appears for the Coding Plan on the International (z.ai) region.",
   "glm-copilot.config.showUsageStatusBar.description": "Show the GLM Coding Plan usage status-bar item. Only applies to Coding Plan keys on the International (z.ai) region."
 }
