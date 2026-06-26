@@ -90,7 +90,7 @@ All must pass (CI runs only typecheck + package, but run the full set):
 pnpm run typecheck
 pnpm run lint
 pnpm run test
-pnpm exec vsce package --no-dependencies -o "$TMPDIR/glm-X.Y.Z.vsix"
+pnpm exec vsce package --no-dependencies -o "${TMPDIR:-/tmp}/glm-X.Y.Z.vsix"
 ```
 
 Package the `.vsix` to a scratch path, not the repo (`*.vsix` is gitignored

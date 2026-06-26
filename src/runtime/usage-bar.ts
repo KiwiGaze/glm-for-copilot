@@ -179,7 +179,13 @@ export class UsageStatusBar implements vscode.Disposable {
 	/** Status-bar rendering for the ok state (text + tooltip). Pane gets the structured message via fireEffective. */
 	private renderOkBar(snapshot: UsageSnapshot, offline: boolean): void {
 		const primary = snapshot.metrics.find((m) => m.kind === 'session') ?? snapshot.metrics[0];
-		this.item.text = primary ? t('usage.status.ok.short', String(primary.used)) : '$(sparkle) GLM';
+		if (!primary) {
+			this.item.text = '$(sparkle) GLM';
+		} else if (primary.kind === 'web-searches') {
+			this.item.text = `$(sparkle) GLM ${primary.used} / ${primary.limit}`;
+		} else {
+			this.item.text = t('usage.status.ok.short', String(primary.used));
+		}
 		const lines: string[] = [];
 		if (snapshot.planName) {
 			lines.push(t('usage.plan.label', snapshot.planName));

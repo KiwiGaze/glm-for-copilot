@@ -154,6 +154,26 @@ describe('UsageStatusBar activation gate', () => {
 		expect(statusBar.show).toHaveBeenCalled();
 		bar.dispose();
 	});
+
+	it('renders web-search-only quota as a count', async () => {
+		setConfig('coding-plan', 'international');
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({
+				status: 'ok',
+				fetchedAt: Date.now(),
+				metrics: [{ kind: 'web-searches', used: 1095, limit: 4000 }],
+			})),
+		};
+		const bar = new UsageStatusBar(
+			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
+			makeAuth(true),
+			client,
+		);
+		await bar.refresh();
+		expect(statusBar.text).toBe('$(sparkle) GLM 1095 / 4000');
+		expect(statusBar.text).not.toContain('%');
+		bar.dispose();
+	});
 });
 
 describe('UsageStatusBar debounce', () => {
