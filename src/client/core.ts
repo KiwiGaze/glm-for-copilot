@@ -9,7 +9,8 @@ import type {
 	IGLMClient,
 	StreamCallbacks,
 } from '../types';
-import { formatRequestError, createHttpError, normalizeRequestError } from './errors';
+import { formatRequestError, isAbortError, normalizeRequestError } from './errors';
+import { fetchChatCompletionWithRetry } from './retry';
 
 /**
  * Lightweight SSE-streaming GLM API client.
@@ -19,11 +20,14 @@ export class GLMClient implements IGLMClient {
 	constructor(
 		private baseUrl: string,
 		private apiKey: string,
+		private version: string,
 	) {}
 
 	/**
 	 * Stream a chat completion from the GLM API.
 	 * Parses SSE chunks and dispatches callbacks for content, thinking, and tool calls.
+	 * Transient failures (HTTP 429 / 5xx) are retried with exponential backoff before
+	 * any output is streamed; once streaming begins, the response is committed.
 	 */
 	async streamChatCompletion(
 		request: GLMChatRequest,
@@ -42,19 +46,25 @@ export class GLMClient implements IGLMClient {
 				...request,
 				stream_options: { include_usage: true },
 			});
-			const response = await fetch(`${this.baseUrl}/chat/completions`, {
-				method: 'POST',
+			const response = await fetchChatCompletionWithRetry(
+				`${this.baseUrl}/chat/completions`,
+				{
+					method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					Authorization: `Bearer ${this.apiKey}`,
 					'Accept-Encoding': 'identity',
+					'User-Agent': `glm-copilot/${this.version}`,
 				},
-				body: requestBody,
-				signal: controller.signal,
-			});
-			if (!response.ok) {
-				throw await createHttpError(response, { baseUrl: this.baseUrl });
-			}
+					body: requestBody,
+					signal: controller.signal,
+				},
+				{
+					baseUrl: this.baseUrl,
+					cancellationToken,
+					onRetryBackoff: callbacks.onRetryBackoff,
+				},
+			);
 			if (!response.body) {
 				throw new Error('No response body received');
 			}
@@ -165,8 +175,4 @@ function reportFinalUsage(callbacks: StreamCallbacks, usage: GLMUsage | undefine
 		return;
 	}
 	callbacks.onUsage(usage);
-}
-
-function isAbortError(error: unknown): boolean {
-	return error instanceof Error && error.name === 'AbortError';
 }

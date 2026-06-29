@@ -157,6 +157,10 @@ export class GLMRequestError extends Error {
 	}
 }
 
+export function isAbortError(error: unknown): boolean {
+	return error instanceof Error && error.name === 'AbortError';
+}
+
 /** Build a `GLMRequestError` from a non-OK HTTP response. */
 export async function createHttpError(
 	response: Response,

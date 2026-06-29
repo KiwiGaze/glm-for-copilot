@@ -1,6 +1,7 @@
 .vscode/**
 src/**
 node_modules/**
+.pnpm-store/**
 **/*.ts
 **/*.map
 tsconfig.json
@@ -8,6 +9,7 @@ tsconfig.json
 .npmrc
 .vscodeignore
 .claude/**
+.agents/**
 PLAN.md
 pnpm-lock.yaml
 dist/**
@@ -18,3 +20,4 @@ SECURITY.md
 SUPPORT.md
 llms.txt
 docs/**
+!docs/glm-composer-light.png

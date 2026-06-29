@@ -4,6 +4,7 @@ import { API_KEY_SECRET, USAGE_CACHE_STALE_MS, USAGE_MANUAL_DEBOUNCE_MS } from '
 import { t } from '../i18n';
 import { logger } from '../logger';
 import type { IAuthManager, UsageSnapshot } from '../types';
+import { isAbortError } from '../client/errors';
 import type { IUsageClient } from '../client/usage';
 import { buildUsageMessage, type UsagePanelMessage } from './usage-detail-html';
 import { UsageDetailPanel } from './usage-detail-panel';
@@ -269,10 +270,6 @@ export class UsageStatusBar implements vscode.Disposable {
 		this.lastRendered = message;
 		this._onDidChange.fire(message);
 	}
-}
-
-function isAbortError(error: unknown): boolean {
-	return error instanceof Error && error.name === 'AbortError';
 }
 
 function currentThemeKind(): 'dark' | 'light' {

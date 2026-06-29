@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { createUserFacingError } from '../client';
+import { t } from '../i18n';
 import { logger } from '../logger';
-import type { GLMToolCall, GLMUsage, StreamCallbacks } from '../types';
+import type { GLMToolCall, GLMUsage, RetryBackoffInfo, StreamCallbacks } from '../types';
 import type { PreparedChatRequest } from './request';
 
 const USAGE_DATA_PART_MIME = 'usage';
@@ -36,6 +37,9 @@ export async function streamChatCompletion({
 			updateCharsPerToken(prepared.totalRequestChars, usage, getCharsPerToken, setCharsPerToken);
 			reportUsage(progress, usage);
 		},
+		onRetryBackoff: (info) => {
+			reportRetryBackoff(progress, info);
+		},
 		onDone: () => {
 			/* Resolution is handled by the client's returned promise. */
 		},
@@ -44,6 +48,20 @@ export async function streamChatCompletion({
 		},
 	};
 	await prepared.client.streamChatCompletion(prepared.request, callbacks, token);
+}
+
+function reportRetryBackoff(
+	progress: vscode.Progress<vscode.LanguageModelResponsePart>,
+	info: RetryBackoffInfo,
+): void {
+	const seconds = Math.ceil(info.delayMs / 1000);
+	const key = info.status === 429 ? 'request.retry.rateLimited' : 'request.retry.busy';
+	reportThinking(progress, t(
+		key,
+		String(seconds),
+		String(info.nextAttempt),
+		String(info.maxAttempts),
+	));
 }
 
 function reportThinking(

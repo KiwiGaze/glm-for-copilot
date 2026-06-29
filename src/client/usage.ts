@@ -1,6 +1,6 @@
 import { USAGE_PATHS, USAGE_REQUEST_TIMEOUT_MS } from '../consts';
 import type { UsageMetric, UsageSnapshot, UsageStatus } from '../types';
-import { createHttpError, normalizeRequestError } from './errors';
+import { createHttpError, isAbortError, normalizeRequestError } from './errors';
 
 interface ZaiLimit {
 	type?: string;
@@ -164,10 +164,6 @@ function extractLimits(response: ZaiQuotaResponse): ZaiLimit[] | undefined {
 		return container;
 	}
 	return (container as { limits?: ZaiLimit[] }).limits;
-}
-
-function isAbortError(error: unknown): boolean {
-	return error instanceof Error && error.name === 'AbortError';
 }
 
 /**

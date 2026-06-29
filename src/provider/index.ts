@@ -28,10 +28,13 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 
 	private isActive = true;
 
+	private readonly extensionVersion: string;
+
 	constructor(
 		context: vscode.ExtensionContext,
 		private readonly authManager: IAuthManager,
 	) {
+		this.extensionVersion = context.extension.packageJSON.version as string;
 		context.subscriptions.push(
 			this.onDidChangeLanguageModelChatInformationEmitter,
 			vscode.workspace.onDidChangeConfiguration((e) => {
@@ -73,6 +76,7 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 	): Promise<void> {
 		const prepared = await prepareChatRequest({
 			authManager: this.authManager,
+			extensionVersion: this.extensionVersion,
 			modelInfo: model,
 			messages,
 			options,

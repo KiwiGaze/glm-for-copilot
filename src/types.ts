@@ -153,11 +153,19 @@ export interface GLMStreamChunk {
 
 // ---- Callback + collaborator contracts ----
 
+export interface RetryBackoffInfo {
+	status: number;
+	nextAttempt: number;
+	maxAttempts: number;
+	delayMs: number;
+}
+
 export interface StreamCallbacks {
 	onContent: (content: string) => void;
 	onThinking: (text: string) => void;
 	onToolCall: (toolCall: GLMToolCall) => void;
 	onUsage?: (usage: GLMUsage) => void;
+	onRetryBackoff?: (info: RetryBackoffInfo) => void;
 	onDone: () => void;
 	onError: (error: unknown) => void;
 }

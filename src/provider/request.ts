@@ -16,6 +16,7 @@ import { convertMessages, convertTools, countMessageChars } from './convert';
 
 interface PrepareChatRequestArgs {
 	authManager: IAuthManager;
+	extensionVersion: string;
 	modelInfo: vscode.LanguageModelChatInformation;
 	messages: readonly vscode.LanguageModelChatRequestMessage[];
 	options: vscode.ProvideLanguageModelChatResponseOptions;
@@ -32,6 +33,7 @@ export interface PreparedChatRequest {
 /** Build the GLM client and request body for one Copilot Chat turn. */
 export async function prepareChatRequest({
 	authManager,
+	extensionVersion,
 	modelInfo,
 	messages,
 	options,
@@ -41,7 +43,7 @@ export async function prepareChatRequest({
 		throw new Error(t('auth.notConfigured'));
 	}
 	const baseUrl = resolveBaseUrl();
-	const client = new GLMClient(baseUrl, apiKey);
+	const client = new GLMClient(baseUrl, apiKey, extensionVersion);
 	const modelDef = findModelDefinition(modelInfo.id);
 	const isThinkingModel = modelDef?.capabilities.thinking ?? false;
 	const toolCalling = modelDef?.capabilities.toolCalling ?? false;

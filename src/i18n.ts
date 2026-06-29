@@ -46,6 +46,8 @@ const en: Record<string, string> = {
 	// Request limits
 	'request.toolsLimitExceeded':
 		'GLM supports at most {0} tools in one request, but this request has {1}. Use VS Code Configure Tools to disable tools you rarely use.',
+	'request.retry.rateLimited': 'GLM is rate limited. Retrying in {0}s ({1}/{2}).',
+	'request.retry.busy': 'GLM is busy. Retrying in {0}s ({1}/{2}).',
 
 	// HTTP errors
 	'error.http.400': '[{0}] Invalid request. Check the request parameters.',
@@ -155,6 +157,8 @@ const zh: Record<string, string> = {
 
 	'request.toolsLimitExceeded':
 		'GLM 单次请求最多支持 {0} 个工具，但本次请求包含 {1} 个。请使用 VS Code 的“配置工具”关闭不常用的工具。',
+	'request.retry.rateLimited': 'GLM 请求过于频繁。将在 {0} 秒后重试（{1}/{2}）。',
+	'request.retry.busy': 'GLM 服务繁忙。将在 {0} 秒后重试（{1}/{2}）。',
 
 	'error.http.400': '[{0}] 请求无效。请检查请求参数。',
 	'error.http.401': '[{0}] 身份验证失败。请检查你的 GLM API Key，或为所选套餐创建一个。',
