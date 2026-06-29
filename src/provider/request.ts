@@ -8,6 +8,7 @@ import type {
 	GLMChatRequest,
 	GLMTool,
 	IAuthManager,
+	IGLMClient,
 	ThinkingEffort,
 	ThinkingEffortSpec,
 	ThinkingMode,
@@ -24,7 +25,7 @@ interface PrepareChatRequestArgs {
 }
 
 export interface PreparedChatRequest {
-	client: GLMClient;
+	client: IGLMClient;
 	request: GLMChatRequest;
 	totalRequestChars: number;
 	isThinkingModel: boolean;
