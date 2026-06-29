@@ -45,7 +45,7 @@ export function computeBackoffDelay(
 	retryAfterMs?: number,
 ): number {
 	if (retryAfterMs !== undefined) {
-		return Math.min(retryAfterMs, RETRY_MAX_DELAY_MS);
+		return retryAfterMs;
 	}
 	const base = RETRY_BASE_DELAY_MS * 2 ** attempt;
 	const jittered = base * (0.8 + Math.random() * 0.4);

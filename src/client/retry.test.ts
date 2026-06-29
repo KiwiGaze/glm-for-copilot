@@ -131,9 +131,9 @@ describe('computeBackoffDelay', () => {
 		expect(RETRY_BASE_DELAY_MS).toBe(1000);
 	});
 
-	it('honors the server Retry-After, capped at the max', () => {
+	it('honors the server Retry-After without capping it', () => {
 		expect(computeBackoffDelay(0, 200)).toBe(200);
-		expect(computeBackoffDelay(0, RETRY_MAX_DELAY_MS + 5000)).toBe(RETRY_MAX_DELAY_MS);
+		expect(computeBackoffDelay(0, RETRY_MAX_DELAY_MS + 5000)).toBe(RETRY_MAX_DELAY_MS + 5000);
 	});
 
 	it('grows exponentially with attempt and stays within the jitter band', () => {

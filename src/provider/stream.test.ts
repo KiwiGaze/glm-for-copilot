@@ -1,24 +1,40 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { IGLMClient, StreamCallbacks } from '../types';
 
-const textParts: string[] = [];
-const thinkingParts: string[] = [];
-const dataParts: Array<{ data: Uint8Array; mimeType: string }> = [];
+const vscodeMock = vi.hoisted(() => {
+	const state: {
+		textParts: string[];
+		thinkingParts: string[];
+		dataParts: Array<{ data: Uint8Array; mimeType: string }>;
+		LanguageModelThinkingPart?: new (value: string) => unknown;
+	} = {
+		textParts: [],
+		thinkingParts: [],
+		dataParts: [],
+		LanguageModelThinkingPart: undefined,
+	};
+	state.LanguageModelThinkingPart = class {
+		constructor(public value: string) {
+			state.thinkingParts.push(value);
+		}
+	};
+	return state;
+});
+
+const { textParts, thinkingParts, dataParts } = vscodeMock;
 
 vi.mock('vscode', () => ({
 	LanguageModelTextPart: class {
 		constructor(public value: string) {
-			textParts.push(value);
+			vscodeMock.textParts.push(value);
 		}
 	},
-	LanguageModelThinkingPart: class {
-		constructor(public value: string) {
-			thinkingParts.push(value);
-		}
+	get LanguageModelThinkingPart() {
+		return vscodeMock.LanguageModelThinkingPart;
 	},
 	LanguageModelDataPart: class {
 		constructor(public data: Uint8Array, public mimeType: string) {
-			dataParts.push({ data, mimeType });
+			vscodeMock.dataParts.push({ data, mimeType });
 		}
 	},
 	LanguageModelToolCallPart: class {
@@ -48,7 +64,6 @@ vi.mock('../logger', () => ({
 	logger: { warn: vi.fn() },
 }));
 
-import * as vscode from 'vscode';
 import { streamChatCompletion } from './stream';
 
 const token = { isCancellationRequested: false, onCancellationRequested: vi.fn() };
@@ -117,8 +132,8 @@ describe('streamChatCompletion retry backoff progress', () => {
 	it('skips retry progress when thinking parts are unavailable', async () => {
 		textParts.length = 0;
 		thinkingParts.length = 0;
-		const original = (vscode as { LanguageModelThinkingPart?: unknown }).LanguageModelThinkingPart;
-		(vscode as { LanguageModelThinkingPart?: unknown }).LanguageModelThinkingPart = undefined;
+		const original = vscodeMock.LanguageModelThinkingPart;
+		vscodeMock.LanguageModelThinkingPart = undefined;
 		const client = clientWith((callbacks) => {
 			callbacks.onRetryBackoff?.({
 				status: 429,
@@ -131,7 +146,7 @@ describe('streamChatCompletion retry backoff progress', () => {
 		try {
 			await streamChatCompletion(args(client));
 		} finally {
-			(vscode as { LanguageModelThinkingPart?: unknown }).LanguageModelThinkingPart = original;
+			vscodeMock.LanguageModelThinkingPart = original;
 		}
 
 		expect(thinkingParts).toEqual([]);
