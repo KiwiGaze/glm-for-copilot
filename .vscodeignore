@@ -21,3 +21,4 @@ SUPPORT.md
 llms.txt
 docs/**
 !docs/glm-composer-light.png
+!docs/glm-usage-panel.png
