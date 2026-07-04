@@ -24,7 +24,7 @@ import {
 	computeBackoffDelay,
 } from './retry';
 import { GLMRequestError } from './errors';
-import { RETRY_BASE_DELAY_MS, RETRY_MAX_ATTEMPTS, RETRY_MAX_DELAY_MS } from '../consts';
+import { RETRY_BASE_DELAY_MS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_DELAY_MS } from '../consts';
 
 const URL = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 const INIT: RequestInit = { method: 'POST', headers: {}, body: '{}' };
@@ -188,6 +188,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		const fetchImpl = seqFetch([response(200, 'ok')]);
 		const res = await fetchChatCompletionWithRetry(URL, INIT, {
 			baseUrl: BASE_URL,
+			maxRetries: 3,
 			fetchImpl,
 			onRetryBackoff,
 		});
@@ -202,6 +203,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		const fetchImpl = seqFetch([response(429, 'rate limited'), response(200, 'ok')]);
 		const promise = fetchChatCompletionWithRetry(URL, INIT, {
 			baseUrl: BASE_URL,
+			maxRetries: 3,
 			fetchImpl,
 			onRetryBackoff,
 		});
@@ -213,7 +215,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		expect(onRetryBackoff).toHaveBeenCalledWith({
 			status: 429,
 			nextAttempt: 2,
-			maxAttempts: RETRY_MAX_ATTEMPTS,
+			maxAttempts: 4,
 			delayMs: expect.any(Number),
 		});
 	});
@@ -224,6 +226,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		const fetchImpl = seqFetch([response(503, 'busy'), response(200, 'ok')]);
 		const promise = fetchChatCompletionWithRetry(URL, INIT, {
 			baseUrl: BASE_URL,
+			maxRetries: 3,
 			fetchImpl,
 			onRetryBackoff,
 		});
@@ -241,7 +244,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		const onRetryBackoff = vi.fn();
 		const fetchImpl = seqFetch([response(400, 'bad request')]);
 		await expect(
-			fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, fetchImpl, onRetryBackoff }),
+			fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, maxRetries: 3, fetchImpl, onRetryBackoff }),
 		).rejects.toMatchObject({ name: 'GLMRequestError', status: 400 });
 		expect(fetchImpl).toHaveBeenCalledTimes(1);
 		expect(onRetryBackoff).not.toHaveBeenCalled();
@@ -250,29 +253,32 @@ describe('fetchChatCompletionWithRetry', () => {
 	it('does not retry HTTP 401', async () => {
 		const fetchImpl = seqFetch([response(401, 'unauthorized')]);
 		await expect(
-			fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, fetchImpl }),
+			fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, maxRetries: 3, fetchImpl }),
 		).rejects.toMatchObject({ name: 'GLMRequestError', status: 401 });
 		expect(fetchImpl).toHaveBeenCalledTimes(1);
 	});
 
-	it('throws a GLMRequestError with status 429 after exhausting all attempts', async () => {
+	it('throws a GLMRequestError with status 429 after exhausting maxRetries', async () => {
 		vi.useFakeTimers();
-		expect(RETRY_MAX_ATTEMPTS).toBe(10);
 		const fetchImpl = seqFetch(
-			Array.from({ length: RETRY_MAX_ATTEMPTS }, () => response(429, 'rate limited')),
+			Array.from({ length: 3 }, () => response(429, 'rate limited')),
 		);
-		const promise = fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, fetchImpl });
+		const promise = fetchChatCompletionWithRetry(URL, INIT, {
+			baseUrl: BASE_URL,
+			maxRetries: 2,
+			fetchImpl,
+		});
 		// Attach a handler before flushing timers so the rejection isn't reported as unhandled.
 		promise.catch(() => {});
 		await vi.runAllTimersAsync();
 		await expect(promise).rejects.toMatchObject({ name: 'GLMRequestError', status: 429 });
-		expect(fetchImpl).toHaveBeenCalledTimes(RETRY_MAX_ATTEMPTS);
+		expect(fetchImpl).toHaveBeenCalledTimes(3);
 	});
 
 	it('throws a GLMRequestError instance (not a plain Error)', async () => {
 		const fetchImpl = seqFetch([response(400, 'bad request')]);
 		try {
-			await fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, fetchImpl });
+			await fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, maxRetries: 3, fetchImpl });
 			throw new Error('should have thrown');
 		} catch (error) {
 			expect(error).toBeInstanceOf(GLMRequestError);
@@ -285,7 +291,7 @@ describe('fetchChatCompletionWithRetry', () => {
 			response(429, 'rate limited', { 'retry-after': '2' }),
 			response(200, 'ok'),
 		]);
-		const promise = fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, fetchImpl });
+		const promise = fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, maxRetries: 3, fetchImpl });
 		// 2s must elapse before the second attempt fires.
 		await vi.advanceTimersByTimeAsync(1999);
 		expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -304,6 +310,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		]);
 		const promise = fetchChatCompletionWithRetry(URL, INIT, {
 			baseUrl: BASE_URL,
+			maxRetries: 3,
 			fetchImpl,
 			onRetryBackoff,
 		});
@@ -326,6 +333,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		const fetchImpl = seqFetch([response(429, 'rate limited'), response(200, 'ok')]);
 		const promise = fetchChatCompletionWithRetry(URL, INIT, {
 			baseUrl: BASE_URL,
+			maxRetries: 3,
 			fetchImpl,
 			onRetryBackoff,
 		});
@@ -346,7 +354,7 @@ describe('fetchChatCompletionWithRetry', () => {
 				response(429, 'rate limited'),
 				response(200, 'ok'),
 			]);
-			const promise = fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, fetchImpl });
+			const promise = fetchChatCompletionWithRetry(URL, INIT, { baseUrl: BASE_URL, maxRetries: 3, fetchImpl });
 			// First retry scheduled at 1000ms (base * 2^0).
 			await vi.advanceTimersByTimeAsync(999);
 			expect(fetchImpl).toHaveBeenCalledTimes(1);
@@ -370,6 +378,7 @@ describe('fetchChatCompletionWithRetry', () => {
 		const fetchImpl = seqFetch([response(429, 'rate limited'), response(200, 'ok')]);
 		const promise = fetchChatCompletionWithRetry(URL, INIT, {
 			baseUrl: BASE_URL,
+			maxRetries: 3,
 			cancellationToken: token,
 			fetchImpl,
 		});
@@ -387,10 +396,45 @@ describe('fetchChatCompletionWithRetry', () => {
 		await expect(
 			fetchChatCompletionWithRetry(URL, INIT, {
 				baseUrl: BASE_URL,
+				maxRetries: 3,
 				cancellationToken: token,
 				fetchImpl,
 			}),
 		).rejects.toMatchObject({ name: 'AbortError' });
 		expect(fetchImpl).not.toHaveBeenCalled();
+	});
+
+	it('pins the default retry budget at 3', () => {
+		expect(RETRY_DEFAULT_MAX_RETRIES).toBe(3);
+	});
+
+	it('does not retry when maxRetries is 0 and surfaces the 429 immediately', async () => {
+		const onRetryBackoff = vi.fn();
+		const fetchImpl = seqFetch([response(429, 'rate limited')]);
+		await expect(
+			fetchChatCompletionWithRetry(URL, INIT, {
+				baseUrl: BASE_URL,
+				maxRetries: 0,
+				fetchImpl,
+				onRetryBackoff,
+			}),
+		).rejects.toMatchObject({ name: 'GLMRequestError', status: 429 });
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(onRetryBackoff).not.toHaveBeenCalled();
+	});
+
+	it('treats a non-numeric maxRetries as 0 and fails fast', async () => {
+		const onRetryBackoff = vi.fn();
+		const fetchImpl = seqFetch([response(429, 'rate limited')]);
+		await expect(
+			fetchChatCompletionWithRetry(URL, INIT, {
+				baseUrl: BASE_URL,
+				maxRetries: Number.NaN,
+				fetchImpl,
+				onRetryBackoff,
+			}),
+		).rejects.toMatchObject({ name: 'GLMRequestError', status: 429 });
+		expect(fetchImpl).toHaveBeenCalledTimes(1);
+		expect(onRetryBackoff).not.toHaveBeenCalled();
 	});
 });

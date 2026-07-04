@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { GLMClient } from '../client';
-import { findModelDefinition, getApiModelId, getMaxTokens, getThinking } from '../config';
+import { findModelDefinition, getApiModelId, getMaxRetries, getMaxTokens, getThinking } from '../config';
 import { DEFAULT_TOOLS_LIMIT } from '../consts';
 import { resolveBaseUrl } from '../endpoint';
 import { t } from '../i18n';
@@ -44,7 +44,7 @@ export async function prepareChatRequest({
 		throw new Error(t('auth.notConfigured'));
 	}
 	const baseUrl = resolveBaseUrl();
-	const client = new GLMClient(baseUrl, apiKey, extensionVersion);
+	const client = new GLMClient(baseUrl, apiKey, extensionVersion, getMaxRetries());
 	const modelDef = findModelDefinition(modelInfo.id);
 	const isThinkingModel = modelDef?.capabilities.thinking ?? false;
 	const toolCalling = modelDef?.capabilities.toolCalling ?? false;

@@ -1,5 +1,5 @@
 import type * as vscode from 'vscode';
-import { RETRY_BASE_DELAY_MS, RETRY_MAX_ATTEMPTS, RETRY_MAX_DELAY_MS } from '../consts';
+import { RETRY_BASE_DELAY_MS, RETRY_MAX_DELAY_MS } from '../consts';
 import { logger } from '../logger';
 import type { RetryBackoffInfo } from '../types';
 import { createHttpError, isAbortError, normalizeRequestError } from './errors';
@@ -54,6 +54,8 @@ export function computeBackoffDelay(
 
 export interface FetchWithRetryOptions {
 	baseUrl: string;
+	/** Automatic retries after the initial attempt; 0 disables retrying. */
+	maxRetries: number;
 	cancellationToken?: vscode.CancellationToken;
 	/** Test seam; defaults to the global `fetch`. */
 	fetchImpl?: typeof fetch;
@@ -75,7 +77,7 @@ export async function fetchChatCompletionWithRetry(
 	options: FetchWithRetryOptions,
 ): Promise<Response> {
 	const fetchImpl = options.fetchImpl ?? fetch;
-	const maxAttempts = RETRY_MAX_ATTEMPTS;
+	const maxAttempts = options.maxRetries + 1;
 	const token = options.cancellationToken;
 	for (let attempt = 0; ; attempt++) {
 		if (token?.isCancellationRequested) {

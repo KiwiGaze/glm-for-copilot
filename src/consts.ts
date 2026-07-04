@@ -64,8 +64,6 @@ export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
 export const RETRY_DEFAULT_MAX_RETRIES = 3;
 /** Highest value accepted from the `maxRetries` setting. */
 export const RETRY_MAX_RETRIES_CEILING = 10;
-/** Total attempts (initial + retries) for transient GLM API failures (429 / 5xx). */
-export const RETRY_MAX_ATTEMPTS = 10;
 /** Base delay (ms) for the first retry; doubles each attempt up to RETRY_MAX_DELAY_MS. */
 export const RETRY_BASE_DELAY_MS = 1000;
 /** Upper bound (ms) for a single backoff sleep, even when Retry-After is larger. */

@@ -21,6 +21,7 @@ export class GLMClient implements IGLMClient {
 		private baseUrl: string,
 		private apiKey: string,
 		private version: string,
+		private maxRetries: number,
 	) {}
 
 	/**
@@ -61,6 +62,7 @@ export class GLMClient implements IGLMClient {
 				},
 				{
 					baseUrl: this.baseUrl,
+					maxRetries: this.maxRetries,
 					cancellationToken,
 					onRetryBackoff: callbacks.onRetryBackoff,
 				},
