@@ -2,6 +2,10 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## 0.2.8
+
+- **Configurable retry limit** - new `glm-copilot.maxRetries` setting (0–10) caps automatic retries for transient chat failures (HTTP 429 and 5xx). Set `0` to disable automatic retries and fail fast when rate limited. The default drops from 9 retries (10 total attempts) to 3 (4 total attempts), so peak-hour throttling no longer holds a request through ~1.5 minutes of backoff by default. (#20)
+
 ## 0.2.7
 
 - **Retry with exponential backoff** - chat requests now retry transient GLM API failures (HTTP 429 and 5xx) with exponential backoff and jitter before any output is streamed, honoring the server's `Retry-After` / `retry-after-ms` header when present. Up to 10 total attempts, 1s base delay, 10s cap. This clears rate-limit windows instead of failing fast, so the same API key that works in other GLM clients no longer surfaces "HTTP 429 Too many requests" in Copilot Chat. Non-retryable errors (4xx) and exhausted retries still surface the existing user-facing error. Cancellation during a backoff wait aborts promptly.
