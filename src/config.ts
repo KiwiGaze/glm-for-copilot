@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, MODELS, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
+import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, MODELS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
 import { t } from './i18n';
 import type { ApiMode, CustomModelConfig, GLMModel, Region, ThinkingMode } from './types';
 
@@ -106,4 +106,10 @@ export function getUsageRefreshIntervalMinutes(): number {
 /** Whether the usage status-bar item should be shown. */
 export function getShowUsageStatusBar(): boolean {
 	return cfg().get<boolean>('showUsageStatusBar', true);
+}
+
+/** Automatic retries for transient chat failures (0 disables), clamped to 0–RETRY_MAX_RETRIES_CEILING. */
+export function getMaxRetries(): number {
+	const value = cfg().get<number>('maxRetries', RETRY_DEFAULT_MAX_RETRIES);
+	return Math.min(RETRY_MAX_RETRIES_CEILING, Math.max(0, Math.floor(value)));
 }

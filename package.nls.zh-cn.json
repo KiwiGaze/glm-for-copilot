@@ -35,6 +35,8 @@
 
   "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
 
+  "glm-copilot.config.maxRetries.description": "对瞬时失败（HTTP 429 限流和 5xx 服务器错误）的最大自动重试次数（不含首次请求）。设为 `0` 可关闭自动重试、失败时立即报错。重试采用指数退避，并遵循服务器返回的 `Retry-After`。",
+
   "glm-copilot.config.modelIdOverrides.description": "重映射内置模型的 API ID。键为选择器中显示的模型 ID（如 `glm-4.7`），值为发送给 API 的 ID。适用于使用不同模型名称的代理或区域端点（如 bigmodel.cn）。要添加全新模型，请改用 `customModels`。",
   "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`。自定义模型始终显示（不受 API 模式过滤），并发送到当前生效的端点。",
 

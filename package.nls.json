@@ -35,6 +35,8 @@
 
   "glm-copilot.config.maxTokens.description": "Maximum number of output tokens per request. Set to `0` to use the API default (no explicit limit). Useful for controlling costs.",
 
+  "glm-copilot.config.maxRetries.description": "Maximum automatic retries for transient chat failures (HTTP 429 rate limits and 5xx server errors), not counting the initial attempt. Set to `0` to disable automatic retries and fail fast. Retries wait with exponential backoff and honor the server's `Retry-After` header.",
+
   "glm-copilot.config.modelIdOverrides.description": "Remap a built-in model's API id. Keys are the model id shown in the picker (e.g. `glm-4.7`); values are the id sent to the API. Use this for proxies or regional endpoints (such as bigmodel.cn) that use different model names. To add brand-new models, use `customModels` instead.",
   "glm-copilot.config.customModels.description": "Add your own GLM models to the picker. Each entry is either a model id string (e.g. `\"glm-4.7\"`) or an object such as `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`. Custom models always appear regardless of API Mode and are sent to the active endpoint.",
 

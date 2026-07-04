@@ -165,6 +165,13 @@
 					"minimum": 0,
 					"description": "%glm-copilot.config.maxTokens.description%"
 				},
+				"glm-copilot.maxRetries": {
+					"type": "integer",
+					"default": 3,
+					"minimum": 0,
+					"maximum": 10,
+					"markdownDescription": "%glm-copilot.config.maxRetries.description%"
+				},
 				"glm-copilot.modelIdOverrides": {
 					"type": "object",
 					"default": {},

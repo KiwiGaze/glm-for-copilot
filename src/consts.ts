@@ -60,6 +60,10 @@ export const USAGE_CACHE_STALE_MS = 60 * 60 * 1000;
 export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
 export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
 
+/** Default automatic retries (after the initial attempt) for transient GLM API failures (429 / 5xx). */
+export const RETRY_DEFAULT_MAX_RETRIES = 3;
+/** Highest value accepted from the `maxRetries` setting. */
+export const RETRY_MAX_RETRIES_CEILING = 10;
 /** Total attempts (initial + retries) for transient GLM API failures (429 / 5xx). */
 export const RETRY_MAX_ATTEMPTS = 10;
 /** Base delay (ms) for the first retry; doubles each attempt up to RETRY_MAX_DELAY_MS. */
