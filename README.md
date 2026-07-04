@@ -9,17 +9,17 @@
   <img src="docs/glm-composer-light.png" alt="GLM-5.2 selected in the Copilot Chat composer in light theme, with Thinking Effort set to Max" width="420">
 </p>
 
-Use your own GLM API key (BYOK) to bring Z.AI's GLM models into GitHub Copilot Chat — **GLM-5.2**, the 1M-context flagship built for long-horizon coding, plus a curated GLM lineup (GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). No new sidebar or chat UI: the models appear in the picker you already use, with agent mode, tool calling, and thinking mode available through Copilot's native provider path.
+Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) — **GLM-5.2**, the 1M-context flagship built for long-horizon coding, plus a curated lineup (GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). No new sidebar or chat UI: the models appear in the picker you already use, with agent mode, tool calling, and thinking through Copilot's native provider path.
 
 > **Unofficial, community-built extension.** Not affiliated with, endorsed by, or sponsored by Zhipu AI, Z.AI, GitHub, or Microsoft. "GLM", "Copilot", and "Visual Studio Code" are trademarks of their respective owners. You bring your own GLM API key and pay your own usage.
 
 ## Features
 
-- **GLM-5.2 flagship, right in the picker.** A 1M-token context window, step-by-step thinking that streams live into the chat, and a per-model **Thinking Effort** control (None / High / Max). Choose None for faster simple edits. Switch models mid-chat without losing history.
+- **GLM-5.2 flagship, right in the picker.** A 1M-token context window, step-by-step thinking that streams live into Copilot's native thinking UI, and a per-model **Thinking Effort** control (None / High / Max) — pick None for faster simple edits. Switch models mid-chat without losing history.
 
-- **Powers Copilot up, doesn't replace it.** GLM models appear alongside GPT and Claude. Because the extension plugs into Copilot's native Language Model Provider API, Copilot agent mode and tool calling continue through the normal chat experience.
+- **Powers Copilot up, doesn't replace it.** GLM models appear alongside GPT and Claude. Because the extension uses Copilot's native Language Model Provider API, agent mode and tool calling keep working as usual.
 - **Dual API.** Use your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`). See [Coding Plan vs Standard API](#coding-plan-vs-standard-api).
-- **Live Coding Plan usage.** A status-bar quota readout, **GLM: Refresh Usage** on demand, and a full **GLM: Show Usage Details** panel — session (5-hour) and weekly (7-day) limits, monthly web searches, and reset countdowns. Refreshes automatically; the status-bar item can be hidden. Coding Plan, International region, no `baseUrl` override.
+- **Live Coding Plan usage.** A status-bar quota readout plus a full **GLM: Show Usage Details** panel — session (5-hour) and weekly (7-day) limits, monthly web searches, and reset countdowns. Refreshes automatically; the status-bar item can be hidden. Coding Plan, International region, no `baseUrl` override.
 
 <p align="center">
   <img src="docs/glm-usage-panel.png" alt="GLM Usage panel showing session, weekly, and web-search quota with reset countdowns for a GLM Coding plan" width="760">
@@ -70,7 +70,7 @@ Use **GLM: Set API Key** or **GLM: Clear API Key** to update or remove the key l
 | **GLM-4.7** | Fast coding | 200K | 128K | Coding Plan + Standard | Yes | Yes |
 | **GLM-4.5 Air** | Lightweight | 128K | 96K | Coding Plan + Standard | Yes | Yes |
 
-The picker shows only the models your selected **API Mode** can serve, so you never pick a model your plan can't use. GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-only. Need a model not listed — a newly released one like GLM-5-Turbo, an older one like GLM-4.6, or a proxy-hosted id? Add it with [`glm-copilot.customModels`](#settings).
+The picker shows only the models your selected **API Mode** can serve, so you never pick one your plan can't use. GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-only. Need a model not listed — newer (GLM-5-Turbo), older (GLM-4.6), or proxy-hosted? Add it with [`glm-copilot.customModels`](#settings).
 
 ## Settings
 
