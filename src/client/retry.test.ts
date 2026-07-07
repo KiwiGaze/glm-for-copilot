@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // retry.ts → ./errors → ../endpoint → ../config → 'vscode', and ../logger → ../config + vscode.window.
@@ -24,7 +26,12 @@ import {
 	computeBackoffDelay,
 } from './retry';
 import { GLMRequestError } from './errors';
-import { RETRY_BASE_DELAY_MS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_DELAY_MS } from '../consts';
+import {
+	RETRY_BASE_DELAY_MS,
+	RETRY_DEFAULT_MAX_RETRIES,
+	RETRY_MAX_DELAY_MS,
+	RETRY_MAX_RETRIES_CEILING,
+} from '../consts';
 
 const URL = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 const INIT: RequestInit = { method: 'POST', headers: {}, body: '{}' };
@@ -404,8 +411,17 @@ describe('fetchChatCompletionWithRetry', () => {
 		expect(fetchImpl).not.toHaveBeenCalled();
 	});
 
-	it('pins the default retry budget at 3', () => {
-		expect(RETRY_DEFAULT_MAX_RETRIES).toBe(3);
+	it('keeps the maxRetries setting schema in sync with the retry consts', () => {
+		const pkg = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')) as {
+			contributes: {
+				configuration: {
+					properties: Record<string, { default: number; maximum: number }>;
+				};
+			};
+		};
+		const setting = pkg.contributes.configuration.properties['glm-copilot.maxRetries'];
+		expect(setting.default).toBe(RETRY_DEFAULT_MAX_RETRIES);
+		expect(setting.maximum).toBe(RETRY_MAX_RETRIES_CEILING);
 	});
 
 	it('does not retry when maxRetries is 0 and surfaces the 429 immediately', async () => {
