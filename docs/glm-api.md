@@ -42,7 +42,7 @@ Streaming is OpenAI-compatible server-sent events:
 - Reasoning/thinking deltas: `choices[0].delta.reasoning_content`.
 - Tool-call deltas: `choices[0].delta.tool_calls[]`.
 - Usage: top-level `usage` object, emitted in the final streaming chunk before
-  `data: [DONE]` (no opt-in flag required).
+  `data: [DONE]`. The extension opts in with `stream_options: { include_usage: true }`.
 
 ## Thinking mode
 
