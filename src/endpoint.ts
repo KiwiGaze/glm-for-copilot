@@ -31,13 +31,12 @@ export function resolveKeyPageUrl(): string {
 }
 
 /**
- * Host root for the z.ai usage API. v1: international only — the China host is intentionally
- * absent (unverified). The activation gate in `UsageStatusBar` ensures this is only reached
- * when `region === 'international'`, so a region branch would be dead code today.
+ * Host root for the Coding Plan usage API. Both stations expose the same `/api/biz` (subscription)
+ * and `/api/monitor` (quota) paths and JSON shape; only the host differs.
  *
- * Usage paths (`/api/biz`, `/api/monitor`) are a DIFFERENT root than chat (`/api/paas/v4`),
- * so this does not derive from `resolveBaseUrl()`.
+ * Usage paths are a DIFFERENT root than chat (`/api/paas/v4`), so this does not derive from
+ * `resolveBaseUrl()`. Routing is by region: china → open.bigmodel.cn, else → api.z.ai.
  */
 export function resolveUsageHost(): string {
-	return USAGE_HOSTS.international;
+	return getRegion() === 'china' ? USAGE_HOSTS.china : USAGE_HOSTS.international;
 }

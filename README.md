@@ -19,7 +19,7 @@ Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) �
 
 - **Powers Copilot up, doesn't replace it.** GLM models appear alongside GPT and Claude. Because the extension uses Copilot's native Language Model Provider API, agent mode and tool calling keep working as usual.
 - **Dual API.** Use your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`). See [Coding Plan vs Standard API](#coding-plan-vs-standard-api).
-- **Live Coding Plan usage.** A status-bar quota readout plus a full **GLM: Show Usage Details** panel — session (5-hour) and weekly (7-day) limits, monthly web searches, and reset countdowns. Refreshes automatically; the status-bar item can be hidden. Coding Plan, International region, no `baseUrl` override.
+- **Live Coding Plan usage.** A status-bar quota readout plus a full **GLM: Show Usage Details** panel — session (5-hour) and weekly (7-day) limits, monthly web searches, and reset countdowns. Refreshes automatically; the status-bar item can be hidden. Works on both the International (`z.ai`) and Mainland China (`bigmodel.cn`) Coding Plan endpoints; no `baseUrl` override.
 
 <p align="center">
   <img src="docs/glm-usage-panel.png" alt="GLM Usage panel showing session, weekly, and web-search quota with reset countdowns for a GLM Coding plan" width="760">
@@ -85,8 +85,8 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 | `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, vision?, thinking? }`. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
 | `glm-copilot.debugLogging` | `false` | Write verbose debug logs to the GLM output channel. View with **GLM: Show Logs**. |
-| `glm-copilot.usageRefreshIntervalMinutes` | `15` | How often (in minutes) to refresh the Coding Plan usage status bar. Minimum `5`. Coding Plan on the International (z.ai) region only, with no `baseUrl` override. |
-| `glm-copilot.showUsageStatusBar` | `true` | Show the Coding Plan usage status-bar item. Coding Plan on the International (z.ai) region only, with no `baseUrl` override. |
+| `glm-copilot.usageRefreshIntervalMinutes` | `15` | How often (in minutes) to refresh the Coding Plan usage status bar. Minimum `5`. Coding Plan only (both `z.ai` and `bigmodel.cn` regions), with no `baseUrl` override. |
+| `glm-copilot.showUsageStatusBar` | `true` | Show the Coding Plan usage status-bar item. Coding Plan only (both `z.ai` and `bigmodel.cn` regions), with no `baseUrl` override. |
 
 ## Coding Plan vs Standard API
 

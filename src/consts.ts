@@ -43,9 +43,17 @@ export const EXTERNAL_URLS = {
 	docs: 'https://docs.z.ai',
 } as const;
 
-/** Hosts + paths for the z.ai usage API (v1: international only; China is unverified and gated off). */
+/**
+ * Host roots for the Coding Plan usage API. Both stations expose the SAME paths (see USAGE_PATHS)
+ * and JSON shape (`TOKENS_LIMIT` unit 3/6 + `TIME_LIMIT`); only the host differs. The China host
+ * (open.bigmodel.cn) is verified to share the quota backend with z.ai (cc-switch / cc-zhipu-hud).
+ *
+ * NOTE: the China monitor endpoint authenticates with the RAW API key (no `Bearer` prefix),
+ * whereas z.ai uses `Bearer {key}`. This is handled in `UsageClient` via host detection.
+ */
 export const USAGE_HOSTS = {
 	international: 'https://api.z.ai',
+	china: 'https://open.bigmodel.cn',
 } as const;
 
 export const USAGE_PATHS = {

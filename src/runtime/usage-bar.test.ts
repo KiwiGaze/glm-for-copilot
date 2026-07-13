@@ -88,17 +88,17 @@ describe('UsageStatusBar activation gate', () => {
 		subscriptions.length = 0;
 	});
 
-	it('hides and does not fetch when region is china', async () => {
+	it('fetches and shows when region is china (open.bigmodel.cn coding plan)', async () => {
 		setConfig('coding-plan', 'china');
-		const client: IUsageClient = { fetchSnapshot: vi.fn() };
+		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => okSnapshot()) };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
 			client,
 		);
 		await bar.refresh();
-		expect(statusBar.hide).toHaveBeenCalled();
-		expect(client.fetchSnapshot).not.toHaveBeenCalled();
+		expect(client.fetchSnapshot).toHaveBeenCalledTimes(1);
+		expect(statusBar.show).toHaveBeenCalled();
 		bar.dispose();
 	});
 

@@ -183,3 +183,55 @@ describe('UsageClient.fetchSnapshot', () => {
 		expect(web.resetsAt).toBe(expected);
 	});
 });
+
+describe('UsageClient auth scheme by station', () => {
+	beforeEach(() => vi.useRealTimers());
+
+	it('sends Bearer prefix for the international host (api.z.ai)', async () => {
+		const calls: { authorization?: string }[] = [];
+		const fetchImpl = vi.fn(async (url: URL | string, init?: RequestInit) => {
+			calls.push({ authorization: (init?.headers as Record<string, string>)?.Authorization });
+			return new Response(QUOTA_SESSION_ONLY, { status: 200, headers: { 'Content-Type': 'application/json' } });
+		}) as unknown as typeof fetch;
+		const client = new UsageClient('https://api.z.ai', fetchImpl);
+		await client.fetchSnapshot('my.key');
+		expect(calls.length).toBe(2);
+		for (const call of calls) {
+			expect(call.authorization).toBe('Bearer my.key');
+		}
+	});
+
+	it('sends the RAW key (no Bearer) for the china host (open.bigmodel.cn)', async () => {
+		const calls: { authorization?: string }[] = [];
+		const fetchImpl = vi.fn(async (url: URL | string, init?: RequestInit) => {
+			calls.push({ authorization: (init?.headers as Record<string, string>)?.Authorization });
+			return new Response(QUOTA_SESSION_ONLY, { status: 200, headers: { 'Content-Type': 'application/json' } });
+		}) as unknown as typeof fetch;
+		const client = new UsageClient('https://open.bigmodel.cn', fetchImpl);
+		await client.fetchSnapshot('my.key');
+		expect(calls.length).toBe(2);
+		for (const call of calls) {
+			expect(call.authorization).toBe('my.key');
+			expect(call.authorization).not.toContain('Bearer');
+		}
+	});
+});
+
+describe('UsageClient china station quota', () => {
+	beforeEach(() => vi.useRealTimers());
+
+	it('parses the china quota response identically (session + weekly + web-searches)', async () => {
+		// open.bigmodel.cn returns the same JSON shape as z.ai: TOKENS_LIMIT unit=3 (5h),
+		// unit=6 (weekly), and TIME_LIMIT (web searches).
+		const client = new UsageClient('https://open.bigmodel.cn', mockFetch({
+			'subscription/list': { status: 200, body: SUBSCRIPTION_OK },
+			'quota/limit': { status: 200, body: QUOTA_FULL },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.status).toBe('ok');
+		expect(snap.metrics.map((m) => m.kind)).toEqual(['session', 'weekly', 'web-searches']);
+		expect(snap.metrics[0]).toMatchObject({ used: 10, limit: 100, resetsAt: 1738368000000 });
+		expect(snap.metrics[1]).toMatchObject({ used: 10, limit: 100, resetsAt: 1738972800000 });
+		expect(snap.metrics[2]).toMatchObject({ used: 1095, limit: 4000 });
+	});
+});

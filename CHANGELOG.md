@@ -2,6 +2,10 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## Unreleased (maybe 0.2.9)
+
+- **Coding Plan usage for Mainland China** - the usage status bar and details panel now also work for the Coding Plan on the Mainland China (`bigmodel.cn`) region, not just the International (`z.ai`) region. Session (5-hour) and weekly (7-day, if available) token limits plus monthly web searches are queried from `open.bigmodel.cn/api/monitor/usage/quota/limit`, which shares the same JSON shape as the z.ai endpoint (only the host and auth scheme differ — the China monitor endpoint authenticates with the raw API key without the `Bearer` prefix). The gate no longer hides the bar for the China region.
+
 ## 0.2.8
 
 - **Configurable retry limit** - new `glm-copilot.maxRetries` setting (0–10) caps automatic retries for transient chat failures (HTTP 429 and 5xx). Set `0` to disable automatic retries and fail fast when rate limited. The default drops from 9 retries (10 total attempts) to 3 (4 total attempts), so peak-hour throttling no longer holds a request through ~1.5 minutes of backoff by default. (#20)

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getApiMode, getBaseUrlOverride, getRegion, getShowUsageStatusBar, getUsageRefreshIntervalMinutes } from '../config';
+import { getApiMode, getBaseUrlOverride, getShowUsageStatusBar, getUsageRefreshIntervalMinutes } from '../config';
 import { API_KEY_SECRET, USAGE_CACHE_STALE_MS, USAGE_MANUAL_DEBOUNCE_MS } from '../consts';
 import { t } from '../i18n';
 import { logger } from '../logger';
@@ -11,13 +11,13 @@ import { UsageDetailPanel } from './usage-detail-panel';
 import { usagePanelStrings } from './usage-strings';
 
 /**
- * Status-bar item showing z.ai Coding Plan quota usage. Constructed inside
- * `registerProvider` (where AuthManager lives). Registers its own refresh command.
+ * Status-bar item showing Coding Plan quota usage (both z.ai international and open.bigmodel.cn
+ * china stations). Constructed inside `registerProvider` (where AuthManager lives). Registers its
+ * own refresh command.
  *
- * Gate (§5 of spec): the item shows AND fetches only when apiMode=coding-plan,
- * region=international, no baseUrl override, a key is present, and the user has
- * not opted out. The gate is re-checked inside refresh() — a racing timer tick
- * cannot bypass it.
+ * Gate (§5 of spec): the item shows AND fetches only when apiMode=coding-plan, no baseUrl
+ * override, a key is present, and the user has not opted out. Both regions are supported — the
+ * usage host + auth scheme are resolved per region in `endpoint.ts` / `usage.ts`.
  */
 export class UsageStatusBar implements vscode.Disposable {
 	private readonly item: vscode.StatusBarItem;
@@ -120,9 +120,10 @@ export class UsageStatusBar implements vscode.Disposable {
 	}
 
 	private async evaluateGate(): Promise<{ passed: true; apiKey: string } | { passed: false }> {
+		// Coding Plan supports both regions (z.ai international + open.bigmodel.cn china). The usage
+		// host and auth scheme are resolved per region, so only apiMode/baseUrl/key/opt-in gate here.
 		if (
 			getApiMode() !== 'coding-plan' ||
-			getRegion() !== 'international' ||
 			getBaseUrlOverride() !== '' ||
 			!getShowUsageStatusBar()
 		) {

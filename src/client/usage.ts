@@ -29,6 +29,11 @@ export interface IUsageClient {
 /**
  * z.ai Coding Plan usage client. Two sequential GETs against the (reverse-engineered,
  * undocumented) usage endpoints. Subscription failure is swallowed; quota failure sets status.
+ *
+ * Both stations (z.ai international + open.bigmodel.cn china) share the same paths and JSON
+ * shape; only the host and Authorization header differ. The China monitor endpoint authenticates
+ * with the RAW API key (no `Bearer` prefix), while z.ai uses `Bearer {key}`. We detect the scheme
+ * from the host so the constructor signature stays stable.
  */
 export class UsageClient implements IUsageClient {
 	constructor(
@@ -118,7 +123,7 @@ export class UsageClient implements IUsageClient {
 			return await this.fetchImpl(url, {
 				method: 'GET',
 				headers: {
-					Authorization: `Bearer ${apiKey}`,
+					Authorization: this.authHeader(apiKey),
 					Accept: 'application/json',
 				},
 				signal: controller.signal,
@@ -134,6 +139,15 @@ export class UsageClient implements IUsageClient {
 			clearTimeout(timer);
 			signal?.removeEventListener('abort', onCallerAbort);
 		}
+	}
+
+	/**
+	 * Authorization header value. z.ai (international) monitor uses `Bearer {key}`; the
+	 * open.bigmodel.cn (china) monitor authenticates with the RAW key (no `Bearer` prefix).
+	 * Detected from the host so callers don't need to know the region.
+	 */
+	private authHeader(apiKey: string): string {
+		return this.host.includes('bigmodel.cn') ? apiKey : `Bearer ${apiKey}`;
 	}
 
 	private toErrorSnapshot(error: unknown, fetchedAt: number): UsageSnapshot {
