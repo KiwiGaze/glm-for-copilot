@@ -221,8 +221,6 @@ describe('UsageClient china station quota', () => {
 	beforeEach(() => vi.useRealTimers());
 
 	it('parses the china quota response identically (session + weekly + web-searches)', async () => {
-		// open.bigmodel.cn returns the same JSON shape as z.ai: TOKENS_LIMIT unit=3 (5h),
-		// unit=6 (weekly), and TIME_LIMIT (web searches).
 		const client = new UsageClient('https://open.bigmodel.cn', mockFetch({
 			'subscription/list': { status: 200, body: SUBSCRIPTION_OK },
 			'quota/limit': { status: 200, body: QUOTA_FULL },
@@ -240,7 +238,6 @@ describe('UsageClient region resolution', () => {
 	beforeEach(() => vi.useRealTimers());
 
 	it('re-resolves the host per fetch so region changes are followed', async () => {
-		// The host is read via the resolver on every fetchSnapshot, not captured at construction.
 		let currentHost = 'https://api.z.ai';
 		const seenUrls: string[] = [];
 		const fetchImpl = vi.fn(async (url: URL | string) => {
@@ -256,8 +253,6 @@ describe('UsageClient region resolution', () => {
 	});
 
 	it('auth scheme follows the currently resolved host within one snapshot', async () => {
-		// A single fetchSnapshot resolves the host once and uses it for BOTH sub-requests, so the
-		// auth scheme is consistent (raw key for bigmodel.cn, Bearer otherwise) per snapshot.
 		const authHeaders: string[] = [];
 		const fetchImpl = vi.fn(async (_url: URL | string, init?: RequestInit) => {
 			authHeaders.push((init?.headers as Record<string, string> | undefined)?.Authorization ?? '');
@@ -265,9 +260,9 @@ describe('UsageClient region resolution', () => {
 		}) as unknown as typeof fetch;
 		const client = new UsageClient(() => 'https://open.bigmodel.cn', fetchImpl);
 		await client.fetchSnapshot('raw-key');
-		expect(authHeaders.length).toBe(2); // subscription + quota
+		expect(authHeaders.length).toBe(2);
 		for (const header of authHeaders) {
-			expect(header).toBe('raw-key'); // raw key (no Bearer) because host is bigmodel.cn
+			expect(header).toBe('raw-key');
 		}
 	});
 });

@@ -10,8 +10,6 @@ import { UsageStatusBar } from './usage-bar';
 export async function registerProvider(context: vscode.ExtensionContext): Promise<GLMChatProvider> {
 	const authManager = new AuthManager(context);
 	const provider = new GLMChatProvider(context, authManager);
-	// Pass the resolver (not the resolved value) so UsageClient re-reads glm-copilot.region on every
-	// fetch and the usage bar follows region changes without recreating the client.
 	const usageClient = new UsageClient(resolveUsageHost);
 	const usageBar = new UsageStatusBar(context, authManager, usageClient);
 	context.subscriptions.push(

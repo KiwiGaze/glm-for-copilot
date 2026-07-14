@@ -152,12 +152,6 @@ export class UsageClient implements IUsageClient {
 		}
 	}
 
-	/**
-	 * Authorization header value. z.ai (international) monitor uses `Bearer {key}`; the
-	 * open.bigmodel.cn (china) monitor authenticates with the RAW key (no `Bearer` prefix).
-	 * Detected from the request URL (which carries the region host) so callers don't need to
-	 * know the region.
-	 */
 	private authHeader(url: string, apiKey: string): string {
 		return url.includes('bigmodel.cn') ? apiKey : `Bearer ${apiKey}`;
 	}

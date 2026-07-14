@@ -4,4 +4,3 @@ out/
 dist/
 *.vsix
 .DS_Store
-pnpm-workspace.yaml
