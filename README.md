@@ -101,7 +101,7 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 
 Full API documentation: [docs.z.ai](https://docs.z.ai).
 
-Usage details rely on z.ai usage endpoints that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
+Usage details rely on regional usage endpoints (`api.z.ai` for International, `open.bigmodel.cn` for Mainland China) that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
 
 ## Commands
 

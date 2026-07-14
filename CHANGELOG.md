@@ -2,7 +2,7 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
-## Unreleased (maybe 0.2.9)
+## Unreleased
 
 - **Coding Plan usage for Mainland China** - the usage status bar and details panel now also work for the Coding Plan on the Mainland China (`bigmodel.cn`) region, not just the International (`z.ai`) region. Session (5-hour) and weekly (7-day, if available) token limits plus monthly web searches are queried from `open.bigmodel.cn/api/monitor/usage/quota/limit`, which shares the same JSON shape as the z.ai endpoint (only the host and auth scheme differ — the China monitor endpoint authenticates with the raw API key without the `Bearer` prefix). The gate no longer hides the bar for the China region.
 

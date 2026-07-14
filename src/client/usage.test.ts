@@ -235,3 +235,39 @@ describe('UsageClient china station quota', () => {
 		expect(snap.metrics[2]).toMatchObject({ used: 1095, limit: 4000 });
 	});
 });
+
+describe('UsageClient region resolution', () => {
+	beforeEach(() => vi.useRealTimers());
+
+	it('re-resolves the host per fetch so region changes are followed', async () => {
+		// The host is read via the resolver on every fetchSnapshot, not captured at construction.
+		let currentHost = 'https://api.z.ai';
+		const seenUrls: string[] = [];
+		const fetchImpl = vi.fn(async (url: URL | string) => {
+			seenUrls.push(typeof url === 'string' ? url : url.toString());
+			return new Response(QUOTA_SESSION_ONLY, { status: 200, headers: { 'Content-Type': 'application/json' } });
+		}) as unknown as typeof fetch;
+		const client = new UsageClient(() => currentHost, fetchImpl);
+		await client.fetchSnapshot('k');
+		currentHost = 'https://open.bigmodel.cn';
+		await client.fetchSnapshot('k');
+		expect(seenUrls.some((u) => u.startsWith('https://api.z.ai'))).toBe(true);
+		expect(seenUrls.some((u) => u.startsWith('https://open.bigmodel.cn'))).toBe(true);
+	});
+
+	it('auth scheme follows the currently resolved host within one snapshot', async () => {
+		// A single fetchSnapshot resolves the host once and uses it for BOTH sub-requests, so the
+		// auth scheme is consistent (raw key for bigmodel.cn, Bearer otherwise) per snapshot.
+		const authHeaders: string[] = [];
+		const fetchImpl = vi.fn(async (_url: URL | string, init?: RequestInit) => {
+			authHeaders.push((init?.headers as Record<string, string> | undefined)?.Authorization ?? '');
+			return new Response(QUOTA_SESSION_ONLY, { status: 200, headers: { 'Content-Type': 'application/json' } });
+		}) as unknown as typeof fetch;
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', fetchImpl);
+		await client.fetchSnapshot('raw-key');
+		expect(authHeaders.length).toBe(2); // subscription + quota
+		for (const header of authHeaders) {
+			expect(header).toBe('raw-key'); // raw key (no Bearer) because host is bigmodel.cn
+		}
+	});
+});

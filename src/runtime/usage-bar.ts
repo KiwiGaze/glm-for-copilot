@@ -121,7 +121,9 @@ export class UsageStatusBar implements vscode.Disposable {
 
 	private async evaluateGate(): Promise<{ passed: true; apiKey: string } | { passed: false }> {
 		// Coding Plan supports both regions (z.ai international + open.bigmodel.cn china). The usage
-		// host and auth scheme are resolved per region, so only apiMode/baseUrl/key/opt-in gate here.
+		// host and auth scheme are resolved per region on every fetch (inside UsageClient via the
+		// resolveUsageHost resolver), so a region change is picked up by the next refresh without
+		// recreating the client — only apiMode/baseUrl/key/opt-in are gated here.
 		if (
 			getApiMode() !== 'coding-plan' ||
 			getBaseUrlOverride() !== '' ||
