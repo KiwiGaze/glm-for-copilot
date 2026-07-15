@@ -74,7 +74,7 @@ export interface TokenPackage {
 	model?: string;
 }
 
-/** Cash + token-package balance for the Standard API (China only). */
+/** Cash + token-package balance for the Standard API. */
 export interface UsageBalance {
 	/** Available cash balance (after deducting spent + frozen). */
 	availableCash?: number;
@@ -105,7 +105,7 @@ export interface UsageSnapshot {
 	renewsAt?: string;
 	/** 0..3 metrics, ordered session, weekly, web-searches. Coding Plan only. */
 	metrics: UsageMetric[];
-	/** Cash + token-package balance. Standard API (China) only. */
+	/** Cash + token-package balance. Standard API only. */
 	balance?: UsageBalance;
 	/** Epoch-ms of the fetch that produced this snapshot. */
 	fetchedAt: number;

@@ -59,8 +59,8 @@ export interface IUsageClient {
  * Subscription failure is swallowed; quota/balance failure sets status.
  *
  * Both stations (z.ai international + open.bigmodel.cn china) share the same paths and JSON
- * shapes; only the host and Authorization header differ. The China monitor endpoint authenticates
- * with the RAW API key (no `Bearer` prefix), while z.ai uses `Bearer {key}`. The scheme is detected
+ * shapes; only the host and Authorization header differ. The China (open.bigmodel.cn) monitor
+ * endpoint authenticates with the RAW API key (no `Bearer` prefix), while z.ai uses `Bearer {key}`. The scheme is detected
  * from the request URL (which carries the region host).
  *
  * The host is resolved on EVERY `fetchSnapshot` call (via `resolveHost`) rather than captured at

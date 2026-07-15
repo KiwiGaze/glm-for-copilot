@@ -267,7 +267,7 @@ describe('UsageClient region resolution', () => {
 	});
 });
 
-describe('UsageClient.fetchBalance (Standard API, China only)', () => {
+describe('UsageClient.fetchBalance (Standard API balance)', () => {
 	beforeEach(() => vi.useRealTimers());
 
 	const ACCOUNT_OK = JSON.stringify({
