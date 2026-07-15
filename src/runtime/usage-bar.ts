@@ -11,13 +11,12 @@ import { UsageDetailPanel } from './usage-detail-panel';
 import { usagePanelStrings } from './usage-strings';
 
 /**
- * Status-bar item showing Coding Plan quota usage (both z.ai international and open.bigmodel.cn
- * china stations). Constructed inside `registerProvider` (where AuthManager lives). Registers its
- * own refresh command.
+ * Status-bar item showing GLM usage/balance. Coding Plan shows session/weekly/web-search quota;
+ * Standard API shows cash balance + token packages. Both apiModes × both regions are supported.
+ * Constructed inside `registerProvider` (where AuthManager lives). Registers its own refresh command.
  *
- * Gate (§5 of spec): the item shows AND fetches only when apiMode=coding-plan, no baseUrl
- * override, a key is present, and the user has not opted out. Both regions are supported — the
- * usage host + auth scheme are resolved per region in `endpoint.ts` / `usage.ts`.
+ * Gate: the item shows AND fetches only when no `baseUrl` override is set, a key is present, and the
+ * user has not opted out via `showUsageStatusBar`.
  */
 export class UsageStatusBar implements vscode.Disposable {
 	private readonly item: vscode.StatusBarItem;

@@ -31,11 +31,11 @@ export function resolveKeyPageUrl(): string {
 }
 
 /**
- * Host root for the Coding Plan usage API. Both stations expose the same `/api/biz` (subscription)
- * and `/api/monitor` (quota) paths and JSON shape; only the host differs.
+ * Host root for the usage + balance APIs. Both stations expose the same `/api/biz` and
+ * `/api/monitor` paths and JSON shapes; only the host differs.
  *
- * Usage paths are a DIFFERENT root than chat (`/api/paas/v4`), so this does not derive from
- * `resolveBaseUrl()`. Routing is by region: china → open.bigmodel.cn, else → api.z.ai.
+ * Usage/balance paths are a DIFFERENT root than chat (`/api/paas/v4`), so this does not
+ * derive from `resolveBaseUrl()`. Routing is by region: china → open.bigmodel.cn, else → api.z.ai.
  */
 export function resolveUsageHost(): string {
 	return getRegion() === 'china' ? USAGE_HOSTS.china : USAGE_HOSTS.international;

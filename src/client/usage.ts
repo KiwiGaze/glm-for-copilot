@@ -49,16 +49,17 @@ interface BigmodelTokenAccountsResponse {
 
 export interface IUsageClient {
 	fetchSnapshot(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot>;
-	/** Standard API balance (China only). Returns a snapshot with `balance` populated. */
+	/** Standard API balance. Returns a snapshot with `balance` populated. */
 	fetchBalance(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot>;
 }
 
 /**
- * z.ai Coding Plan usage client. Two sequential GETs against the (reverse-engineered,
- * undocumented) usage endpoints. Subscription failure is swallowed; quota failure sets status.
+ * GLM usage + balance client. `fetchSnapshot` fetches Coding Plan quota (subscription + quota GETs);
+ * `fetchBalance` fetches Standard API cash balance + token packages (two parallel GETs).
+ * Subscription failure is swallowed; quota/balance failure sets status.
  *
  * Both stations (z.ai international + open.bigmodel.cn china) share the same paths and JSON
- * shape; only the host and Authorization header differ. The China monitor endpoint authenticates
+ * shapes; only the host and Authorization header differ. The China monitor endpoint authenticates
  * with the RAW API key (no `Bearer` prefix), while z.ai uses `Bearer {key}`. The scheme is detected
  * from the request URL (which carries the region host).
  *
@@ -87,9 +88,9 @@ export class UsageClient implements IUsageClient {
 	}
 
 	/**
-	 * Fetch Standard API balance (China only). Two parallel GETs against the bigmodel.cn biz
-	 * gateway: a cash account report and a token resource-package list. Either may fail
-	 * independently — the account report is the primary signal; token packages are supplementary.
+	 * Fetch Standard API balance. Two parallel GETs against the biz gateway: a cash account report
+	 * and a token resource-package list. Either may fail independently — the account report is the
+	 * primary signal; token packages are supplementary.
 	 */
 	async fetchBalance(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
 		const host = this.resolveHost();
