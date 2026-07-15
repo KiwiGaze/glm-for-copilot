@@ -51,7 +51,7 @@ const cfg = vi.hoisted(() => ({
 	region: 'international' as 'international' | 'china',
 	baseUrl: '',
 	show: true,
-	interval: 15,
+	interval: 5,
 }));
 vi.mock('../config', () => ({
 	getApiMode: () => cfg.mode,
@@ -81,7 +81,7 @@ function setConfig(mode: 'coding-plan' | 'standard', region: 'international' | '
 	cfg.region = region;
 	cfg.baseUrl = baseUrl;
 	cfg.show = true;
-	cfg.interval = 15;
+	cfg.interval = 5;
 }
 
 describe('UsageStatusBar activation gate', () => {

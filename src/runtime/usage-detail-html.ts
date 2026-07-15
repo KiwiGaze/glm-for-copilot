@@ -32,6 +32,8 @@ export interface UsagePanelMessage {
 	renewsAt?: string;
 	metrics: UsageMetricView[];
 	balance?: UsageBalanceView;
+	/** Currency symbol for balance amounts: `$` (international) or `¥` (china). */
+	currency: string;
 	lastUpdated?: number;
 	offline: boolean;
 	theme: 'dark' | 'light';
@@ -70,6 +72,7 @@ export function buildUsageMessage(
 	offline: boolean,
 	strings: UsagePanelStrings,
 	theme: 'dark' | 'light',
+	currency: string,
 ): UsagePanelMessage | null {
 	if (snapshot === null) {
 		return null;
@@ -80,6 +83,7 @@ export function buildUsageMessage(
 		renewsAt: snapshot.renewsAt,
 		metrics: snapshot.metrics.map(toMetricView, strings),
 		balance: snapshot.balance ? toBalanceView(snapshot.balance) : undefined,
+		currency,
 		lastUpdated: snapshot.status === 'ok' ? snapshot.fetchedAt : undefined,
 		offline,
 		theme,

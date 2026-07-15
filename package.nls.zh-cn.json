@@ -45,6 +45,6 @@
   "glm-copilot.config.thinking.disabled.label": "关闭",
 
   "glm-copilot.config.debugLogging.description": "启用详细调试日志，输出到 GLM 输出频道。使用 [`GLM: 显示日志`](command:glm-copilot.showLogs) 查看。日志包含请求元数据，但不包含提示词文本。",
-  "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔（分钟），最小值为 5，最大值为 1440（24 小时）。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均可显示。仅在未配置 baseUrl 覆盖时生效。",
+  "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔（分钟），最小值为 1，最大值为 1440（24 小时）。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均可显示。仅在未配置 baseUrl 覆盖时生效。",
   "glm-copilot.config.showUsageStatusBar.description": "是否显示 GLM 用量状态栏。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均生效。仅在未配置 baseUrl 覆盖时可用。"
 }

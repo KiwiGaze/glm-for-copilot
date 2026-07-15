@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getApiMode, getBaseUrlOverride, getShowUsageStatusBar, getUsageRefreshIntervalMinutes } from '../config';
+import { getApiMode, getBaseUrlOverride, getRegion, getShowUsageStatusBar, getUsageRefreshIntervalMinutes } from '../config';
 import { API_KEY_SECRET, USAGE_CACHE_STALE_MS, USAGE_MANUAL_DEBOUNCE_MS } from '../consts';
 import { t } from '../i18n';
 import { logger } from '../logger';
@@ -240,11 +240,12 @@ export class UsageStatusBar implements vscode.Disposable {
 		const cash = bal.availableCash;
 		const packages = bal.tokenPackages;
 		const totalTokens = packages.reduce((sum, p) => sum + p.remainingTokens * p.magnitude, 0);
+		const currency = getRegion() === 'china' ? '¥' : '$';
 
 		if (cash !== undefined && totalTokens > 0) {
-			this.item.text = `$(wallet) GLM ¥${formatAmount(cash)} · ${formatTokens(totalTokens)}`;
+			this.item.text = `$(wallet) GLM ${currency}${formatAmount(cash)} · ${formatTokens(totalTokens)}`;
 		} else if (cash !== undefined) {
-			this.item.text = `$(wallet) GLM ¥${formatAmount(cash)}`;
+			this.item.text = `$(wallet) GLM ${currency}${formatAmount(cash)}`;
 		} else if (totalTokens > 0) {
 			this.item.text = `$(sparkle) GLM ${formatTokens(totalTokens)}`;
 		} else {
@@ -253,19 +254,19 @@ export class UsageStatusBar implements vscode.Disposable {
 
 		const lines: string[] = [];
 		if (cash !== undefined) {
-			lines.push(`${t('usage.balance.available')}: ¥${formatAmount(cash)}`);
+			lines.push(`${t('usage.balance.available')}: ${currency}${formatAmount(cash)}`);
 		}
 		if (bal.totalRecharged !== undefined) {
-			lines.push(`${t('usage.balance.recharged')}: ¥${formatAmount(bal.totalRecharged)}`);
+			lines.push(`${t('usage.balance.recharged')}: ${currency}${formatAmount(bal.totalRecharged)}`);
 		}
 		if (bal.giftedAmount !== undefined && bal.giftedAmount > 0) {
-			lines.push(`${t('usage.balance.gifted')}: ¥${formatAmount(bal.giftedAmount)}`);
+			lines.push(`${t('usage.balance.gifted')}: ${currency}${formatAmount(bal.giftedAmount)}`);
 		}
 		if (bal.totalSpent !== undefined) {
-			lines.push(`${t('usage.balance.spent')}: ¥${formatAmount(bal.totalSpent)}`);
+			lines.push(`${t('usage.balance.spent')}: ${currency}${formatAmount(bal.totalSpent)}`);
 		}
 		if (bal.frozenAmount !== undefined && bal.frozenAmount > 0) {
-			lines.push(`${t('usage.balance.frozen')}: ¥${formatAmount(bal.frozenAmount)}`);
+			lines.push(`${t('usage.balance.frozen')}: ${currency}${formatAmount(bal.frozenAmount)}`);
 		}
 		for (const pkg of packages) {
 			const tokens = pkg.remainingTokens * pkg.magnitude;
@@ -335,7 +336,8 @@ export class UsageStatusBar implements vscode.Disposable {
 
 	/** Build a UsagePanelMessage from the effective state and fire the emitter + cache it. */
 	private fireEffective(snapshot: UsageSnapshot, offline: boolean): void {
-		const message = buildUsageMessage(snapshot, offline, usagePanelStrings(), currentThemeKind());
+		const currency = getRegion() === 'china' ? '¥' : '$';
+		const message = buildUsageMessage(snapshot, offline, usagePanelStrings(), currentThemeKind(), currency);
 		this.lastRendered = message;
 		this._onDidChange.fire(message);
 	}

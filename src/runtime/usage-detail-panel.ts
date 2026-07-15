@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { t } from '../i18n';
+import { getRegion } from '../config';
 import { barWidthCss } from './usage-detail-html';
 import type { UsagePanelMessage } from './usage-detail-html';
 import type { UsageStatusBar } from './usage-bar';
@@ -80,6 +81,7 @@ export class UsageDetailPanel {
 		const effective: UsagePanelMessage = message ?? {
 			status: 'no-data',
 			metrics: [],
+			currency: getRegion() === 'china' ? '¥' : '$',
 			offline: false,
 			theme,
 			strings: usagePanelStrings(),
@@ -181,21 +183,22 @@ function renderOkBody(msg: UsagePanelMessage): string {
 function renderBalanceBody(msg: UsagePanelMessage): string {
 	const s = msg.strings;
 	const b = msg.balance!;
+	const c = msg.currency;
 	const lines: string[] = [`<div class="balance-section"><h2>${escapeHtml(s.balanceSection)}</h2>`];
 	if (b.availableCash !== undefined) {
-		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceAvailable)}</span><span class="balance-value">¥${escapeHtml(b.availableCash)}</span></div>`);
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceAvailable)}</span><span class="balance-value">${escapeHtml(c)}${escapeHtml(b.availableCash)}</span></div>`);
 	}
 	if (b.totalRecharged !== undefined) {
-		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceRecharged)}</span><span class="balance-value">¥${escapeHtml(b.totalRecharged)}</span></div>`);
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceRecharged)}</span><span class="balance-value">${escapeHtml(c)}${escapeHtml(b.totalRecharged)}</span></div>`);
 	}
 	if (b.giftedAmount !== undefined && b.giftedAmount !== '0') {
-		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceGifted)}</span><span class="balance-value">¥${escapeHtml(b.giftedAmount)}</span></div>`);
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceGifted)}</span><span class="balance-value">${escapeHtml(c)}${escapeHtml(b.giftedAmount)}</span></div>`);
 	}
 	if (b.totalSpent !== undefined) {
-		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceSpent)}</span><span class="balance-value">¥${escapeHtml(b.totalSpent)}</span></div>`);
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceSpent)}</span><span class="balance-value">${escapeHtml(c)}${escapeHtml(b.totalSpent)}</span></div>`);
 	}
 	if (b.frozenAmount !== undefined && b.frozenAmount !== '0') {
-		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceFrozen)}</span><span class="balance-value">¥${escapeHtml(b.frozenAmount)}</span></div>`);
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceFrozen)}</span><span class="balance-value">${escapeHtml(c)}${escapeHtml(b.frozenAmount)}</span></div>`);
 	}
 	if (b.tokenPackages.length > 0) {
 		lines.push(`<div class="balance-packages">${escapeHtml(s.balancePackages)}</div>`);

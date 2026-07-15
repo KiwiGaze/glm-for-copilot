@@ -250,8 +250,8 @@
 				},
 				"glm-copilot.usageRefreshIntervalMinutes": {
 					"type": "number",
-					"default": 15,
-					"minimum": 5,
+					"default": 5,
+					"minimum": 1,
 					"maximum": 1440,
 					"markdownDescription": "%glm-copilot.config.usageRefreshIntervalMinutes.description%"
 				},
