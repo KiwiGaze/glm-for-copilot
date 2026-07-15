@@ -28,7 +28,7 @@ const strings: UsagePanelStrings = {
 
 describe('buildUsageMessage', () => {
 	it('returns null for gate-failed (no snapshot)', () => {
-		expect(buildUsageMessage(null, false, strings, 'dark')).toBeNull();
+		expect(buildUsageMessage(null, false, strings, 'dark', '$')).toBeNull();
 	});
 
 	it('maps ok with all three metrics, ordered session/weekly/web-searches', () => {
@@ -40,7 +40,7 @@ describe('buildUsageMessage', () => {
 				{ kind: 'web-searches', used: 1828, limit: 4000 },
 			],
 		};
-		const msg = buildUsageMessage(snap, false, strings, 'dark');
+		const msg = buildUsageMessage(snap, false, strings, 'dark', '$');
 		expect(msg?.status).toBe('ok');
 		expect(msg?.planName).toBe('GLM Coding Max');
 		expect(msg?.renewsAt).toBe('2026-03-12');
@@ -57,7 +57,7 @@ describe('buildUsageMessage', () => {
 		const snap: UsageSnapshot = {
 			status: 'ok', fetchedAt: 1, metrics: [{ kind: 'session', used: 42, limit: 100 }],
 		};
-		const msg = buildUsageMessage(snap, false, strings, 'dark');
+		const msg = buildUsageMessage(snap, false, strings, 'dark', '$');
 		expect(msg?.metrics).toHaveLength(1);
 		expect(msg?.metrics[0].kind).toBe('session');
 	});
@@ -66,13 +66,13 @@ describe('buildUsageMessage', () => {
 		const snap: UsageSnapshot = {
 			status: 'ok', fetchedAt: 1, metrics: [{ kind: 'session', used: 42, limit: 100 }],
 		};
-		const msg = buildUsageMessage(snap, true, strings, 'dark');
+		const msg = buildUsageMessage(snap, true, strings, 'dark', '$');
 		expect(msg?.offline).toBe(true);
 	});
 
 	it('maps loading status with empty metrics and no lastUpdated', () => {
 		const snap: UsageSnapshot = { status: 'loading', fetchedAt: 1, metrics: [] };
-		const msg = buildUsageMessage(snap, false, strings, 'dark');
+		const msg = buildUsageMessage(snap, false, strings, 'dark', '$');
 		expect(msg?.status).toBe('loading');
 		expect(msg?.metrics).toEqual([]);
 		expect(msg?.lastUpdated).toBeUndefined();
@@ -81,7 +81,7 @@ describe('buildUsageMessage', () => {
 	it('maps error statuses with empty metrics', () => {
 		for (const status of ['no-data', 'auth-error', 'network-error', 'server-error'] as const) {
 			const snap: UsageSnapshot = { status, fetchedAt: 1, metrics: [] };
-			const msg = buildUsageMessage(snap, false, strings, 'dark');
+			const msg = buildUsageMessage(snap, false, strings, 'dark', '$');
 			expect(msg?.status).toBe(status);
 			expect(msg?.metrics).toEqual([]);
 		}
@@ -92,7 +92,7 @@ describe('buildUsageMessage', () => {
 			status: 'ok', fetchedAt: 1,
 			metrics: [{ kind: 'session', used: 1, limit: 100, resetsAt: 9_999_999 }],
 		};
-		const msg = buildUsageMessage(snap, false, strings, 'dark');
+		const msg = buildUsageMessage(snap, false, strings, 'dark', '$');
 		expect(msg?.metrics[0].resetsAt).toBe(9_999_999);
 	});
 });

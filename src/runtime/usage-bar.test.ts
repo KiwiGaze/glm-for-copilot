@@ -125,6 +125,8 @@ describe('UsageStatusBar activation gate', () => {
 		expect(client.fetchBalance).toHaveBeenCalledTimes(1);
 		expect(client.fetchSnapshot).not.toHaveBeenCalled();
 		expect(statusBar.show).toHaveBeenCalled();
+		expect(statusBar.text).toContain('$1.8');
+		expect(statusBar.text).not.toContain('¥');
 		bar.dispose();
 	});
 
