@@ -1,4 +1,4 @@
-import type { UsageMetric, UsageSnapshot, UsageStatus } from '../types';
+import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
 
 export interface UsageMetricView {
 	kind: 'session' | 'weekly' | 'web-searches';
@@ -10,11 +10,28 @@ export interface UsageMetricView {
 	resetsAt?: number;
 }
 
+export interface TokenPackageView {
+	name: string;
+	tokens: string;
+	status: string;
+	model?: string;
+}
+
+export interface UsageBalanceView {
+	availableCash?: string;
+	totalRecharged?: string;
+	totalSpent?: string;
+	giftedAmount?: string;
+	frozenAmount?: string;
+	tokenPackages: TokenPackageView[];
+}
+
 export interface UsagePanelMessage {
 	status: UsageStatus;
 	planName?: string;
 	renewsAt?: string;
 	metrics: UsageMetricView[];
+	balance?: UsageBalanceView;
 	lastUpdated?: number;
 	offline: boolean;
 	theme: 'dark' | 'light';
@@ -34,6 +51,13 @@ export interface UsagePanelStrings {
 	window: Record<UsageMetric['kind'], string>;
 	label: Record<UsageMetric['kind'], string>;
 	status: Record<UsageStatus, string>;
+	balanceSection: string;
+	balanceAvailable: string;
+	balanceRecharged: string;
+	balanceSpent: string;
+	balanceGifted: string;
+	balanceFrozen: string;
+	balancePackages: string;
 }
 
 /**
@@ -55,6 +79,7 @@ export function buildUsageMessage(
 		planName: snapshot.planName,
 		renewsAt: snapshot.renewsAt,
 		metrics: snapshot.metrics.map(toMetricView, strings),
+		balance: snapshot.balance ? toBalanceView(snapshot.balance) : undefined,
 		lastUpdated: snapshot.status === 'ok' ? snapshot.fetchedAt : undefined,
 		offline,
 		theme,
@@ -73,6 +98,47 @@ function toMetricView(this: UsagePanelStrings, metric: UsageMetric): UsageMetric
 		isPercent,
 		resetsAt: metric.resetsAt,
 	};
+}
+
+function toBalanceView(balance: UsageBalance): UsageBalanceView {
+	return {
+		availableCash: balance.availableCash !== undefined ? formatAmount(balance.availableCash) : undefined,
+		totalRecharged: balance.totalRecharged !== undefined ? formatAmount(balance.totalRecharged) : undefined,
+		totalSpent: balance.totalSpent !== undefined ? formatAmount(balance.totalSpent) : undefined,
+		giftedAmount: balance.giftedAmount !== undefined ? formatAmount(balance.giftedAmount) : undefined,
+		frozenAmount: balance.frozenAmount !== undefined ? formatAmount(balance.frozenAmount) : undefined,
+		tokenPackages: balance.tokenPackages.map(toPackageView),
+	};
+}
+
+function toPackageView(pkg: TokenPackage): TokenPackageView {
+	const tokens = pkg.remainingTokens * pkg.magnitude;
+	return {
+		name: pkg.name,
+		tokens: formatTokens(tokens),
+		status: pkg.status,
+		model: pkg.model,
+	};
+}
+
+function formatAmount(value: number): string {
+	return value.toFixed(2).replace(/\.?0+$/, '') || '0';
+}
+
+function formatTokens(tokens: number): string {
+	if (tokens >= 1_000_000_000_000) {
+		return `${(tokens / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '')}T`;
+	}
+	if (tokens >= 1_000_000_000) {
+		return `${(tokens / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+	}
+	if (tokens >= 1_000_000) {
+		return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+	}
+	if (tokens >= 1_000) {
+		return `${(tokens / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+	}
+	return String(tokens);
 }
 
 /** Bar fill width for a metric, as a clamped 0..100 integer percent. */

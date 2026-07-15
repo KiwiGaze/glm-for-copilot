@@ -266,3 +266,114 @@ describe('UsageClient region resolution', () => {
 		}
 	});
 });
+
+describe('UsageClient.fetchBalance (Standard API, China only)', () => {
+	beforeEach(() => vi.useRealTimers());
+
+	const ACCOUNT_OK = JSON.stringify({
+		success: true,
+		data: {
+			balance: 42.5,
+			rechargeAmount: 100,
+			giveAmount: 10,
+			totalSpendAmount: 67.5,
+			frozenBalance: 0,
+			availableBalance: 42.5,
+		},
+	});
+	const ACCOUNT_EMPTY = JSON.stringify({ success: true, data: {} });
+	const TOKEN_PACKAGES_OK = JSON.stringify({
+		code: 200,
+		rows: [
+			{ tokenBalance: 800, tokensMagnitude: 10000, status: 'EFFECTIVE', resourcePackageName: 'GLM-5.2 Pack', suitableModel: 'glm-5.2' },
+			{ tokenBalance: 500, tokensMagnitude: 1000, status: 'EXPIRED', resourcePackageName: 'Old Pack', suitableModel: 'glm-4.6' },
+		],
+	});
+	const TOKEN_PACKAGES_EMPTY = JSON.stringify({ code: 200, rows: [] });
+
+	it('parses cash balance and effective token packages', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_OK },
+			'tokenAccounts/list/my': { status: 200, body: TOKEN_PACKAGES_OK },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('ok');
+		expect(snap.balance).toBeDefined();
+		expect(snap.balance!.availableCash).toBe(42.5);
+		expect(snap.balance!.totalRecharged).toBe(100);
+		expect(snap.balance!.totalSpent).toBe(67.5);
+		expect(snap.balance!.giftedAmount).toBe(10);
+		expect(snap.balance!.tokenPackages).toHaveLength(2);
+		expect(snap.balance!.tokenPackages[0]).toMatchObject({ name: 'GLM-5.2 Pack', remainingTokens: 800, magnitude: 10000, model: 'glm-5.2' });
+	});
+
+	it('returns ok with cash only when token packages endpoint returns empty', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_OK },
+			'tokenAccounts/list/my': { status: 200, body: TOKEN_PACKAGES_EMPTY },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('ok');
+		expect(snap.balance!.tokenPackages).toEqual([]);
+		expect(snap.balance!.availableCash).toBe(42.5);
+	});
+
+	it('returns ok with packages only when account report has no data', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_EMPTY },
+			'tokenAccounts/list/my': { status: 200, body: TOKEN_PACKAGES_OK },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('ok');
+		expect(snap.balance!.availableCash).toBeUndefined();
+		expect(snap.balance!.tokenPackages.length).toBeGreaterThan(0);
+	});
+
+	it('returns no-data when both endpoints return empty', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_EMPTY },
+			'tokenAccounts/list/my': { status: 200, body: TOKEN_PACKAGES_EMPTY },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('no-data');
+	});
+
+	it('maps HTTP 401 on account report to auth-error', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 401, body: '' },
+			'tokenAccounts/list/my': { status: 200, body: TOKEN_PACKAGES_OK },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('auth-error');
+	});
+
+	it('survives token packages failure (non-fatal), still shows cash', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_OK },
+			'tokenAccounts/list/my': { status: 500, body: '' },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('ok');
+		expect(snap.balance!.availableCash).toBe(42.5);
+		expect(snap.balance!.tokenPackages).toEqual([]);
+	});
+
+	it('uses raw key auth (no Bearer) for bigmodel.cn balance endpoints', async () => {
+		const authHeaders: string[] = [];
+		const fetchImpl = vi.fn(async (url: URL | string, init?: RequestInit) => {
+			authHeaders.push((init?.headers as Record<string, string>)?.Authorization);
+			const path = typeof url === 'string' ? url : url.toString();
+			if (path.includes('query-customer-account-report')) {
+				return new Response(ACCOUNT_OK, { status: 200, headers: { 'Content-Type': 'application/json' } });
+			}
+			return new Response(TOKEN_PACKAGES_OK, { status: 200, headers: { 'Content-Type': 'application/json' } });
+		}) as unknown as typeof fetch;
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', fetchImpl);
+		await client.fetchBalance('raw-key');
+		expect(authHeaders.length).toBe(2);
+		for (const h of authHeaders) {
+			expect(h).toBe('raw-key');
+			expect(h).not.toContain('Bearer');
+		}
+	});
+});

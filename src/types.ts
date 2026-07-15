@@ -47,7 +47,7 @@ export interface CustomModelConfig {
 	thinking?: boolean;
 }
 
-// ---- Usage tracking (z.ai Coding Plan quota) ----
+// ---- Usage tracking (Coding Plan quota + Standard API balance) ----
 
 export type UsageMetricKind = 'session' | 'weekly' | 'web-searches';
 
@@ -59,6 +59,35 @@ export interface UsageMetric {
 	limit: number;
 	/** Epoch-ms when the window resets. */
 	resetsAt?: number;
+}
+
+/** A token resource package on the China Standard API (pay-as-you-go). */
+export interface TokenPackage {
+	name: string;
+	/** Remaining tokens in this package. */
+	remainingTokens: number;
+	/** Magnitude divisor (e.g. 1000 = thousands). */
+	magnitude: number;
+	/** Package status (e.g. "EFFECTIVE"). */
+	status: string;
+	/** Model this package is valid for, if any. */
+	model?: string;
+}
+
+/** Cash + token-package balance for the Standard API (China only). */
+export interface UsageBalance {
+	/** Available cash balance (after deducting spent + frozen). */
+	availableCash?: number;
+	/** Total amount recharged by the user. */
+	totalRecharged?: number;
+	/** Total amount spent so far. */
+	totalSpent?: number;
+	/** Gifted/promotional amount. */
+	giftedAmount?: number;
+	/** Frozen (held) amount. */
+	frozenAmount?: number;
+	/** Active token resource packages. */
+	tokenPackages: TokenPackage[];
 }
 
 export type UsageStatus =
@@ -74,8 +103,10 @@ export interface UsageSnapshot {
 	planName?: string;
 	/** ISO date string from the subscription response. */
 	renewsAt?: string;
-	/** 0..3 metrics, ordered session, weekly, web-searches. */
+	/** 0..3 metrics, ordered session, weekly, web-searches. Coding Plan only. */
 	metrics: UsageMetric[];
+	/** Cash + token-package balance. Standard API (China) only. */
+	balance?: UsageBalance;
 	/** Epoch-ms of the fetch that produced this snapshot. */
 	fetchedAt: number;
 }

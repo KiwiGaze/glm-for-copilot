@@ -1,5 +1,5 @@
-import { USAGE_PATHS, USAGE_REQUEST_TIMEOUT_MS } from '../consts';
-import type { UsageMetric, UsageSnapshot, UsageStatus } from '../types';
+import { BALANCE_PATHS, USAGE_PATHS, USAGE_REQUEST_TIMEOUT_MS } from '../consts';
+import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
 import { createHttpError, isAbortError, normalizeRequestError } from './errors';
 
 interface ZaiLimit {
@@ -22,8 +22,35 @@ interface ZaiSubscriptionResponse {
 	data?: Array<{ productName?: string; nextRenewTime?: string }>;
 }
 
+interface BigmodelAccountReport {
+	success?: boolean;
+	data?: {
+		balance?: number;
+		rechargeAmount?: number;
+		giveAmount?: number;
+		totalSpendAmount?: number;
+		frozenBalance?: number;
+		availableBalance?: number;
+	};
+}
+
+interface BigmodelTokenAccount {
+	tokenBalance?: number;
+	tokensMagnitude?: number;
+	status?: string;
+	resourcePackageName?: string;
+	suitableModel?: string;
+}
+
+interface BigmodelTokenAccountsResponse {
+	code?: number;
+	rows?: BigmodelTokenAccount[];
+}
+
 export interface IUsageClient {
 	fetchSnapshot(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot>;
+	/** Standard API balance (China only). Returns a snapshot with `balance` populated. */
+	fetchBalance(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot>;
 }
 
 /**
@@ -57,6 +84,92 @@ export class UsageClient implements IUsageClient {
 			this.fetchQuota(host, apiKey, signal),
 		]);
 		return { ...snapshot, ...subscription };
+	}
+
+	/**
+	 * Fetch Standard API balance (China only). Two parallel GETs against the bigmodel.cn biz
+	 * gateway: a cash account report and a token resource-package list. Either may fail
+	 * independently — the account report is the primary signal; token packages are supplementary.
+	 */
+	async fetchBalance(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
+		const host = this.resolveHost();
+		const fetchedAt = Date.now();
+		const [accountResult, packagesResult] = await Promise.allSettled([
+			this.fetchAccountReport(host, apiKey, signal),
+			this.fetchTokenAccounts(host, apiKey, signal),
+		]);
+
+		// If the primary (account report) failed, surface its error status.
+		if (accountResult.status === 'rejected') {
+			if (isAbortError(accountResult.reason)) {
+				throw accountResult.reason;
+			}
+			return this.toErrorSnapshot(accountResult.reason, host, fetchedAt);
+		}
+		const account = accountResult.value;
+
+		// Token packages failure is non-fatal — we still show cash balance.
+		const packages = packagesResult.status === 'fulfilled' ? packagesResult.value : [];
+
+		const balance: UsageBalance = { ...account, tokenPackages: packages };
+		// No data at all → no-data; otherwise ok even if some fields are missing.
+		const hasData =
+			account.availableCash !== undefined ||
+			account.totalRecharged !== undefined ||
+			packages.length > 0;
+		return {
+			status: hasData ? 'ok' : 'no-data',
+			balance,
+			metrics: [],
+			fetchedAt,
+		};
+	}
+
+	private async fetchAccountReport(
+		host: string,
+		apiKey: string,
+		signal?: AbortSignal,
+	): Promise<Omit<UsageBalance, 'tokenPackages'>> {
+		const response = await this.get(`${host}${BALANCE_PATHS.accountReport}`, apiKey, signal);
+		if (!response.ok) {
+			const error = await createHttpError(response, { baseUrl: host });
+			throw error;
+		}
+		const parsed = (await response.json()) as BigmodelAccountReport;
+		const d = parsed?.data;
+		return {
+			availableCash: finiteOr(d?.availableBalance ?? d?.balance),
+			totalRecharged: finiteOr(d?.rechargeAmount),
+			totalSpent: finiteOr(d?.totalSpendAmount),
+			giftedAmount: finiteOr(d?.giveAmount),
+			frozenAmount: finiteOr(d?.frozenBalance),
+		};
+	}
+
+	private async fetchTokenAccounts(
+		host: string,
+		apiKey: string,
+		signal?: AbortSignal,
+	): Promise<TokenPackage[]> {
+		const url = `${host}${BALANCE_PATHS.tokenAccounts}?pageNum=1&pageSize=100`;
+		const response = await this.get(url, apiKey, signal);
+		if (!response.ok) {
+			return [];
+		}
+		const parsed = (await response.json()) as BigmodelTokenAccountsResponse;
+		const rows = parsed?.rows;
+		if (!Array.isArray(rows)) {
+			return [];
+		}
+		return rows
+			.filter((r) => r.status === 'EFFECTIVE' || r.tokenBalance !== undefined)
+			.map((r) => ({
+				name: r.resourcePackageName ?? 'Token Package',
+				remainingTokens: numberOr(r.tokenBalance),
+				magnitude: numberOr(r.tokensMagnitude, 1),
+				status: r.status ?? 'UNKNOWN',
+				model: r.suitableModel,
+			}));
 	}
 
 	private async fetchSubscription(
@@ -211,6 +324,20 @@ function findLimit(limits: ZaiLimit[], type: string, unit?: number): ZaiLimit | 
 
 function numberOr(value: unknown, fallback = 0): number {
 	return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+/** Coerce to a finite number, returning undefined when not numeric (for optional balance fields). */
+function finiteOr(value: unknown, fallback?: number): number | undefined {
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return value;
+	}
+	if (typeof value === 'string') {
+		const n = Number(value);
+		if (Number.isFinite(n)) {
+			return n;
+		}
+	}
+	return fallback;
 }
 
 function nextUtcFirstOfMonthMs(now: Date = new Date()): number {

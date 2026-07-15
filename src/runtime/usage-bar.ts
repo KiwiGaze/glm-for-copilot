@@ -104,7 +104,7 @@ export class UsageStatusBar implements vscode.Disposable {
 		const controller = new AbortController();
 		this.controller = controller;
 		try {
-			const snapshot = await this.client.fetchSnapshot(gate.apiKey, controller.signal);
+			const snapshot = await this.fetchUsage(gate.apiKey, controller.signal);
 			if (snapshot.status === 'ok') {
 				this.lastOk = snapshot;
 			}
@@ -120,8 +120,10 @@ export class UsageStatusBar implements vscode.Disposable {
 	}
 
 	private async evaluateGate(): Promise<{ passed: true; apiKey: string } | { passed: false }> {
+		// Both apiModes (Coding Plan + Standard API) and both regions (z.ai + bigmodel.cn) are
+		// supported. The usage/balance endpoints exist on both stations' biz gateways and share
+		// the same JSON shape. Only gate on baseUrl override, opt-in, and key presence.
 		if (
-			getApiMode() !== 'coding-plan' ||
 			getBaseUrlOverride() !== '' ||
 			!getShowUsageStatusBar()
 		) {
@@ -134,10 +136,20 @@ export class UsageStatusBar implements vscode.Disposable {
 		return { passed: true, apiKey };
 	}
 
+	/** Route to fetchSnapshot (Coding Plan) or fetchBalance (Standard API) based on apiMode. */
+	private fetchUsage(apiKey: string, signal: AbortSignal): Promise<UsageSnapshot> {
+		return getApiMode() === 'standard'
+			? this.client.fetchBalance(apiKey, signal)
+			: this.client.fetchSnapshot(apiKey, signal);
+	}
+
 	private render(snapshot: UsageSnapshot): void {
 		const now = Date.now();
 		const cacheUsable = this.lastOk && now - this.lastOk.fetchedAt < USAGE_CACHE_STALE_MS;
 		let offline = false;
+
+		// Reset warning background by default; ok-state renderers may set it for critical values.
+		this.item.backgroundColor = undefined;
 
 		let effective: UsageSnapshot = snapshot;
 		if ((snapshot.status === 'network-error' || snapshot.status === 'server-error') && cacheUsable) {
@@ -178,6 +190,10 @@ export class UsageStatusBar implements vscode.Disposable {
 
 	/** Status-bar rendering for the ok state (text + tooltip). Pane gets the structured message via fireEffective. */
 	private renderOkBar(snapshot: UsageSnapshot, offline: boolean): void {
+		if (snapshot.balance) {
+			this.renderOkBarBalance(snapshot, offline);
+			return;
+		}
 		const primary = snapshot.metrics.find((m) => m.kind === 'session') ?? snapshot.metrics[0];
 		if (!primary) {
 			this.item.text = '$(sparkle) GLM';
@@ -211,6 +227,61 @@ export class UsageStatusBar implements vscode.Disposable {
 			lines.push(t('usage.tooltip.offline'));
 		}
 		this.item.tooltip = lines.join('\n');
+		// Critical: any percentage metric at 100% → error background.
+		const exhausted = snapshot.metrics.some((m) => m.limit > 0 && m.used >= m.limit);
+		this.item.backgroundColor = exhausted
+			? new vscode.ThemeColor('statusBarItem.errorBackground')
+			: undefined;
+		this.item.show();
+	}
+
+	/** Status-bar rendering for the Standard API balance (cash + token packages). */
+	private renderOkBarBalance(snapshot: UsageSnapshot, offline: boolean): void {
+		const bal = snapshot.balance!;
+		const cash = bal.availableCash;
+		const packages = bal.tokenPackages;
+		const totalTokens = packages.reduce((sum, p) => sum + p.remainingTokens * p.magnitude, 0);
+
+		if (cash !== undefined && totalTokens > 0) {
+			this.item.text = `$(wallet) GLM ¥${formatAmount(cash)} · ${formatTokens(totalTokens)}`;
+		} else if (cash !== undefined) {
+			this.item.text = `$(wallet) GLM ¥${formatAmount(cash)}`;
+		} else if (totalTokens > 0) {
+			this.item.text = `$(sparkle) GLM ${formatTokens(totalTokens)}`;
+		} else {
+			this.item.text = '$(dash) GLM';
+		}
+
+		const lines: string[] = [];
+		if (cash !== undefined) {
+			lines.push(`${t('usage.balance.available')}: ¥${formatAmount(cash)}`);
+		}
+		if (bal.totalRecharged !== undefined) {
+			lines.push(`${t('usage.balance.recharged')}: ¥${formatAmount(bal.totalRecharged)}`);
+		}
+		if (bal.giftedAmount !== undefined && bal.giftedAmount > 0) {
+			lines.push(`${t('usage.balance.gifted')}: ¥${formatAmount(bal.giftedAmount)}`);
+		}
+		if (bal.totalSpent !== undefined) {
+			lines.push(`${t('usage.balance.spent')}: ¥${formatAmount(bal.totalSpent)}`);
+		}
+		if (bal.frozenAmount !== undefined && bal.frozenAmount > 0) {
+			lines.push(`${t('usage.balance.frozen')}: ¥${formatAmount(bal.frozenAmount)}`);
+		}
+		for (const pkg of packages) {
+			const tokens = pkg.remainingTokens * pkg.magnitude;
+			lines.push(`${pkg.name}: ${formatTokens(tokens)}`);
+		}
+		lines.push(t('usage.tooltip.lastUpdated', new Date(snapshot.fetchedAt).toLocaleTimeString()));
+		if (offline) {
+			lines.push(t('usage.tooltip.offline'));
+		}
+		this.item.tooltip = lines.join('\n');
+		// Critical: available cash is 0 (or missing with no token packages) → error background.
+		const broke = (cash !== undefined && cash <= 0) || (cash === undefined && totalTokens <= 0);
+		this.item.backgroundColor = broke
+			? new vscode.ThemeColor('statusBarItem.errorBackground')
+			: undefined;
 		this.item.show();
 	}
 
@@ -273,4 +344,26 @@ export class UsageStatusBar implements vscode.Disposable {
 
 function currentThemeKind(): 'dark' | 'light' {
 	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+}
+
+/** Format a cash amount with up to 2 decimal places, stripping trailing zeros. */
+function formatAmount(value: number): string {
+	return value.toFixed(2).replace(/\.?0+$/, '') || '0';
+}
+
+/** Format a token count with k/M suffixes for compact status-bar display. */
+function formatTokens(tokens: number): string {
+	if (tokens >= 1_000_000_000_000) {
+		return `${(tokens / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '')}T`;
+	}
+	if (tokens >= 1_000_000_000) {
+		return `${(tokens / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
+	}
+	if (tokens >= 1_000_000) {
+		return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+	}
+	if (tokens >= 1_000) {
+		return `${(tokens / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+	}
+	return String(tokens);
 }

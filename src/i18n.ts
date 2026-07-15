@@ -112,12 +112,19 @@ const en: Record<string, string> = {
 	'usage.panel.refresh': 'Refresh',
 	'usage.panel.setKey': 'Set API Key',
 	'usage.panel.offline': 'Offline · showing last data',
-	'usage.panel.unavailable': 'Usage unavailable. Open a GLM Coding Plan key to view details.',
+	'usage.panel.unavailable': 'Usage unavailable. Use a Coding Plan key or a Standard API key (China region) to view details.',
 	'usage.metric.window.session': '5h rolling',
 	'usage.metric.window.weekly': '7-day rolling',
 	'usage.metric.window.webSearches': 'Monthly',
 	'usage.metric.resetsIn': 'Resets in {0}',
 	'usage.panel.lastUpdated': 'Last updated: {0}',
+	'usage.balance.section': 'Account Balance',
+	'usage.balance.available': 'Available',
+	'usage.balance.recharged': 'Recharged',
+	'usage.balance.spent': 'Spent',
+	'usage.balance.gifted': 'Gifted',
+	'usage.balance.frozen': 'Frozen',
+	'usage.balance.packages': 'Token Packages',
 };
 
 const zh: Record<string, string> = {
@@ -207,12 +214,19 @@ const zh: Record<string, string> = {
 	'usage.panel.refresh': '刷新',
 	'usage.panel.setKey': '设置 API 密钥',
 	'usage.panel.offline': '离线 · 显示上次数据',
-	'usage.panel.unavailable': '暂无用量数据。请打开 GLM 编程计划密钥以查看详情。',
+	'usage.panel.unavailable': '暂无用量数据。请使用编程计划密钥或标准 API 密钥（国内站）以查看详情。',
 	'usage.metric.window.session': '5 小时滚动',
 	'usage.metric.window.weekly': '7 天滚动',
 	'usage.metric.window.webSearches': '每月',
 	'usage.metric.resetsIn': '{0} 后重置',
 	'usage.panel.lastUpdated': '最后更新：{0}',
+	'usage.balance.section': '账户余额',
+	'usage.balance.available': '可用余额',
+	'usage.balance.recharged': '累计充值',
+	'usage.balance.spent': '累计消耗',
+	'usage.balance.gifted': '赠送金额',
+	'usage.balance.frozen': '冻结金额',
+	'usage.balance.packages': '资源包',
 };
 
 function isZh(): boolean {

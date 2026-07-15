@@ -61,6 +61,16 @@ export const USAGE_PATHS = {
 	quota: '/api/monitor/usage/quota/limit',
 } as const;
 
+/**
+ * Paths for the Standard API balance query (China only). These are reverse-engineered
+ * console-backend endpoints (same nature as USAGE_PATHS), not part of the public API.
+ * Both live on the bigmodel.cn biz gateway and authenticate with the raw API key.
+ */
+export const BALANCE_PATHS = {
+	accountReport: '/api/biz/account/query-customer-account-report',
+	tokenAccounts: '/api/biz/tokenAccounts/list/my',
+} as const;
+
 export const USAGE_MIN_REFRESH_MINUTES = 5;
 export const USAGE_DEFAULT_REFRESH_MINUTES = 15;
 export const USAGE_MAX_REFRESH_MINUTES = 1440;

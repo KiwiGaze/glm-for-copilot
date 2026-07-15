@@ -34,5 +34,12 @@ export function usagePanelStrings(): UsagePanelStrings {
 			'network-error': t('usage.status.network-error'),
 			'server-error': t('usage.status.server-error'),
 		},
+		balanceSection: t('usage.balance.section'),
+		balanceAvailable: t('usage.balance.available'),
+		balanceRecharged: t('usage.balance.recharged'),
+		balanceSpent: t('usage.balance.spent'),
+		balanceGifted: t('usage.balance.gifted'),
+		balanceFrozen: t('usage.balance.frozen'),
+		balancePackages: t('usage.balance.packages'),
 	};
 }

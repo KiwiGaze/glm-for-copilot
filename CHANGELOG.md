@@ -1,6 +1,14 @@
+ 
+
 # Changelog
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
+
+## 0.3.0
+
+- **General API usage for Mainland China and International endpoints.**
+
+> 💡 If you encountered "No utility model is configured for 'copilot-utility-small' while the selected main agent model is BYOK." error during use, please change the "**Chat:** **Byok Utility Model Default**" option from "None" to "Main Agent Model" in VSCode settings.
 
 ## 0.2.9
 

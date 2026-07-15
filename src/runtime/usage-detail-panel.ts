@@ -166,12 +166,45 @@ function renderOkBody(msg: UsagePanelMessage): string {
 			${metric.resetsAt ? `<div id="resets-${escapeHtml(metric.kind)}" class="resets"></div>` : ''}
 		</div>`);
 	}
+	if (msg.balance) {
+		lines.push(renderBalanceBody(msg));
+	}
 	if (msg.lastUpdated !== undefined) {
 		lines.push(`<div class="last-updated">${escapeHtml(s.lastUpdated.replace('{0}', new Date(msg.lastUpdated).toLocaleTimeString()))}</div>`);
 	}
 	if (msg.offline) {
 		lines.push(`<div class="offline">${escapeHtml(s.offline)}</div>`);
 	}
+	return lines.join('');
+}
+
+function renderBalanceBody(msg: UsagePanelMessage): string {
+	const s = msg.strings;
+	const b = msg.balance!;
+	const lines: string[] = [`<div class="balance-section"><h2>${escapeHtml(s.balanceSection)}</h2>`];
+	if (b.availableCash !== undefined) {
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceAvailable)}</span><span class="balance-value">¥${escapeHtml(b.availableCash)}</span></div>`);
+	}
+	if (b.totalRecharged !== undefined) {
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceRecharged)}</span><span class="balance-value">¥${escapeHtml(b.totalRecharged)}</span></div>`);
+	}
+	if (b.giftedAmount !== undefined && b.giftedAmount !== '0') {
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceGifted)}</span><span class="balance-value">¥${escapeHtml(b.giftedAmount)}</span></div>`);
+	}
+	if (b.totalSpent !== undefined) {
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceSpent)}</span><span class="balance-value">¥${escapeHtml(b.totalSpent)}</span></div>`);
+	}
+	if (b.frozenAmount !== undefined && b.frozenAmount !== '0') {
+		lines.push(`<div class="balance-row"><span>${escapeHtml(s.balanceFrozen)}</span><span class="balance-value">¥${escapeHtml(b.frozenAmount)}</span></div>`);
+	}
+	if (b.tokenPackages.length > 0) {
+		lines.push(`<div class="balance-packages">${escapeHtml(s.balancePackages)}</div>`);
+		for (const pkg of b.tokenPackages) {
+			const modelLabel = pkg.model ? ` <span class="pkg-model">(${escapeHtml(pkg.model)})</span>` : '';
+			lines.push(`<div class="balance-row"><span>${escapeHtml(pkg.name)}${modelLabel}</span><span class="balance-value">${escapeHtml(pkg.tokens)} tokens</span></div>`);
+		}
+	}
+	lines.push('</div>');
 	return lines.join('');
 }
 
@@ -225,6 +258,12 @@ function themeCss(theme: 'dark' | 'light'): string {
 		.offline { color: ${muted}; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
 		.status-message { text-align: center; padding: 40px 16px; color: ${muted}; }
 		.status-message p { margin-bottom: 16px; }
+		.balance-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid ${barBg}; }
+		.balance-section h2 { font-size: 1rem; margin-bottom: 12px; color: ${fg}; }
+		.balance-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
+		.balance-value { font-weight: 600; }
+		.balance-packages { margin-top: 12px; font-weight: 600; font-size: 0.9rem; color: ${muted}; }
+		.pkg-model { font-weight: 400; color: ${muted}; font-size: 0.8rem; }
 	`;
 }
 
