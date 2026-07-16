@@ -4,11 +4,12 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
-## 0.3.0
+## 0.2.10
 
 - **Standard API balance tracking** - the usage status bar and details panel now also work for the Standard API (pay-as-you-go) mode, not just Coding Plan. Cash balance (available, recharged, gifted, spent, frozen) and token resource packages are queried from both `z.ai` and `bigmodel.cn` account endpoints, which share the same JSON shape. The status bar turns red when the available balance reaches 0.
 - **Full usage support matrix** - all four combinations now work: Coding Plan × {International, China} for quota tracking (5h/weekly token limits + monthly web searches), and Standard API × {International, China} for balance tracking (cash + token packages).
 - **Status-bar warning colors** - the status bar now uses `statusBarItem.errorBackground` (VS Code theme error color) when any Coding Plan metric hits 100% or when the Standard API available balance reaches 0.
+- Contributed by [@Dootmaan](https://github.com/Dootmaan) in [pull request 28](https://github.com/KiwiGaze/glm-for-copilot/pull/28).
 
 > 💡 If you encountered "No utility model is configured for 'copilot-utility-small' while the selected main agent model is BYOK." error during use, please change the "**Chat:** **Byok Utility Model Default**" option from "None" to "Main Agent Model" in VSCode settings.
 
