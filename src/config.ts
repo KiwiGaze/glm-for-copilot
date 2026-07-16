@@ -3,18 +3,22 @@ import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, MODELS, RETRY_DEFAULT_MAX_RETRIES,
 import { t } from './i18n';
 import type { ApiMode, CustomModelConfig, GLMModel, Region, ThinkingMode } from './types';
 
+/** Read the `glm-copilot` configuration section. */
 function cfg(): vscode.WorkspaceConfiguration {
 	return vscode.workspace.getConfiguration(CONFIG_SECTION);
 }
 
+/** Active API mode: `coding-plan` (subscription) or `standard` (pay-as-you-go). */
 export function getApiMode(): ApiMode {
 	return cfg().get<ApiMode>('apiMode', 'coding-plan');
 }
 
+/** Server region: `international` (z.ai) or `china` (open.bigmodel.cn). */
 export function getRegion(): Region {
 	return cfg().get<Region>('region', 'international');
 }
 
+/** User-supplied base URL override (empty = use the apiMode/region-derived endpoint). */
 export function getBaseUrlOverride(): string {
 	return (cfg().get<string>('baseUrl', '') ?? '').trim();
 }
@@ -25,6 +29,7 @@ export function getMaxTokens(): number | undefined {
 	return value && value > 0 ? value : undefined;
 }
 
+/** Map of picker model id → API model id overrides (for regional/proxy naming differences). */
 export function getModelIdOverrides(): Record<string, string> {
 	return cfg().get<Record<string, string>>('modelIdOverrides', {}) ?? {};
 }
@@ -35,10 +40,12 @@ export function getApiModelId(modelId: string): string {
 	return override && override.trim() ? override.trim() : modelId;
 }
 
+/** Whether thinking/reasoning is enabled for thinking-capable models. */
 export function getThinking(): ThinkingMode {
 	return cfg().get<ThinkingMode>('thinking', 'enabled') === 'disabled' ? 'disabled' : 'enabled';
 }
 
+/** Whether verbose debug logging is enabled (GLM output channel). */
 export function getDebugLogging(): boolean {
 	return cfg().get<boolean>('debugLogging', false);
 }

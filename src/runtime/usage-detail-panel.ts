@@ -40,6 +40,10 @@ export class UsageDetailPanel {
 		this.panel.onDidDispose(() => this.dispose(), undefined, context.subscriptions);
 	}
 
+		/**
+	 * Reveal the singleton panel if it exists, otherwise create one bound to `bar`.
+	 * The panel subscribes to `bar.onDidChangeSnapshot` and re-renders on every push.
+	 */
 	static createOrShow(context: vscode.ExtensionContext, bar: UsageStatusBar): void {
 		if (UsageDetailPanel.currentPanel) {
 			UsageDetailPanel.currentPanel.panel.reveal(vscode.ViewColumn.Active, false);
@@ -57,6 +61,7 @@ export class UsageDetailPanel {
 		UsageDetailPanel.currentPanel = new UsageDetailPanel(panel, context, bar);
 	}
 
+	/** Handle a webview post-message: `refresh` triggers a bar refresh, `setKey` opens the key prompt. */
 	private async onMessage(message: { type: string }): Promise<void> {
 		if (message.type === 'refresh') {
 			await this.bar.refresh();
@@ -65,6 +70,10 @@ export class UsageDetailPanel {
 		}
 	}
 
+	/**
+	 * Re-render the panel HTML. Suppresses the transition to `loading` when a non-loading snapshot
+	 * is already showing (avoids fltransform on background refresh). Caches the last message.
+	 */
 	private render(message: UsagePanelMessage | null): void {
 		if (message?.status === 'loading' && this.lastMessage != null && this.lastMessage.status !== 'loading') {
 			return;
@@ -74,6 +83,10 @@ export class UsageDetailPanel {
 		this.panel.webview.html = this.buildHtml(message);
 	}
 
+	/**
+	 * Build the full panel HTML document. Uses a gate-failed fallback message when `message` is null.
+	 * Inline scripts run under a nonce CSP; reset-countdown timers are hydrated via `resetsAtMap`.
+	 */
 	private buildHtml(message: UsagePanelMessage | null): string {
 		const nonce = getNonce();
 		const theme = themeKind();
@@ -142,6 +155,7 @@ export class UsageDetailPanel {
 </html>`;
 	}
 
+	/** Dispose subscriptions, theme listener, and the webview panel; clear the singleton reference. */
 	dispose(): void {
 		this.subscription?.dispose();
 		this.themeSub?.dispose();
@@ -150,6 +164,7 @@ export class UsageDetailPanel {
 	}
 }
 
+/** Render the HTML body for the `ok` status: plan header, metric bars, optional balance section, footer. */
 function renderOkBody(msg: UsagePanelMessage): string {
 	const s = msg.strings;
 	const lines: string[] = [];
@@ -180,6 +195,7 @@ function renderOkBody(msg: UsagePanelMessage): string {
 	return lines.join('');
 }
 
+/** Render the HTML for the Standard API balance section: cash rows (right-aligned values) + token packages. */
 function renderBalanceBody(msg: UsagePanelMessage): string {
 	const s = msg.strings;
 	const b = msg.balance!;
@@ -211,6 +227,7 @@ function renderBalanceBody(msg: UsagePanelMessage): string {
 	return lines.join('');
 }
 
+/** Render the HTML body for non-ok statuses: a centered message, plus a Set-Key button on auth errors. */
 function renderStatusBody(msg: UsagePanelMessage): string {
 	const s = msg.strings;
 	if (msg.status === 'auth-error') {
@@ -225,6 +242,7 @@ function renderStatusBody(msg: UsagePanelMessage): string {
 	return `<div class="status-message"><p>${escapeHtml(text)}</p></div>`;
 }
 
+/** Collect `{ kind: resetsAt }` for metrics that have a reset time, to hydrate the client-side countdown. */
 function resetsAtMap(msg: UsagePanelMessage): Record<string, number> {
 	const map: Record<string, number> = {};
 	for (const m of msg.metrics) {
@@ -235,6 +253,7 @@ function resetsAtMap(msg: UsagePanelMessage): Record<string, number> {
 	return map;
 }
 
+/** Generate the panel's theme CSS string, switching colors by dark/light token. */
 function themeCss(theme: 'dark' | 'light'): string {
 	const dark = theme === 'dark';
 	const fg = dark ? '#cccccc' : '#313033';
@@ -270,19 +289,23 @@ function themeCss(theme: 'dark' | 'light'): string {
 	`;
 }
 
+/** Map the VS Code color theme to a dark/light token (high-contrast counted as dark). */
 function themeKind(): 'dark' | 'light' {
 	const kind = vscode.window.activeColorTheme.kind;
 	return kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
 }
 
+/** Generate a CSP nonce for the panel's `<style>` / `<script>` elements. */
 function getNonce(): string {
 	return randomBytes(16).toString('base64');
 }
 
+/** Escape `& < > " '` for safe interpolation into HTML. */
 function escapeHtml(s: string): string {
 	return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
+/** JSON-stringify a value for inline `<script>` interpolation, escaping `<` to prevent tag-break-out. */
 function jsonForScript(value: unknown): string {
 	return JSON.stringify(value).replace(/</g, '\\u003c');
 }

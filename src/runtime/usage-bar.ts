@@ -8,6 +8,7 @@ import { isAbortError } from '../client/errors';
 import type { IUsageClient } from '../client/usage';
 import { buildUsageMessage, type UsagePanelMessage } from './usage-detail-html';
 import { UsageDetailPanel } from './usage-detail-panel';
+import { formatAmount, formatTokens } from './format';
 import { usagePanelStrings } from './usage-strings';
 
 /**
@@ -88,6 +89,11 @@ export class UsageStatusBar implements vscode.Disposable {
 		return this.refreshPromise;
 	}
 
+	/**
+	 * Evaluate the gate, fetch usage/balance, and render the result. Aborts any in-flight fetch.
+	 * On gate failure: hide the bar + stop the interval. On fetch error: render a network-error
+	 * snapshot (unless the error is an abort, which is expected during cancellation).
+	 */
 	private async runRefresh(): Promise<void> {
 		const gate = await this.evaluateGate();
 		if (!gate.passed) {
@@ -118,6 +124,11 @@ export class UsageStatusBar implements vscode.Disposable {
 		}
 	}
 
+	/**
+	 * Decide whether the status bar should be visible. Passes when no `baseUrl` override is set,
+	 * the user has opted in (`showUsageStatusBar`), and an API key is present. Both apiModes ×
+	 * both regions are eligible — the usage/balance endpoints exist on both stations.
+	 */
 	private async evaluateGate(): Promise<{ passed: true; apiKey: string } | { passed: false }> {
 		// Both apiModes (Coding Plan + Standard API) and both regions (z.ai + bigmodel.cn) are
 		// supported. The usage/balance endpoints exist on both stations' biz gateways and share
@@ -142,6 +153,11 @@ export class UsageStatusBar implements vscode.Disposable {
 			: this.client.fetchSnapshot(apiKey, signal);
 	}
 
+	/**
+	 * Render a snapshot to the status bar (text + tooltip + background) and fire the panel message.
+	 * On network/server error with a fresh cache (< 1h), falls back to the last `ok` snapshot
+	 * marked `offline`. Resets the warning background; ok-state renderers may set it.
+	 */
 	private render(snapshot: UsageSnapshot): void {
 		const now = Date.now();
 		const cacheUsable = this.lastOk && now - this.lastOk.fetchedAt < USAGE_CACHE_STALE_MS;
@@ -277,8 +293,8 @@ export class UsageStatusBar implements vscode.Disposable {
 			lines.push(t('usage.tooltip.offline'));
 		}
 		this.item.tooltip = lines.join('\n');
-		// Critical: available cash is 0 (or missing with no token packages) → error background.
-		const broke = (cash !== undefined && cash <= 0) || (cash === undefined && totalTokens <= 0);
+		// Critical: no usable credit (cash absent/≤0 AND no token packages) → error background.
+		const broke = (cash === undefined || cash <= 0) && totalTokens <= 0;
 		this.item.backgroundColor = broke
 			? new vscode.ThemeColor('statusBarItem.errorBackground')
 			: undefined;
@@ -308,6 +324,7 @@ export class UsageStatusBar implements vscode.Disposable {
 		void this.refresh();
 	}
 
+	/** Arm the auto-refresh interval from `getUsageRefreshIntervalMinutes`; replaces any existing handle. */
 	private startInterval(): void {
 		const minutes = getUsageRefreshIntervalMinutes();
 		this.intervalHandle = setInterval(() => {
@@ -315,6 +332,7 @@ export class UsageStatusBar implements vscode.Disposable {
 		}, minutes * 60_000);
 	}
 
+	/** Clear the auto-refresh interval if armed. */
 	private stopInterval(): void {
 		if (this.intervalHandle !== null) {
 			clearInterval(this.intervalHandle);
@@ -322,6 +340,7 @@ export class UsageStatusBar implements vscode.Disposable {
 		}
 	}
 
+	/** Dispose the status bar item, abort any in-flight fetch, and stop auto-refresh. */
 	dispose(): void {
 		this.stopInterval();
 		this.controller?.abort();
@@ -343,28 +362,7 @@ export class UsageStatusBar implements vscode.Disposable {
 	}
 }
 
+/** Map the active VS Code color theme to a light/dark token for the detail panel. */
 function currentThemeKind(): 'dark' | 'light' {
 	return vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-}
-
-/** Format a cash amount with up to 2 decimal places, stripping trailing zeros. */
-function formatAmount(value: number): string {
-	return value.toFixed(2).replace(/\.?0+$/, '') || '0';
-}
-
-/** Format a token count with k/M suffixes for compact status-bar display. */
-function formatTokens(tokens: number): string {
-	if (tokens >= 1_000_000_000_000) {
-		return `${(tokens / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '')}T`;
-	}
-	if (tokens >= 1_000_000_000) {
-		return `${(tokens / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
-	}
-	if (tokens >= 1_000_000) {
-		return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-	}
-	if (tokens >= 1_000) {
-		return `${(tokens / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
-	}
-	return String(tokens);
 }

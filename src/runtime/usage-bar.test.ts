@@ -151,6 +151,9 @@ describe('UsageStatusBar activation gate', () => {
 		expect(client.fetchSnapshot).not.toHaveBeenCalled();
 		expect(statusBar.show).toHaveBeenCalled();
 		expect(statusBar.text).toContain('42');
+		// China region uses ¥ (not the international $); the codicon "$(wallet)" always prefixes, so
+		// assert the currency symbol directly rather than the absence of '$'.
+		expect(statusBar.text).toContain('¥');
 		bar.dispose();
 	});
 
@@ -253,6 +256,30 @@ describe('UsageStatusBar activation gate', () => {
 		);
 		await bar.refresh();
 		expect(statusBar.backgroundColor).toBeDefined();
+		bar.dispose();
+	});
+
+	it('keeps normal status when cash is 0 but a token package has credit', async () => {
+		setConfig('standard', 'international');
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(),
+			fetchBalance: vi.fn(async () => ({
+				status: 'ok',
+				fetchedAt: Date.now(),
+				metrics: [],
+				balance: {
+					availableCash: 0,
+					tokenPackages: [{ name: 'GLM Resource Package', remainingTokens: 500, magnitude: 1000, status: 'EFFECTIVE' }],
+				},
+			})),
+		};
+		const bar = new UsageStatusBar(
+			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
+			makeAuth(true),
+			client,
+		);
+		await bar.refresh();
+		expect(statusBar.backgroundColor).toBeUndefined();
 		bar.dispose();
 	});
 
