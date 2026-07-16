@@ -112,8 +112,8 @@ Usage details rely on regional usage endpoints (`api.z.ai` for International, `o
 | **GLM: Clear API Key** | Remove your stored API key |
 | **GLM: Open Settings** | Open the extension settings |
 | **GLM: Show Logs** | Open the GLM output channel |
-| **GLM: Refresh Usage** | Refresh Coding Plan usage now |
-| **GLM: Show Usage Details** | Open the Coding Plan usage panel |
+| **GLM: Refresh Usage** | Refresh GLM usage/balance now (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
+| **GLM: Show Usage Details** | Open the GLM usage panel (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
 
 ## Frequently asked questions
 

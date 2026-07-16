@@ -1,6 +1,7 @@
 import { ENDPOINTS, EXTERNAL_URLS, USAGE_HOSTS } from './consts';
 import { getApiMode, getBaseUrlOverride, getRegion } from './config';
 
+/** Trim and strip trailing slashes from a URL. */
 export function normalizeBaseUrl(url: string): string {
 	return url.trim().replace(/\/+$/, '');
 }

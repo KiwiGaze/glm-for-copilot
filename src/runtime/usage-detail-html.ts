@@ -1,5 +1,7 @@
 import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
+import { formatAmount, formatTokens } from './format';
 
+/** Render-ready metric row (session / weekly / web-searches) for the detail panel. */
 export interface UsageMetricView {
 	kind: 'session' | 'weekly' | 'web-searches';
 	label: string;
@@ -10,6 +12,7 @@ export interface UsageMetricView {
 	resetsAt?: number;
 }
 
+/** Render-ready token resource package row with a pre-formatted token count. */
 export interface TokenPackageView {
 	name: string;
 	tokens: string;
@@ -17,6 +20,7 @@ export interface TokenPackageView {
 	model?: string;
 }
 
+/** Render-ready cash balance section (all amounts are pre-formatted strings with currency). */
 export interface UsageBalanceView {
 	availableCash?: string;
 	totalRecharged?: string;
@@ -91,6 +95,7 @@ export function buildUsageMessage(
 	};
 }
 
+/** Map a {@link UsageMetric} to a {@link UsageMetricView}, pulling labels from `this` (the strings bag). */
 function toMetricView(this: UsagePanelStrings, metric: UsageMetric): UsageMetricView {
 	const isPercent = metric.kind === 'session' || metric.kind === 'weekly';
 	return {
@@ -104,6 +109,7 @@ function toMetricView(this: UsagePanelStrings, metric: UsageMetric): UsageMetric
 	};
 }
 
+/** Map a {@link UsageBalance} to a {@link UsageBalanceView} with formatted amounts and packages. */
 function toBalanceView(balance: UsageBalance): UsageBalanceView {
 	return {
 		availableCash: balance.availableCash !== undefined ? formatAmount(balance.availableCash) : undefined,
@@ -115,6 +121,7 @@ function toBalanceView(balance: UsageBalance): UsageBalanceView {
 	};
 }
 
+/** Map a {@link TokenPackage} to a {@link TokenPackageView}, formatting the token count compactly. */
 function toPackageView(pkg: TokenPackage): TokenPackageView {
 	const tokens = pkg.remainingTokens * pkg.magnitude;
 	return {
@@ -123,26 +130,6 @@ function toPackageView(pkg: TokenPackage): TokenPackageView {
 		status: pkg.status,
 		model: pkg.model,
 	};
-}
-
-function formatAmount(value: number): string {
-	return value.toFixed(2).replace(/\.?0+$/, '') || '0';
-}
-
-function formatTokens(tokens: number): string {
-	if (tokens >= 1_000_000_000_000) {
-		return `${(tokens / 1_000_000_000_000).toFixed(1).replace(/\.0$/, '')}T`;
-	}
-	if (tokens >= 1_000_000_000) {
-		return `${(tokens / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
-	}
-	if (tokens >= 1_000_000) {
-		return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-	}
-	if (tokens >= 1_000) {
-		return `${(tokens / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
-	}
-	return String(tokens);
 }
 
 /** Bar fill width for a metric, as a clamped 0..100 integer percent. */

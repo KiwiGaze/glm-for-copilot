@@ -56,6 +56,7 @@ export const USAGE_HOSTS = {
 	china: 'https://open.bigmodel.cn',
 } as const;
 
+/** Paths for the Coding Plan usage API (subscription + quota). Both stations use the same paths. */
 export const USAGE_PATHS = {
 	subscription: '/api/biz/subscription/list',
 	quota: '/api/monitor/usage/quota/limit',
