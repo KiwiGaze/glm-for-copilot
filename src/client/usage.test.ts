@@ -5,6 +5,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 vi.mock('vscode', () => ({
 	workspace: { getConfiguration: () => ({ get: () => undefined }) },
 	env: { language: 'en' },
+	window: {
+		createOutputChannel: () => ({
+			info: () => {},
+			warn: () => {},
+			error: () => {},
+			debug: () => {},
+			show: () => {},
+			dispose: () => {},
+		}),
+	},
 }));
 
 import { UsageClient } from './usage';
@@ -37,6 +47,21 @@ const QUOTA_NON_NUMERIC = JSON.stringify({
 	] },
 });
 const QUOTA_EMPTY = JSON.stringify({ data: { limits: [] } });
+const BUSINESS_AUTH_401 = JSON.stringify({
+	code: 401,
+	msg: 'Credential expired or incorrect',
+	success: false,
+});
+const BUSINESS_SERVER_ERROR = JSON.stringify({
+	code: 500,
+	msg: 'Internal Error',
+	success: false,
+});
+const BUSINESS_AUTH_1001 = JSON.stringify({
+	code: 1001,
+	msg: 'Authentication parameter not received in Header, unable to authenticate',
+	success: false,
+});
 
 function mockFetch(responses: Record<string, { status: number; body: string }>): typeof fetch {
 	return vi.fn(async (url: URL | string) => {
@@ -116,6 +141,62 @@ describe('UsageClient.fetchSnapshot', () => {
 		}));
 		const snap = await client.fetchSnapshot('k');
 		expect(snap.status).toBe('auth-error');
+	});
+
+	it.each([
+		'https://api.z.ai',
+		'https://open.bigmodel.cn',
+	])('maps HTTP 200 business code 401 to auth-error for %s', async (host) => {
+		const client = new UsageClient(host, mockFetch({
+			'subscription/list': { status: 200, body: BUSINESS_AUTH_401 },
+			'quota/limit': { status: 200, body: BUSINESS_AUTH_401 },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.status).toBe('auth-error');
+	});
+
+	it('maps an HTTP 200 non-authentication business failure to server-error', async () => {
+		const client = new UsageClient('https://api.z.ai', mockFetch({
+			'subscription/list': { status: 200, body: SUBSCRIPTION_OK },
+			'quota/limit': { status: 200, body: BUSINESS_SERVER_ERROR },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.status).toBe('server-error');
+	});
+
+	it('does not reduce a subscription business authentication failure to no-data', async () => {
+		const client = new UsageClient('https://api.z.ai', mockFetch({
+			'subscription/list': { status: 200, body: BUSINESS_AUTH_401 },
+			'quota/limit': { status: 200, body: QUOTA_EMPTY },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.status).toBe('auth-error');
+	});
+
+	it('does not mask a subscription business authentication failure with usable quota', async () => {
+		const client = new UsageClient('https://api.z.ai', mockFetch({
+			'subscription/list': { status: 200, body: BUSINESS_AUTH_401 },
+			'quota/limit': { status: 200, body: QUOTA_SESSION_ONLY },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.status).toBe('auth-error');
+	});
+
+	it('propagates subscription cancellation even when quota data is usable', async () => {
+		const abortError = new DOMException('The operation was aborted.', 'AbortError');
+		const fetchImpl = vi.fn(async (url: URL | string) => {
+			const path = typeof url === 'string' ? url : url.pathname;
+			if (path.includes('subscription/list')) {
+				throw abortError;
+			}
+			return new Response(QUOTA_SESSION_ONLY, {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}) as unknown as typeof fetch;
+		const client = new UsageClient('https://api.z.ai', fetchImpl);
+
+		await expect(client.fetchSnapshot('k')).rejects.toBe(abortError);
 	});
 
 	it('maps HTTP 500 to server-error', async () => {
@@ -347,6 +428,33 @@ describe('UsageClient.fetchBalance (Standard API balance)', () => {
 		expect(snap.status).toBe('auth-error');
 	});
 
+	it('maps official business authentication code 1001 to auth-error', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: BUSINESS_AUTH_1001 },
+			'tokenAccounts/list/my': { status: 200, body: TOKEN_PACKAGES_EMPTY },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('auth-error');
+	});
+
+	it('does not reduce a token-package business failure to no-data', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_EMPTY },
+			'tokenAccounts/list/my': { status: 200, body: BUSINESS_SERVER_ERROR },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('server-error');
+	});
+
+	it('does not mask a token-package business authentication failure with usable cash', async () => {
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+			'query-customer-account-report': { status: 200, body: ACCOUNT_OK },
+			'tokenAccounts/list/my': { status: 200, body: BUSINESS_AUTH_1001 },
+		}));
+		const snap = await client.fetchBalance('k');
+		expect(snap.status).toBe('auth-error');
+	});
+
 	it('survives token packages failure (non-fatal), still shows cash', async () => {
 		const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
 			'query-customer-account-report': { status: 200, body: ACCOUNT_OK },
@@ -356,6 +464,23 @@ describe('UsageClient.fetchBalance (Standard API balance)', () => {
 		expect(snap.status).toBe('ok');
 		expect(snap.balance!.availableCash).toBe(42.5);
 		expect(snap.balance!.tokenPackages).toEqual([]);
+	});
+
+	it('propagates token-package cancellation even when cash data is usable', async () => {
+		const abortError = new DOMException('The operation was aborted.', 'AbortError');
+		const fetchImpl = vi.fn(async (url: URL | string) => {
+			const path = typeof url === 'string' ? url : url.toString();
+			if (path.includes('tokenAccounts/list/my')) {
+				throw abortError;
+			}
+			return new Response(ACCOUNT_OK, {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}) as unknown as typeof fetch;
+		const client = new UsageClient(() => 'https://open.bigmodel.cn', fetchImpl);
+
+		await expect(client.fetchBalance('k')).rejects.toBe(abortError);
 	});
 
 	it('uses raw key auth (no Bearer) for bigmodel.cn balance endpoints', async () => {

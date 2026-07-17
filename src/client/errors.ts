@@ -14,7 +14,18 @@ const SET_API_KEY_COMMAND = 'command:glm-copilot.setApiKey';
 /** VS Code command URI that reveals the extension log output. */
 const SHOW_LOGS_COMMAND = 'command:glm-copilot.showLogs';
 
-type RequestErrorKind = 'http' | 'network' | 'unknown';
+type RequestErrorKind = 'http' | 'network' | 'business' | 'response' | 'unknown';
+
+const AUTHENTICATION_BUSINESS_CODES = new Set([
+	'401',
+	'403',
+	'1000',
+	'1001',
+	'1002',
+	'1003',
+	'1004',
+	'1005',
+]);
 
 interface GLMRequestErrorOptions {
 	message: string;
@@ -191,6 +202,53 @@ export async function createHttpError(
 	});
 }
 
+/** Build a `GLMRequestError` from a failed JSON business envelope. */
+export function createBusinessError(context: {
+	baseUrl: string;
+	operation: string;
+	code?: string;
+	serverMessage?: string;
+}): GLMRequestError {
+	const codeLabel = context.code ?? 'UNKNOWN';
+	return new GLMRequestError({
+		message: `GLM API ${context.operation} failed with business code ${codeLabel}`,
+		kind: 'business',
+		baseUrl: context.baseUrl,
+		code: context.code,
+		diagnosticMessage: joinDiagnosticParts(
+			'kind=business',
+			`operation=${safeStringify(context.operation)}`,
+			context.code ? `businessCode=${safeStringify(context.code)}` : undefined,
+			`baseUrl=${safeStringify(context.baseUrl)}`,
+			context.serverMessage
+				? `serverMessage=${safeStringify(truncateSingleLine(context.serverMessage))}`
+				: undefined,
+		),
+	});
+}
+
+/** Build a `GLMRequestError` for an invalid JSON response body. */
+export function createResponseParseError(
+	context: { baseUrl: string; operation: string },
+	cause: unknown,
+): GLMRequestError {
+	const causeMessage = cause instanceof Error ? cause.message : String(cause);
+	return new GLMRequestError({
+		message: `GLM API ${context.operation} returned invalid JSON`,
+		kind: 'response',
+		baseUrl: context.baseUrl,
+		code: 'INVALID_JSON',
+		cause,
+		diagnosticMessage: joinDiagnosticParts(
+			'kind=response',
+			'code=INVALID_JSON',
+			`operation=${safeStringify(context.operation)}`,
+			`baseUrl=${safeStringify(context.baseUrl)}`,
+			`message=${safeStringify(truncateSingleLine(causeMessage))}`,
+		),
+	});
+}
+
 /** Categorize a thrown value into a `GLMRequestError`, or return it unchanged. */
 export function normalizeRequestError(
 	error: unknown,
@@ -265,6 +323,24 @@ export function formatRequestError(error: unknown): string {
 	return `error=${safeStringify(String(error))}`;
 }
 
+/**
+ * Return whether a structured request failure represents invalid authentication.
+ *
+ * @see https://docs.z.ai/api-reference/api-code
+ * @see https://docs.bigmodel.cn/cn/faq/api-code
+ */
+export function isAuthenticationRequestError(error: unknown): boolean {
+	if (!(error instanceof GLMRequestError)) {
+		return false;
+	}
+	if (error.kind === 'http') {
+		return error.status === 401 || error.status === 403;
+	}
+	return error.kind === 'business' &&
+		error.code !== undefined &&
+		AUTHENTICATION_BUSINESS_CODES.has(error.code);
+}
+
 function getHttpErrorMessage(status: number, statusLabel: string, baseUrl: string): string {
 	switch (status) {
 		case 400:
@@ -292,7 +368,7 @@ function getHttpErrorMessage(status: number, statusLabel: string, baseUrl: strin
 
 function getErrorActions(error: GLMRequestError): ErrorAction[] {
 	const actions: ErrorAction[] = [];
-	if (error.kind === 'http' && error.status === 401) {
+	if (isAuthenticationRequestError(error)) {
 		actions.push({ labelKey: 'error.action.setApiKey', url: SET_API_KEY_COMMAND });
 	}
 	actions.push({ labelKey: 'error.action.viewDetails', url: SHOW_LOGS_COMMAND });

@@ -1,6 +1,14 @@
 import { BALANCE_PATHS, USAGE_PATHS, USAGE_REQUEST_TIMEOUT_MS } from '../consts';
+import { logger } from '../logger';
 import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
-import { createHttpError, isAbortError, normalizeRequestError } from './errors';
+import {
+	formatRequestError,
+	GLMRequestError,
+	isAbortError,
+	isAuthenticationRequestError,
+	normalizeRequestError,
+} from './errors';
+import { readBusinessJson } from './response';
 
 interface ZaiLimit {
 	type?: string;
@@ -58,7 +66,7 @@ export interface IUsageClient {
 /**
  * GLM usage + balance client. `fetchSnapshot` fetches Coding Plan quota (subscription + quota GETs);
  * `fetchBalance` fetches Standard API cash balance + token packages (two parallel GETs).
- * Subscription failure is swallowed; quota/balance failure sets status.
+ * Supplementary request failures preserve usable primary data and otherwise set the error status.
  *
  * Both stations (z.ai international + open.bigmodel.cn china) share the same paths and JSON
  * shapes; only the host and Authorization header differ. The China (open.bigmodel.cn) monitor
@@ -83,15 +91,33 @@ export class UsageClient implements IUsageClient {
 	/**
 	 * Fetch Coding Plan usage quota. Resolves the host, then fires subscription + quota requests in
 	 * parallel; the subscription result (plan name + renewal) is merged into the quota snapshot.
-	 * Subscription failure is swallowed (best-effort); quota failure determines the final status.
+	 * Subscription failure is best-effort when quota data is usable and otherwise determines the
+	 * error status instead of being reduced to `no-data`.
 	 */
 	async fetchSnapshot(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
 		const host = this.resolveHost();
-		const [subscription, snapshot] = await Promise.all([
+		const [subscriptionResult, quotaResult] = await Promise.allSettled([
 			this.fetchSubscription(host, apiKey, signal),
 			this.fetchQuota(host, apiKey, signal),
 		]);
-		return { ...snapshot, ...subscription };
+		if (quotaResult.status === 'rejected') {
+			throw quotaResult.reason;
+		}
+		const snapshot = quotaResult.value;
+		if (subscriptionResult.status === 'fulfilled') {
+			return { ...snapshot, ...subscriptionResult.value };
+		}
+		if (isAbortError(subscriptionResult.reason)) {
+			throw subscriptionResult.reason;
+		}
+		if (
+			isAuthenticationRequestError(subscriptionResult.reason) ||
+			snapshot.status === 'no-data'
+		) {
+			return this.toErrorSnapshot(subscriptionResult.reason, host, snapshot.fetchedAt);
+		}
+		this.logRequestError(subscriptionResult.reason, host);
+		return snapshot;
 	}
 
 	/**
@@ -116,15 +142,25 @@ export class UsageClient implements IUsageClient {
 		}
 		const account = accountResult.value;
 
-		// Token packages failure is non-fatal — we still show cash balance.
+		const hasAccountData =
+			account.availableCash !== undefined ||
+			account.totalRecharged !== undefined;
+		if (packagesResult.status === 'rejected' && isAbortError(packagesResult.reason)) {
+			throw packagesResult.reason;
+		}
+		if (
+			packagesResult.status === 'rejected' &&
+			(isAuthenticationRequestError(packagesResult.reason) || !hasAccountData)
+		) {
+			return this.toErrorSnapshot(packagesResult.reason, host, fetchedAt);
+		}
+		if (packagesResult.status === 'rejected') {
+			this.logRequestError(packagesResult.reason, host);
+		}
 		const packages = packagesResult.status === 'fulfilled' ? packagesResult.value : [];
 
 		const balance: UsageBalance = { ...account, tokenPackages: packages };
-		// No data at all → no-data; otherwise ok even if some fields are missing.
-		const hasData =
-			account.availableCash !== undefined ||
-			account.totalRecharged !== undefined ||
-			packages.length > 0;
+		const hasData = hasAccountData || packages.length > 0;
 		return {
 			status: hasData ? 'ok' : 'no-data',
 			balance,
@@ -135,17 +171,17 @@ export class UsageClient implements IUsageClient {
 	/**
 	 * Fetch the cash account report (balance, recharge, spend, gift, frozen) from the biz gateway.
 	 * Throws on HTTP error so the caller can map it to an error status.
-	 */	private async fetchAccountReport(
+	 */
+	private async fetchAccountReport(
 		host: string,
 		apiKey: string,
 		signal?: AbortSignal,
 	): Promise<Omit<UsageBalance, 'tokenPackages'>> {
 		const response = await this.get(`${host}${BALANCE_PATHS.accountReport}`, apiKey, signal);
-		if (!response.ok) {
-			const error = await createHttpError(response, { baseUrl: host });
-			throw error;
-		}
-		const parsed = (await response.json()) as BigmodelAccountReport;
+		const parsed = await readBusinessJson<BigmodelAccountReport>(response, {
+			baseUrl: host,
+			operation: 'account report',
+		});
 		const d = parsed?.data;
 		return {
 			availableCash: finiteOr(d?.availableBalance ?? d?.balance),
@@ -157,8 +193,8 @@ export class UsageClient implements IUsageClient {
 	}
 
 	/**
-	 * Fetch the list of token resource packages. Returns `[]` on any failure (non-fatal: cash
-	 * balance is still shown). Filters to EFFECTIVE packages (plus any with a non-null balance).
+	 * Fetch the list of token resource packages. Filters to EFFECTIVE packages (plus any with a
+	 * non-null balance). The caller decides whether a failure can degrade to cash-only data.
 	 */
 	private async fetchTokenAccounts(
 		host: string,
@@ -167,10 +203,10 @@ export class UsageClient implements IUsageClient {
 	): Promise<TokenPackage[]> {
 		const url = `${host}${BALANCE_PATHS.tokenAccounts}?pageNum=1&pageSize=100`;
 		const response = await this.get(url, apiKey, signal);
-		if (!response.ok) {
-			return [];
-		}
-		const parsed = (await response.json()) as BigmodelTokenAccountsResponse;
+		const parsed = await readBusinessJson<BigmodelTokenAccountsResponse>(response, {
+			baseUrl: host,
+			operation: 'token accounts',
+		});
 		const rows = parsed?.rows;
 		if (!Array.isArray(rows)) {
 			return [];
@@ -187,31 +223,26 @@ export class UsageClient implements IUsageClient {
 	}
 
 	/**
-	 * Fetch the Coding Plan subscription (plan name + renewal time). Any failure returns an empty
-	 * object — the quota snapshot still renders without plan metadata.
+	 * Fetch the Coding Plan subscription plan name and renewal time.
 	 */
 	private async fetchSubscription(
 		host: string,
 		apiKey: string,
 		signal?: AbortSignal,
 	): Promise<{ planName?: string; renewsAt?: string }> {
-		try {
-			const response = await this.get(`${host}${USAGE_PATHS.subscription}`, apiKey, signal);
-			if (!response.ok) {
-				return {};
-			}
-			const data = (await response.json()) as ZaiSubscriptionResponse;
-			const first = data?.data?.[0];
-			if (!first) {
-				return {};
-			}
-			return {
-				planName: first.productName,
-				renewsAt: first.nextRenewTime,
-			};
-		} catch {
+		const response = await this.get(`${host}${USAGE_PATHS.subscription}`, apiKey, signal);
+		const data = await readBusinessJson<ZaiSubscriptionResponse>(response, {
+			baseUrl: host,
+			operation: 'subscription',
+		});
+		const first = data?.data?.[0];
+		if (!first) {
 			return {};
 		}
+		return {
+			planName: first.productName,
+			renewsAt: first.nextRenewTime,
+		};
 	}
 
 	/**
@@ -220,26 +251,18 @@ export class UsageClient implements IUsageClient {
 	 */
 	private async fetchQuota(host: string, apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
 		const fetchedAt = Date.now();
-		let response: Response;
+		let parsed: ZaiQuotaResponse;
 		try {
-			response = await this.get(`${host}${USAGE_PATHS.quota}`, apiKey, signal);
+			const response = await this.get(`${host}${USAGE_PATHS.quota}`, apiKey, signal);
+			parsed = await readBusinessJson<ZaiQuotaResponse>(response, {
+				baseUrl: host,
+				operation: 'quota',
+			});
 		} catch (error) {
-			// Re-throw aborts so the caller (UsageStatusBar) can swallow+log them per spec §7.2
-			// instead of rendering a server-error snapshot for a cancellation it caused.
 			if (isAbortError(error)) {
 				throw error;
 			}
 			return this.toErrorSnapshot(error, host, fetchedAt);
-		}
-		if (!response.ok) {
-			const error = await createHttpError(response, { baseUrl: host });
-			return this.toErrorSnapshot(error, host, fetchedAt);
-		}
-		let parsed: ZaiQuotaResponse;
-		try {
-			parsed = (await response.json()) as ZaiQuotaResponse;
-		} catch {
-			return { status: 'server-error', metrics: [], fetchedAt };
 		}
 		const limits = extractLimits(parsed);
 		if (!Array.isArray(limits) || limits.length === 0) {
@@ -301,28 +324,23 @@ export class UsageClient implements IUsageClient {
 	}
 
 	/**
-	 * Map a fetch error to a {@link UsageSnapshot} error status: 401/403 → `auth-error`,
-	 * network → `network-error`, everything else → `server-error`.
+	 * Map a structured request error to a {@link UsageSnapshot} status.
 	 */
 	private toErrorSnapshot(error: unknown, host: string, fetchedAt: number): UsageSnapshot {
 		const normalized = normalizeRequestError(error, { baseUrl: host });
-		let status: UsageStatus;
-		if (normalized instanceof Error && 'kind' in normalized) {
-			const kind = (normalized as { kind: string }).kind;
-			const httpStatus = (normalized as { status?: number }).status;
-			if (kind === 'http' && (httpStatus === 401 || httpStatus === 403)) {
-				status = 'auth-error';
-			} else if (kind === 'http') {
-				status = 'server-error';
-			} else if (kind === 'network') {
-				status = 'network-error';
-			} else {
-				status = 'server-error';
-			}
-		} else {
-			status = 'server-error';
+		logger.warn('GLM usage request failed:', formatRequestError(normalized));
+		let status: UsageStatus = 'server-error';
+		if (isAuthenticationRequestError(normalized)) {
+			status = 'auth-error';
+		} else if (normalized instanceof GLMRequestError && normalized.kind === 'network') {
+			status = 'network-error';
 		}
 		return { status, metrics: [], fetchedAt };
+	}
+
+	private logRequestError(error: unknown, host: string): void {
+		const normalized = normalizeRequestError(error, { baseUrl: host });
+		logger.warn('GLM supplementary usage request failed:', formatRequestError(normalized));
 	}
 }
 
