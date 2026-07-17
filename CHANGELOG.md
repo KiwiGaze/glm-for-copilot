@@ -4,6 +4,10 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## [Unreleased]
+
+- **Usage error reporting** - HTTP 200 responses containing failed GLM business envelopes now report authentication or server errors instead of `no-data`. Business codes and server messages are preserved in the GLM output logs, and authentication failures provide the existing API-key recovery action.
+
 ## 0.2.10
 
 - **Standard API balance tracking** - the usage status bar and details panel now also work for the Standard API (pay-as-you-go) mode, not just Coding Plan. Cash balance (available, recharged, gifted, spent, frozen) and token resource packages are queried from both `z.ai` and `bigmodel.cn` account endpoints, which share the same JSON shape. The status bar turns red when the available balance reaches 0.
