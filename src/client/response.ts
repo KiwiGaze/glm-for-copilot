@@ -55,11 +55,11 @@ function getBusinessFailure(value: unknown): BusinessFailure | undefined {
 
 	const errorValue = response.error;
 	const errorObject = asRecord(errorValue);
-	const code = readCode(response.code) ?? readCode(errorObject?.code);
+	const code = readCode(errorObject?.code) ?? readCode(response.code);
 	const message =
+		readString(errorObject?.message) ??
 		readString(response.msg) ??
 		readString(response.message) ??
-		readString(errorObject?.message) ??
 		readString(errorValue);
 	const failedBySuccess = response.success === false;
 	const failedByCode = code !== undefined && !SUCCESS_BUSINESS_CODES.has(code);

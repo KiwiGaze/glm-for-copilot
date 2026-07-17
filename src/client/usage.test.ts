@@ -466,6 +466,29 @@ describe('UsageClient.fetchBalance (Standard API balance)', () => {
 		expect(snap.balance!.tokenPackages).toEqual([]);
 	});
 
+	it.each([
+		['totalSpendAmount', 'totalSpent'],
+		['giveAmount', 'giftedAmount'],
+		['frozenBalance', 'frozenAmount'],
+	] as const)(
+		'preserves account data from %s when token packages fail',
+		async (accountField, balanceField) => {
+			const client = new UsageClient(() => 'https://open.bigmodel.cn', mockFetch({
+				'query-customer-account-report': {
+					status: 200,
+					body: JSON.stringify({ success: true, data: { [accountField]: 12.5 } }),
+				},
+				'tokenAccounts/list/my': { status: 500, body: '' },
+			}));
+
+			const snap = await client.fetchBalance('k');
+
+			expect(snap.status).toBe('ok');
+			expect(snap.balance?.[balanceField]).toBe(12.5);
+			expect(snap.balance?.tokenPackages).toEqual([]);
+		},
+	);
+
 	it('propagates token-package cancellation even when cash data is usable', async () => {
 		const abortError = new DOMException('The operation was aborted.', 'AbortError');
 		const fetchImpl = vi.fn(async (url: URL | string) => {

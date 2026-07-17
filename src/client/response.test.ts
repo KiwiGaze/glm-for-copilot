@@ -104,6 +104,30 @@ describe('readBusinessJson', () => {
 		});
 	});
 
+	it('prefers nested error details in a mixed business envelope', async () => {
+		const response = Response.json({
+			code: 200,
+			message: 'Request accepted',
+			error: {
+				code: 1002,
+				message: 'Authorization Token is invalid',
+			},
+		});
+
+		let error: unknown;
+		try {
+			await readBusinessJson(response, CONTEXT);
+		} catch (caught) {
+			error = caught;
+		}
+
+		expect(isAuthenticationRequestError(error)).toBe(true);
+		expect(formatRequestError(error)).toContain('businessCode="1002"');
+		expect(formatRequestError(error)).toContain(
+			'serverMessage="Authorization Token is invalid"',
+		);
+	});
+
 	it('accepts business code 200', async () => {
 		const body = { code: 200, data: { limits: [] } };
 		const response = Response.json(body);

@@ -144,7 +144,10 @@ export class UsageClient implements IUsageClient {
 
 		const hasAccountData =
 			account.availableCash !== undefined ||
-			account.totalRecharged !== undefined;
+			account.totalRecharged !== undefined ||
+			account.totalSpent !== undefined ||
+			account.giftedAmount !== undefined ||
+			account.frozenAmount !== undefined;
 		if (packagesResult.status === 'rejected' && isAbortError(packagesResult.reason)) {
 			throw packagesResult.reason;
 		}
