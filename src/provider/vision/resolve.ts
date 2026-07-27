@@ -16,7 +16,6 @@ import { logger } from '../../logger';
 import type { IAuthManager } from '../../types';
 import { findVisionAnalyzeTool } from '../../vision-tool';
 import { reportThinking } from '../thinking';
-import { isImageDataPart } from '../tokens';
 import {
 	computeDescriptionCacheKey,
 	hashImageContent,
@@ -24,6 +23,7 @@ import {
 	type VisionImage,
 } from './cache';
 import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './consts';
+import { collectImagePartRun, isImageDataPart } from './parts';
 
 /** Longest failure reason shown inside the leading notice. */
 const FAILURE_REASON_MAX_LENGTH = 200;
@@ -35,6 +35,7 @@ const FAILURE_REASON_MAX_LENGTH = 200;
  * of an error screenshot can legitimately start with "Error:".
  */
 const MCP_TOOL_ERROR_PREFIX = /^error:\s/i;
+const activeRunDirs = new Set<string>();
 
 type InvokeTool = (
 	name: string,
@@ -77,11 +78,6 @@ interface ContainerContext {
 interface ContainerResolution {
 	text: string;
 	failureNotice?: string;
-}
-
-interface ImageRun {
-	images: VisionImage[];
-	nextIndex: number;
 }
 
 /**
@@ -165,8 +161,8 @@ async function resolveMessageContent(
 	for (let index = 0; index < parts.length; index += 1) {
 		const part = parts[index];
 		if (isImageDataPart(part)) {
-			const run = collectImageRun(parts, index);
-			const resolution = await resolveContainer(run.images, ctx);
+			const run = collectImagePartRun(parts, index);
+			const resolution = await resolveContainer(run.images.map(toVisionImage), ctx);
 			notice ??= resolution.failureNotice;
 			content.push(new vscode.LanguageModelTextPart(resolution.text));
 			index = run.nextIndex - 1;
@@ -193,8 +189,8 @@ async function resolveToolResult(
 	for (let index = 0; index < items.length; index += 1) {
 		const item = items[index];
 		if (isImageDataPart(item)) {
-			const run = collectImageRun(items, index);
-			const resolution = await resolveContainer(run.images, ctx);
+			const run = collectImagePartRun(items, index);
+			const resolution = await resolveContainer(run.images.map(toVisionImage), ctx);
 			failureNotice ??= resolution.failureNotice;
 			content.push(new vscode.LanguageModelTextPart(resolution.text));
 			index = run.nextIndex - 1;
@@ -206,20 +202,6 @@ async function resolveToolResult(
 		part: new vscode.LanguageModelToolResultPart(part.callId, content),
 		failureNotice,
 	};
-}
-
-function collectImageRun(parts: readonly unknown[], startIndex: number): ImageRun {
-	const images: VisionImage[] = [];
-	let nextIndex = startIndex;
-	while (nextIndex < parts.length) {
-		const part = parts[nextIndex];
-		if (!isImageDataPart(part)) {
-			break;
-		}
-		images.push(toVisionImage(part));
-		nextIndex += 1;
-	}
-	return { images, nextIndex };
 }
 
 async function resolveContainer(
@@ -288,6 +270,7 @@ async function analyzeImages(
 ): Promise<string> {
 	const runDir = join(ctx.imageDir, randomUUID());
 	await mkdir(runDir, { recursive: true });
+	activeRunDirs.add(runDir);
 	const cts = new vscode.CancellationTokenSource();
 	const subscription = ctx.token.onCancellationRequested(() => cts.cancel());
 	// Cancellation can land between the caller's check and this subscription.
@@ -326,6 +309,8 @@ async function analyzeImages(
 			await rm(runDir, { recursive: true, force: true });
 		} catch (error) {
 			logger.warn('Failed to remove GLM Vision temp images', error);
+		} finally {
+			activeRunDirs.delete(runDir);
 		}
 	}
 }
@@ -358,14 +343,15 @@ async function pruneTempImages(dir: string): Promise<void> {
 			return;
 		}
 		const entries = await Promise.all(
-			names.map(async (name) => ({
-				name,
-				mtimeMs: (await stat(join(dir, name))).mtimeMs,
-			})),
+			names.map(async (name) => {
+				const path = join(dir, name);
+				return { path, mtimeMs: (await stat(path)).mtimeMs };
+			}),
 		);
 		entries.sort((a, b) => a.mtimeMs - b.mtimeMs);
-		for (const entry of entries.slice(0, entries.length - retainedLimit)) {
-			await rm(join(dir, entry.name), { recursive: true, force: true });
+		const removableEntries = entries.filter((entry) => !activeRunDirs.has(entry.path));
+		for (const entry of removableEntries.slice(0, entries.length - retainedLimit)) {
+			await rm(entry.path, { recursive: true, force: true });
 		}
 	} catch (error) {
 		logger.warn('Failed to prune GLM Vision temp images', error);

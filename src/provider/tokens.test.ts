@@ -27,6 +27,7 @@ vi.mock('vscode', () => {
 });
 
 import * as vscode from 'vscode';
+import { VISION_DESCRIPTION_MAX_TOKENS } from '../consts';
 import { cachedImageDescriptionChars, estimateTokenCount } from './tokens';
 import { computeDescriptionCacheKey, hashImageContent, VisionDescriptionCache } from './vision/cache';
 import { describedImageText } from './vision/consts';
@@ -48,8 +49,10 @@ function seededCache(data: Uint8Array, description: string): VisionDescriptionCa
 }
 
 describe('estimateTokenCount', () => {
-	it('estimates an image part at the flat constant when no resolver is given', () => {
-		expect(estimateTokenCount(imageMessage(new Uint8Array([1, 2, 3])), 4)).toBe(Math.ceil(1020 / 4));
+	it('budgets the maximum description size for an uncached image', () => {
+		expect(estimateTokenCount(imageMessage(new Uint8Array([1, 2, 3])), 4)).toBeGreaterThan(
+			VISION_DESCRIPTION_MAX_TOKENS,
+		);
 	});
 
 	it('counts the real cached description length for a resolved image', () => {
@@ -62,21 +65,22 @@ describe('estimateTokenCount', () => {
 		expect(count).toBe(Math.ceil(describedImageText(1, description).length / 4));
 	});
 
-	it('falls back to the flat constant when the description is not cached', () => {
+	it('budgets the maximum description size when the description is not cached', () => {
 		const cache = new VisionDescriptionCache();
 		const count = estimateTokenCount(
 			imageMessage(new Uint8Array([9])),
 			4,
 			cachedImageDescriptionChars(cache, PROMPT),
 		);
-		expect(count).toBe(Math.ceil(1020 / 4));
+		expect(count).toBeGreaterThan(VISION_DESCRIPTION_MAX_TOKENS);
 	});
 
-	it('falls back to the flat constant for multi-image containers (cache key spans all hashes)', () => {
+	it('counts a cached multi-image container using its ordered image hashes', () => {
 		const a = new Uint8Array([1]);
 		const b = new Uint8Array([2]);
 		const cache = new VisionDescriptionCache();
-		cache.set(computeDescriptionCacheKey(PROMPT, [hashImageContent(a), hashImageContent(b)]), 'joined description');
+		const description = 'joined description';
+		cache.set(computeDescriptionCacheKey(PROMPT, [hashImageContent(a), hashImageContent(b)]), description);
 		const message = {
 			role: 1,
 			content: [new vscode.LanguageModelDataPart(a, 'image/png'), new vscode.LanguageModelDataPart(b, 'image/jpeg')],
@@ -85,7 +89,7 @@ describe('estimateTokenCount', () => {
 
 		const count = estimateTokenCount(message, 4, cachedImageDescriptionChars(cache, PROMPT));
 
-		expect(count).toBe(Math.ceil((2 * 1020) / 4));
+		expect(count).toBe(Math.ceil(describedImageText(2, description).length / 4));
 	});
 
 	it('uses the cached description for images nested inside tool results', () => {

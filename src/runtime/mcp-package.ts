@@ -26,7 +26,7 @@ export interface NpmCiSpec {
 }
 
 export function buildNpmCiSpec(platform: NodeJS.Platform): NpmCiSpec {
-	const args = ['ci', '--ignore-scripts', '--omit=dev', '--no-audit', '--no-fund'];
+	const args = ['ci', '--ignore-scripts', '--omit=dev', '--no-audit', '--no-fund', '--no-progress'];
 	return {
 		command: platform === 'win32' ? 'cmd.exe' : 'npm',
 		args: platform === 'win32' ? ['/d', '/s', '/c', 'npm', ...args] : args,
@@ -34,7 +34,12 @@ export function buildNpmCiSpec(platform: NodeJS.Platform): NpmCiSpec {
 }
 
 export function hasInstalledVisionMcp(installDir: string): boolean {
-	const packageJsonPath = join(installDir, 'node_modules', '@z_ai', 'mcp-server', 'package.json');
+	const packageJsonPath = join(
+		installDir,
+		'node_modules',
+		VISION_MCP_PACKAGE_NAME,
+		'package.json',
+	);
 	const entryPoint = join(installDir, ...VISION_MCP_ENTRYPOINT_PARTS);
 	if (!existsSync(packageJsonPath) || !existsSync(entryPoint)) {
 		return false;

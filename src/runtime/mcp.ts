@@ -5,6 +5,7 @@ import {
 	API_KEY_SECRET,
 	CONFIG_SECTION,
 	EXTERNAL_URLS,
+	VISION_DESCRIPTION_MAX_TOKENS,
 	VISION_HEALTH_POLL_MS,
 	VISION_MCP_CTX_HEALTHY,
 	VISION_MCP_CTX_INSTALLED,
@@ -13,6 +14,7 @@ import {
 	VISION_MCP_LABEL,
 	VISION_MCP_PACKAGE,
 	VISION_MCP_PROVIDER_ID,
+	VISION_INVOKE_TIMEOUT_MS,
 	VISION_NODE_MIN_MAJOR,
 	ZAI_API_KEY_ENV,
 	ZAI_MODE_CHINA,
@@ -34,7 +36,7 @@ export interface VisionMcpServerSpec {
 	label: string;
 	command: string;
 	args: string[];
-	env: Record<string, string>;
+	env: Record<string, string | number | null>;
 }
 
 /**
@@ -48,9 +50,18 @@ export function buildVisionMcpServerSpec(options: {
 	const mode = options.region === 'china' ? ZAI_MODE_CHINA : ZAI_MODE_INTERNATIONAL;
 	return {
 		label: VISION_MCP_LABEL,
-		command: 'node',
+		command: process.execPath,
 		args: [options.entryPoint],
-		env: { [ZAI_MODE_ENV]: mode },
+		env: {
+			[ZAI_MODE_ENV]: mode,
+			PLATFORM_MODE: mode,
+			Z_AI_BASE_URL: null,
+			ANTHROPIC_AUTH_TOKEN: null,
+			ZAI_API_KEY: null,
+			SERVER_NAME: null,
+			Z_AI_TIMEOUT: String(VISION_INVOKE_TIMEOUT_MS),
+			Z_AI_VISION_MODEL_MAX_TOKENS: String(VISION_DESCRIPTION_MAX_TOKENS),
+		},
 	};
 }
 
@@ -90,7 +101,7 @@ function runProbe(
 			clearTimeout(timer);
 			resolve(undefined);
 		});
-		child.on('exit', (code) => {
+		child.on('close', (code) => {
 			clearTimeout(timer);
 			resolve({ code, stdout });
 		});
@@ -406,7 +417,6 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			resolveMcpServerDefinition: (server) => this.resolveServer(server),
 		};
 		this.registration = register(VISION_MCP_PROVIDER_ID, provider);
-		this.context.subscriptions.push(this.registration);
 		return true;
 	}
 

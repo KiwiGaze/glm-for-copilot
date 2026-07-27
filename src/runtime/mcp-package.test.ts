@@ -5,6 +5,10 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type * as vscode from 'vscode';
 import {
+	VISION_MCP_PACKAGE_NAME,
+	VISION_MCP_PACKAGE_VERSION,
+} from '../consts';
+import {
 	buildNpmCiSpec,
 	hasInstalledVisionMcp,
 	VisionMcpPackageInstaller,
@@ -18,12 +22,15 @@ function makeTempDir(): string {
 	return dir;
 }
 
-async function seedInstalledPackage(installDir: string, version = '0.1.4'): Promise<void> {
-	const packageDir = join(installDir, 'node_modules', '@z_ai', 'mcp-server');
+async function seedInstalledPackage(
+	installDir: string,
+	version = VISION_MCP_PACKAGE_VERSION,
+): Promise<void> {
+	const packageDir = join(installDir, 'node_modules', VISION_MCP_PACKAGE_NAME);
 	await mkdir(join(packageDir, 'build'), { recursive: true });
 	await writeFile(
 		join(packageDir, 'package.json'),
-		JSON.stringify({ name: '@z_ai/mcp-server', version }),
+		JSON.stringify({ name: VISION_MCP_PACKAGE_NAME, version }),
 	);
 	await writeFile(join(packageDir, 'build', 'index.js'), '#!/usr/bin/env node\n');
 }
@@ -43,7 +50,7 @@ describe('buildNpmCiSpec', () => {
 	it('disables lifecycle scripts and installs only the locked production graph', () => {
 		expect(buildNpmCiSpec('darwin')).toEqual({
 			command: 'npm',
-			args: ['ci', '--ignore-scripts', '--omit=dev', '--no-audit', '--no-fund'],
+			args: ['ci', '--ignore-scripts', '--omit=dev', '--no-audit', '--no-fund', '--no-progress'],
 		});
 	});
 
@@ -60,6 +67,7 @@ describe('buildNpmCiSpec', () => {
 				'--omit=dev',
 				'--no-audit',
 				'--no-fund',
+				'--no-progress',
 			],
 		});
 	});
@@ -139,7 +147,7 @@ describe('bundled Vision MCP lockfile', () => {
 			packages: Record<string, { version?: string; integrity?: string }>;
 		};
 		const server = lock.packages['node_modules/@z_ai/mcp-server'];
-		expect(server.version).toBe('0.1.4');
+		expect(server.version).toBe(VISION_MCP_PACKAGE_VERSION);
 		expect(server.integrity).toBe(
 			'sha512-jPLBKJaTIy7HGYI0VuAaFJIjU3dq5z09CYZNr3QYoHYhCQ2dr5D6qp93oEVxNyvex643dICB7WloHbph2EzlVg==',
 		);

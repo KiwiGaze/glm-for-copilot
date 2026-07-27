@@ -154,14 +154,24 @@ describe('buildVisionMcpServerSpec', () => {
 		const entryPoint = '/secure/vision-mcp/build/index.js';
 		const spec = buildVisionMcpServerSpec({ region: 'international', entryPoint });
 		expect(spec.label).toBe('GLM Vision');
-		expect(spec.command).toBe('node');
+		expect(spec.command).toBe(process.execPath);
 		expect(spec.args).toEqual([entryPoint]);
-		expect(spec.env).toEqual({ Z_AI_MODE: 'ZAI' });
+		expect(spec.env).toEqual({
+			Z_AI_MODE: 'ZAI',
+			PLATFORM_MODE: 'ZAI',
+			Z_AI_BASE_URL: null,
+			ANTHROPIC_AUTH_TOKEN: null,
+			ZAI_API_KEY: null,
+			SERVER_NAME: null,
+			Z_AI_TIMEOUT: '120000',
+			Z_AI_VISION_MODEL_MAX_TOKENS: '32768',
+		});
 	});
 
 	it('uses ZHIPU mode for the China region', () => {
 		const spec = buildVisionMcpServerSpec({ region: 'china', entryPoint: '/secure/index.js' });
-		expect(spec.env).toEqual({ Z_AI_MODE: 'ZHIPU' });
+		expect(spec.env.Z_AI_MODE).toBe('ZHIPU');
+		expect(spec.env.PLATFORM_MODE).toBe('ZHIPU');
 	});
 
 	it('never embeds the API key in the base spec (injected only when the server starts)', () => {
@@ -182,10 +192,11 @@ describe('VisionMcpManager', () => {
 	});
 
 	it('restores the MCP server registration at activation when installed', () => {
-		const { manager } = makeManager(true);
+		const { context, manager } = makeManager(true);
 		manager.initialize();
 		expect(mocks.registerMcpServerDefinitionProvider).toHaveBeenCalledTimes(1);
 		expect(mocks.registerMcpServerDefinitionProvider.mock.calls[0][0]).toBe('glm-copilot.vision');
+		expect(context.subscriptions).toHaveLength(0);
 		manager.dispose();
 	});
 

@@ -106,6 +106,9 @@ export const VISION_IMAGE_MIME_EXTENSIONS: Record<string, string> = {
 /** Largest single image (bytes) accepted — the vision MCP server rejects images over 5 MB. */
 export const VISION_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
+/** Maximum description tokens requested from each pinned Vision MCP analysis call. */
+export const VISION_DESCRIPTION_MAX_TOKENS = 32_768;
+
 /**
  * Largest image count per analyzed container. Images of one container are
  * written to disk and analyzed concurrently, so this also bounds peak temp
