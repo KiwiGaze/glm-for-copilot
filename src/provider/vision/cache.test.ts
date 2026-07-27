@@ -1,42 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { computeDescriptionCacheKey, VisionDescriptionCache, type VisionCacheMemento } from './cache';
+import { fakeMemento } from '../../test-helpers';
+import { computeDescriptionCacheKey, hashImageContent, VisionDescriptionCache } from './cache';
 
-function fakeMemento(): VisionCacheMemento & { store: Map<string, unknown> } {
-	const store = new Map<string, unknown>();
-	return {
-		store,
-		get<T>(key: string): T | undefined {
-			return store.get(key) as T | undefined;
-		},
-		update(key: string, value: unknown): Thenable<void> {
-			store.set(key, value);
-			return Promise.resolve();
-		},
-	};
-}
-
-function image(bytes: number[], mimeType = 'image/png'): { mimeType: string; data: Uint8Array } {
-	return { mimeType, data: new Uint8Array(bytes) };
+function imageHash(bytes: number[]): string {
+	return hashImageContent(new Uint8Array(bytes));
 }
 
 describe('computeDescriptionCacheKey', () => {
 	it('is stable for identical prompt and image content', () => {
-		const a = computeDescriptionCacheKey('prompt', [image([1, 2, 3])]);
-		const b = computeDescriptionCacheKey('prompt', [image([1, 2, 3])]);
+		const a = computeDescriptionCacheKey('prompt', [imageHash([1, 2, 3])]);
+		const b = computeDescriptionCacheKey('prompt', [imageHash([1, 2, 3])]);
 		expect(a).toBe(b);
 	});
 
+	it('matches the pinned persisted format, so stored descriptions stay valid across upgrades', () => {
+		expect(computeDescriptionCacheKey('prompt', [imageHash([1, 2, 3])])).toBe(
+			'0bbbe1413dec4f7e336823c82e0f68315b16db8226323efe2c150f86f0ea0d7b',
+		);
+	});
+
 	it('changes when the prompt changes', () => {
-		const base = computeDescriptionCacheKey('prompt', [image([1, 2, 3])]);
-		expect(computeDescriptionCacheKey('other', [image([1, 2, 3])])).not.toBe(base);
+		const base = computeDescriptionCacheKey('prompt', [imageHash([1, 2, 3])]);
+		expect(computeDescriptionCacheKey('other', [imageHash([1, 2, 3])])).not.toBe(base);
 	});
 
 	it('changes when image bytes or order change', () => {
-		const a = image([1, 2, 3]);
-		const b = image([9, 8, 7]);
+		const a = imageHash([1, 2, 3]);
+		const b = imageHash([9, 8, 7]);
 		expect(computeDescriptionCacheKey('p', [a, b])).not.toBe(computeDescriptionCacheKey('p', [b, a]));
-		expect(computeDescriptionCacheKey('p', [image([1, 2, 3])])).not.toBe(
-			computeDescriptionCacheKey('p', [image([1, 2, 4])]),
+		expect(computeDescriptionCacheKey('p', [imageHash([1, 2, 3])])).not.toBe(
+			computeDescriptionCacheKey('p', [imageHash([1, 2, 4])]),
 		);
 	});
 });
@@ -44,7 +37,7 @@ describe('computeDescriptionCacheKey', () => {
 describe('VisionDescriptionCache', () => {
 	it('returns undefined before a value is stored (miss) and the value after (hit)', async () => {
 		const cache = new VisionDescriptionCache(fakeMemento());
-		const key = computeDescriptionCacheKey('p', [image([1])]);
+		const key = computeDescriptionCacheKey('p', [imageHash([1])]);
 		expect(cache.get(key)).toBeUndefined();
 		await cache.set(key, 'a description');
 		expect(cache.get(key)).toBe('a description');
@@ -52,7 +45,7 @@ describe('VisionDescriptionCache', () => {
 
 	it('persists descriptions across instances (survives a window reload)', async () => {
 		const memento = fakeMemento();
-		const key = computeDescriptionCacheKey('p', [image([1])]);
+		const key = computeDescriptionCacheKey('p', [imageHash([1])]);
 		await new VisionDescriptionCache(memento).set(key, 'persisted description');
 
 		const reloaded = new VisionDescriptionCache(memento);

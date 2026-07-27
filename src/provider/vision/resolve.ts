@@ -3,7 +3,6 @@ import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { getVisionEnabled, getVisionPrompt } from '../../config';
 import {
-	VISION_ALLOWED_IMAGE_MIME_TYPES,
 	VISION_IMAGE_MIME_EXTENSIONS,
 	VISION_INVOKE_TIMEOUT_MS,
 	VISION_MAX_IMAGE_BYTES,
@@ -15,7 +14,13 @@ import { logger } from '../../logger';
 import type { IAuthManager } from '../../types';
 import { findVisionAnalyzeTool } from '../../vision-tool';
 import { reportThinking } from '../thinking';
-import { computeDescriptionCacheKey, hashImageContent, type VisionDescriptionCache } from './cache';
+import { isImageDataPart } from '../tokens';
+import {
+	computeDescriptionCacheKey,
+	hashImageContent,
+	type VisionDescriptionCache,
+	type VisionImage,
+} from './cache';
 import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './consts';
 
 /** Longest failure reason shown inside the leading notice. */
@@ -28,11 +33,6 @@ const FAILURE_REASON_MAX_LENGTH = 200;
  * of an error screenshot can legitimately start with "Error:".
  */
 const MCP_TOOL_ERROR_PREFIX = /^error:\s/i;
-
-interface VisionImage {
-	mimeType: string;
-	data: Uint8Array;
-}
 
 type InvokeTool = (
 	name: string,
@@ -77,6 +77,11 @@ interface ContainerResolution {
 	failureNotice?: string;
 }
 
+interface ImageRun {
+	images: VisionImage[];
+	nextIndex: number;
+}
+
 /**
  * Turn image attachments into text so text-only GLM models can reason about
  * them. Runs on every chat request — a cheap no-op for text-only messages.
@@ -116,7 +121,7 @@ export async function resolveVisionMessages(
 	const ctx: ContainerContext = {
 		prompt: getVisionPrompt(),
 		cache: deps.cache,
-		imageDir: join(deps.storageDir, VISION_TEMP_DIR_NAME),
+		imageDir: getVisionTempDir(deps.storageDir),
 		toolName: toolName ?? '',
 		invokeTool: deps.invokeTool ?? defaultInvokeTool,
 		timeoutMs: deps.timeoutMs ?? VISION_INVOKE_TIMEOUT_MS,
@@ -124,6 +129,11 @@ export async function resolveVisionMessages(
 		progress,
 		token,
 	};
+
+	if (preflightFailure === undefined) {
+		await mkdir(ctx.imageDir, { recursive: true });
+		await pruneTempImages(ctx.imageDir);
+	}
 
 	const resolved: vscode.LanguageModelChatRequestMessage[] = [];
 	let failureNotice: string | undefined;
@@ -144,19 +154,17 @@ async function resolveMessageContent(
 	ctx: ContainerContext,
 ): Promise<{ content: vscode.LanguageModelInputPart[]; notice?: string }> {
 	const parts = message.content as readonly vscode.LanguageModelInputPart[];
-	const directImages = parts.filter(isImageDataPart).map(toVisionImage);
 	const content: vscode.LanguageModelInputPart[] = [];
-	let injectedDirect = false;
 	let notice: string | undefined;
 
-	for (const part of parts) {
+	for (let index = 0; index < parts.length; index += 1) {
+		const part = parts[index];
 		if (isImageDataPart(part)) {
-			if (!injectedDirect) {
-				injectedDirect = true;
-				const resolution = await resolveContainer(directImages, ctx);
-				notice ??= resolution.failureNotice;
-				content.push(new vscode.LanguageModelTextPart(resolution.text));
-			}
+			const run = collectImageRun(parts, index);
+			const resolution = await resolveContainer(run.images, ctx);
+			notice ??= resolution.failureNotice;
+			content.push(new vscode.LanguageModelTextPart(resolution.text));
+			index = run.nextIndex - 1;
 			continue;
 		}
 		if (isToolResultWithImages(part)) {
@@ -175,16 +183,38 @@ async function resolveToolResult(
 	ctx: ContainerContext,
 ): Promise<{ part: vscode.LanguageModelToolResultPart; failureNotice?: string }> {
 	const items = part.content as readonly unknown[];
-	const images = items.filter(isImageDataPart).map(toVisionImage);
-	const kept = items.filter((item) => !isImageDataPart(item));
-	const resolution = await resolveContainer(images, ctx);
+	const content: unknown[] = [];
+	let failureNotice: string | undefined;
+	for (let index = 0; index < items.length; index += 1) {
+		const item = items[index];
+		if (isImageDataPart(item)) {
+			const run = collectImageRun(items, index);
+			const resolution = await resolveContainer(run.images, ctx);
+			failureNotice ??= resolution.failureNotice;
+			content.push(new vscode.LanguageModelTextPart(resolution.text));
+			index = run.nextIndex - 1;
+		} else {
+			content.push(item);
+		}
+	}
 	return {
-		part: new vscode.LanguageModelToolResultPart(part.callId, [
-			...kept,
-			new vscode.LanguageModelTextPart(resolution.text),
-		]),
-		failureNotice: resolution.failureNotice,
+		part: new vscode.LanguageModelToolResultPart(part.callId, content),
+		failureNotice,
 	};
+}
+
+function collectImageRun(parts: readonly unknown[], startIndex: number): ImageRun {
+	const images: VisionImage[] = [];
+	let nextIndex = startIndex;
+	while (nextIndex < parts.length) {
+		const part = parts[nextIndex];
+		if (!isImageDataPart(part)) {
+			break;
+		}
+		images.push(toVisionImage(part));
+		nextIndex += 1;
+	}
+	return { images, nextIndex };
 }
 
 async function resolveContainer(
@@ -197,7 +227,8 @@ async function resolveContainer(
 	}
 
 	// Cache first: a stored analysis survives a stopped/uninstalled server.
-	const key = computeDescriptionCacheKey(ctx.prompt, images);
+	const imageHashes = images.map((image) => hashImageContent(image.data));
+	const key = computeDescriptionCacheKey(ctx.prompt, imageHashes);
 	const cached = ctx.cache.get(key);
 	if (cached !== undefined) {
 		return { text: describedImageText(images.length, cached) };
@@ -209,7 +240,7 @@ async function resolveContainer(
 	reportDescribeProgress(ctx.progress, images.length);
 	let description: string;
 	try {
-		description = await analyzeImages(images, ctx);
+		description = await analyzeImages(images, imageHashes, ctx);
 	} catch (error) {
 		if (ctx.token.isCancellationRequested) {
 			throw error instanceof vscode.CancellationError ? error : new vscode.CancellationError();
@@ -234,17 +265,18 @@ async function resolveContainer(
  * paths/URLs, not data URLs) and analyze them in parallel through the vision
  * MCP tool. Multiple images are joined with `Image N:` labels.
  */
-async function analyzeImages(images: readonly VisionImage[], ctx: ContainerContext): Promise<string> {
-	await mkdir(ctx.imageDir, { recursive: true });
-	await pruneTempImages(ctx.imageDir);
-
+async function analyzeImages(
+	images: readonly VisionImage[],
+	imageHashes: readonly string[],
+	ctx: ContainerContext,
+): Promise<string> {
 	const cts = new vscode.CancellationTokenSource();
 	const subscription = ctx.token.onCancellationRequested(() => cts.cancel());
 	const timer = setTimeout(() => cts.cancel(), ctx.timeoutMs);
 	try {
 		const texts = await Promise.all(
-			images.map(async (image) => {
-				const filePath = await ensureImageFile(ctx.imageDir, image);
+			images.map(async (image, index) => {
+				const filePath = await ensureImageFile(ctx.imageDir, image, imageHashes[index]);
 				const result = await ctx.invokeTool(
 					ctx.toolName,
 					{ image_source: filePath, prompt: ctx.prompt },
@@ -270,11 +302,15 @@ async function analyzeImages(images: readonly VisionImage[], ctx: ContainerConte
 	}
 }
 
+/** Directory (under `storageDir`) holding temp image files handed to the MCP tool. */
+export function getVisionTempDir(storageDir: string): string {
+	return join(storageDir, VISION_TEMP_DIR_NAME);
+}
+
 /** Write the image unless already present (content hash name ⇒ no duplicates). */
-async function ensureImageFile(dir: string, image: VisionImage): Promise<string> {
-	const hash = hashImageContent(image.data).slice(0, 32);
+async function ensureImageFile(dir: string, image: VisionImage, hash: string): Promise<string> {
 	const ext = VISION_IMAGE_MIME_EXTENSIONS[image.mimeType.toLowerCase()];
-	const filePath = join(dir, `${hash}.${ext}`);
+	const filePath = join(dir, `${hash.slice(0, 32)}.${ext}`);
 	try {
 		await writeFile(filePath, image.data, { flag: 'wx' });
 	} catch (error) {
@@ -330,7 +366,7 @@ async function defaultInvokeTool(
 /** First localized reason an image is rejected (unsupported type / too large), or undefined. */
 function findInvalidImageReason(images: readonly VisionImage[]): string | undefined {
 	for (const image of images) {
-		if (!VISION_ALLOWED_IMAGE_MIME_TYPES.includes(image.mimeType.toLowerCase())) {
+		if (VISION_IMAGE_MIME_EXTENSIONS[image.mimeType.toLowerCase()] === undefined) {
 			return t('vision.error.unsupportedType', image.mimeType);
 		}
 		if (image.data.byteLength > VISION_MAX_IMAGE_BYTES) {
@@ -380,10 +416,6 @@ function isToolResultWithImages(part: unknown): part is vscode.LanguageModelTool
 		part instanceof vscode.LanguageModelToolResultPart &&
 		(part.content as readonly unknown[]).some(isImageDataPart)
 	);
-}
-
-function isImageDataPart(part: unknown): part is vscode.LanguageModelDataPart {
-	return part instanceof vscode.LanguageModelDataPart && part.mimeType.startsWith('image/');
 }
 
 function toVisionImage(part: vscode.LanguageModelDataPart): VisionImage {

@@ -103,14 +103,8 @@ export const VISION_IMAGE_MIME_EXTENSIONS: Record<string, string> = {
 	'image/gif': 'gif',
 };
 
-/** Image MIME types accepted by the vision pipeline (lowercase). */
-export const VISION_ALLOWED_IMAGE_MIME_TYPES = Object.keys(VISION_IMAGE_MIME_EXTENSIONS);
-
 /** Largest single image (bytes) accepted — the vision MCP server rejects images over 5 MB. */
 export const VISION_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-
-/** Hot in-memory description cache bound (FIFO). */
-export const VISION_CACHE_MEMORY_MAX = 32;
 
 /** Persisted (globalState) description cache bound (FIFO). */
 export const VISION_CACHE_PERSIST_MAX = 128;
@@ -125,7 +119,7 @@ export const VISION_MCP_PROVIDER_ID = 'glm-copilot.vision';
 export const VISION_MCP_LABEL = 'GLM Vision';
 
 /** npx target for the official Z.AI vision MCP server. */
-export const VISION_MCP_PACKAGE = '@z_ai/mcp-server@latest';
+export const VISION_MCP_PACKAGE = '@z_ai/mcp-server@0.1.4';
 
 /** Env var names + platform-mode values consumed by the Z.AI vision MCP server. */
 export const ZAI_MODE_ENV = 'Z_AI_MODE';

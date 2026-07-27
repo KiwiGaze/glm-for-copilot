@@ -13,7 +13,6 @@ import {
 	VISION_MCP_PACKAGE,
 	VISION_MCP_PROVIDER_ID,
 	VISION_NODE_MIN_MAJOR,
-	VISION_TEMP_DIR_NAME,
 	ZAI_API_KEY_ENV,
 	ZAI_MODE_CHINA,
 	ZAI_MODE_ENV,
@@ -21,6 +20,7 @@ import {
 } from '../consts';
 import { t } from '../i18n';
 import { logger } from '../logger';
+import { getVisionTempDir } from '../provider/vision/resolve';
 import type { IAuthManager, IVisionMcpState, Region } from '../types';
 import { findVisionAnalyzeTool } from '../vision-tool';
 
@@ -61,65 +61,59 @@ export interface NodeRuntimeProbe {
 	nodeMajor?: number;
 }
 
-/** Probe whether `npx` is runnable (the vision MCP server is launched through it). */
-export function probeNpx(platform: NodeJS.Platform): Promise<boolean> {
-	const isWindows = platform === 'win32';
-	const command = isWindows ? 'cmd.exe' : 'npx';
-	const args = isWindows ? ['/c', 'npx', '--version'] : ['--version'];
+/**
+ * Spawn a probe command with a 10 s kill timer, capturing stdout. Resolves
+ * undefined when the command cannot be spawned, errors, or times out.
+ */
+function runProbe(
+	command: string,
+	args: string[],
+): Promise<{ code: number | null; stdout: string } | undefined> {
 	return new Promise((resolve) => {
 		let child: ReturnType<typeof spawn>;
 		try {
-			child = spawn(command, args, { stdio: 'ignore' });
+			child = spawn(command, args, { stdio: ['ignore', 'pipe', 'ignore'] });
 		} catch {
-			resolve(false);
+			resolve(undefined);
 			return;
 		}
+		let stdout = '';
+		child.stdout?.on('data', (chunk: Buffer) => {
+			stdout += chunk.toString();
+		});
 		const timer = setTimeout(() => {
 			child.kill();
-			resolve(false);
+			resolve(undefined);
 		}, 10_000);
 		child.on('error', () => {
 			clearTimeout(timer);
-			resolve(false);
+			resolve(undefined);
 		});
 		child.on('exit', (code) => {
 			clearTimeout(timer);
-			resolve(code === 0);
+			resolve({ code, stdout });
 		});
 	});
+}
+
+/** Probe whether `npx` is runnable (the vision MCP server is launched through it). */
+async function probeNpx(platform: NodeJS.Platform): Promise<boolean> {
+	const isWindows = platform === 'win32';
+	const result = await runProbe(
+		isWindows ? 'cmd.exe' : 'npx',
+		isWindows ? ['/c', 'npx', '--version'] : ['--version'],
+	);
+	return result?.code === 0;
 }
 
 /**
  * Probe `node --version` for the major version. `node` is a real executable
  * (unlike the `npx` `.cmd` shim), so a plain spawn works on every platform.
  */
-export function probeNodeMajor(): Promise<number | undefined> {
-	return new Promise((resolve) => {
-		let child: ReturnType<typeof spawn>;
-		try {
-			child = spawn('node', ['--version'], { stdio: ['ignore', 'pipe', 'ignore'] });
-		} catch {
-			resolve(undefined);
-			return;
-		}
-		let output = '';
-		child.stdout?.on('data', (chunk: Buffer) => {
-			output += chunk.toString();
-		});
-		const timer = setTimeout(() => {
-			child.kill();
-			resolve(undefined);
-		}, 10_000);
-		child.on('error', () => {
-			clearTimeout(timer);
-			resolve(undefined);
-		});
-		child.on('exit', (code) => {
-			clearTimeout(timer);
-			const major = code === 0 ? /^v(\d+)\./.exec(output.trim())?.[1] : undefined;
-			resolve(major === undefined ? undefined : Number(major));
-		});
-	});
+async function probeNodeMajor(): Promise<number | undefined> {
+	const result = await runProbe('node', ['--version']);
+	const major = result?.code === 0 ? /^v(\d+)\./.exec(result.stdout.trim())?.[1] : undefined;
+	return major === undefined ? undefined : Number(major);
 }
 
 /** Full runtime preflight: npx presence plus the Node.js major version. */
@@ -169,6 +163,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			vscode.workspace.onDidChangeConfiguration((e) => {
 				if (e.affectsConfiguration(`${CONFIG_SECTION}.region`)) {
 					this.onServerConfigChanged('region');
+				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.apiKey`)) {
+					this.onServerConfigChanged('apiKey');
 				}
 			}),
 			context.secrets.onDidChange((e) => {
@@ -242,9 +238,22 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		this.registration = undefined;
 		await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
 		await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false);
-		await vscode.workspace
-			.getConfiguration(CONFIG_SECTION)
-			.update('visionEnabled', undefined, vscode.ConfigurationTarget.Global);
+		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
+		const visionSetting = configuration.inspect<boolean>('visionEnabled');
+		if (visionSetting?.workspaceValue !== undefined) {
+			await configuration.update(
+				'visionEnabled',
+				undefined,
+				vscode.ConfigurationTarget.Workspace,
+			);
+		}
+		if (visionSetting?.globalValue !== undefined) {
+			await configuration.update(
+				'visionEnabled',
+				undefined,
+				vscode.ConfigurationTarget.Global,
+			);
+		}
 		this.stopHealthPolling();
 		await this.deleteTempImages();
 		// Re-arm the install-flow latches for a future reinstall. An explicit
@@ -262,9 +271,12 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			void vscode.window.showWarningMessage(t('visionMcp.toggle.notRunning'));
 			return;
 		}
-		await vscode.workspace
-			.getConfiguration(CONFIG_SECTION)
-			.update('visionEnabled', enable, vscode.ConfigurationTarget.Global);
+		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
+		const target =
+			configuration.inspect<boolean>('visionEnabled')?.workspaceValue !== undefined
+				? vscode.ConfigurationTarget.Workspace
+				: vscode.ConfigurationTarget.Global;
+		await configuration.update('visionEnabled', enable, target);
 		void vscode.window.showInformationMessage(
 			t(enable ? 'visionMcp.toggle.on' : 'visionMcp.toggle.off'),
 		);
@@ -350,16 +362,15 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		let apiKey = await this.authManager.getApiKey();
 		while (!apiKey) {
 			apiKey = await this.promptForVisionApiKey();
-			if (apiKey) {
-				break;
-			}
-			const choice = await vscode.window.showWarningMessage(
-				t('visionMcp.auth.required'),
-				t('visionMcp.auth.enterKey'),
-				t('visionMcp.notNow'),
-			);
-			if (choice !== t('visionMcp.auth.enterKey')) {
-				return false;
+			if (!apiKey) {
+				const choice = await vscode.window.showWarningMessage(
+					t('visionMcp.auth.required'),
+					t('visionMcp.auth.enterKey'),
+					t('visionMcp.notNow'),
+				);
+				if (choice !== t('visionMcp.auth.enterKey')) {
+					return false;
+				}
 			}
 		}
 		return true;
@@ -445,7 +456,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	}
 
 	private async deleteTempImages(): Promise<void> {
-		const dir = vscode.Uri.joinPath(this.context.globalStorageUri, VISION_TEMP_DIR_NAME);
+		const dir = vscode.Uri.file(getVisionTempDir(this.context.globalStorageUri.fsPath));
 		try {
 			await vscode.workspace.fs.delete(dir, { recursive: true, useTrash: false });
 		} catch (error) {

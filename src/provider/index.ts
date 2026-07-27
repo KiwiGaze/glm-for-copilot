@@ -8,7 +8,8 @@ import { toChatInfo } from './models';
 import { prepareChatRequest } from './request';
 import { streamChatCompletion } from './stream';
 import { estimateTokenCount } from './tokens';
-import { resolveVisionMessages, VisionDescriptionCache } from './vision';
+import { VisionDescriptionCache } from './vision/cache';
+import { resolveVisionMessages } from './vision/resolve';
 
 /**
  * GLM Chat Provider — implements `vscode.LanguageModelChatProvider` so GLM

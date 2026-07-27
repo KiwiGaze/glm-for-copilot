@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
 	executeCommand: vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined),
 	registerMcpServerDefinitionProvider: vi.fn(() => ({ dispose: vi.fn() })),
 	configUpdate: vi.fn<(...args: unknown[]) => Promise<void>>(async () => {}),
+	configInspect: vi.fn<() => unknown>(() => undefined),
+	configurationListeners: [] as Array<(event: { affectsConfiguration(section: string): boolean }) => void>,
 	findVisionAnalyzeTool: vi.fn<() => unknown>(() => undefined),
 }));
 
@@ -35,18 +37,26 @@ vi.mock('vscode', () => {
 	return {
 		EventEmitter,
 		McpStdioServerDefinition,
-		ConfigurationTarget: { Global: 1 },
+		ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 },
 		commands: { executeCommand: (...args: unknown[]) => mocks.executeCommand(...args) },
 		window: {
 			showInformationMessage: (...args: unknown[]) => mocks.showInformationMessage(...args),
 			showWarningMessage: (...args: unknown[]) => mocks.showWarningMessage(...args),
 		},
 		workspace: {
-			onDidChangeConfiguration: () => ({ dispose: () => {} }),
-			getConfiguration: () => ({ update: (...args: unknown[]) => mocks.configUpdate(...args) }),
+			onDidChangeConfiguration: (
+				listener: (event: { affectsConfiguration(section: string): boolean }) => void,
+			) => {
+				mocks.configurationListeners.push(listener);
+				return { dispose: () => {} };
+			},
+			getConfiguration: () => ({
+				inspect: () => mocks.configInspect(),
+				update: (...args: unknown[]) => mocks.configUpdate(...args),
+			}),
 			fs: { delete: async () => {} },
 		},
-		Uri: { joinPath: (base: unknown, ...parts: string[]) => ({ base, parts }), parse: (v: string) => ({ v }) },
+		Uri: { file: (path: string) => ({ fsPath: path }), parse: (v: string) => ({ v }) },
 		env: { openExternal: async () => true },
 		lm: { registerMcpServerDefinitionProvider: mocks.registerMcpServerDefinitionProvider },
 	};
@@ -64,27 +74,19 @@ vi.mock('../logger', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.
 vi.mock('../vision-tool', () => ({ findVisionAnalyzeTool: () => mocks.findVisionAnalyzeTool() }));
 
 import * as vscode from 'vscode';
+import { fakeMemento } from '../test-helpers';
 import type { IAuthManager } from '../types';
 import { buildVisionMcpServerSpec, VisionMcpManager, type NodeRuntimeProbe } from './mcp';
 
 let visionEnabledValue = false;
 
 function fakeContext(installed: boolean) {
-	const state = new Map<string, unknown>();
+	const globalState = fakeMemento();
 	if (installed) {
-		state.set('glm-copilot.visionMcp.installed', true);
+		globalState.store.set('glm-copilot.visionMcp.installed', true);
 	}
 	return {
-		globalState: {
-			get: <T,>(key: string) => state.get(key) as T | undefined,
-			update: async (key: string, value: unknown) => {
-				if (value === undefined) {
-					state.delete(key);
-				} else {
-					state.set(key, value);
-				}
-			},
-		},
+		globalState,
 		secrets: { onDidChange: () => ({ dispose: () => {} }) },
 		subscriptions: [] as Array<{ dispose(): void }>,
 		globalStorageUri: { fsPath: '/tmp/glm-test-storage' },
@@ -112,6 +114,8 @@ function makeManager(
 beforeEach(() => {
 	visionEnabledValue = false;
 	vi.clearAllMocks();
+	mocks.configurationListeners.length = 0;
+	mocks.configInspect.mockReturnValue(undefined);
 	mocks.findVisionAnalyzeTool.mockReturnValue(undefined);
 });
 
@@ -120,7 +124,7 @@ describe('buildVisionMcpServerSpec', () => {
 		const spec = buildVisionMcpServerSpec({ region: 'international', platform: 'darwin' });
 		expect(spec.label).toBe('GLM Vision');
 		expect(spec.command).toBe('npx');
-		expect(spec.args).toEqual(['-y', '@z_ai/mcp-server@latest']);
+		expect(spec.args).toEqual(['-y', '@z_ai/mcp-server@0.1.4']);
 		expect(spec.env).toEqual({ Z_AI_MODE: 'ZAI' });
 	});
 
@@ -132,7 +136,7 @@ describe('buildVisionMcpServerSpec', () => {
 	it('wraps npx in cmd.exe /c on Windows', () => {
 		const spec = buildVisionMcpServerSpec({ region: 'china', platform: 'win32' });
 		expect(spec.command).toBe('cmd.exe');
-		expect(spec.args).toEqual(['/c', 'npx', '-y', '@z_ai/mcp-server@latest']);
+		expect(spec.args).toEqual(['/c', 'npx', '-y', '@z_ai/mcp-server@0.1.4']);
 		expect(spec.env).toEqual({ Z_AI_MODE: 'ZHIPU' });
 	});
 
@@ -271,12 +275,26 @@ describe('VisionMcpManager', () => {
 
 	it('uninstall resets the visionEnabled setting so a reinstall asks for consent again', async () => {
 		visionEnabledValue = true;
+		mocks.configInspect.mockReturnValue({ globalValue: true });
 		const { manager } = makeManager(true);
 		manager.initialize();
 
 		await manager.uninstall();
 
 		expect(mocks.configUpdate).toHaveBeenCalledWith('visionEnabled', undefined, 1);
+		manager.dispose();
+	});
+
+	it('uninstall clears workspace and global visionEnabled values', async () => {
+		visionEnabledValue = true;
+		mocks.configInspect.mockReturnValue({ globalValue: true, workspaceValue: true });
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		await manager.uninstall();
+
+		expect(mocks.configUpdate.mock.calls).toContainEqual(['visionEnabled', undefined, 2]);
+		expect(mocks.configUpdate.mock.calls).toContainEqual(['visionEnabled', undefined, 1]);
 		manager.dispose();
 	});
 
@@ -296,6 +314,36 @@ describe('VisionMcpManager', () => {
 		await manager.toggleVision();
 		expect(mocks.configUpdate).toHaveBeenCalledWith('visionEnabled', true, 1);
 		expect(mocks.showInformationMessage).toHaveBeenCalledWith('visionMcp.toggle.on');
+		manager.dispose();
+	});
+
+	it('updates visionEnabled at workspace scope when that scope defines the effective value', async () => {
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		mocks.configInspect.mockReturnValue({ globalValue: false, workspaceValue: false });
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		await manager.toggleVision();
+
+		expect(mocks.configUpdate).toHaveBeenCalledWith('visionEnabled', true, 2);
+		manager.dispose();
+	});
+
+	it('prompts for a server restart when the settings fallback API key changes', () => {
+		const { manager } = makeManager(true);
+		manager.initialize();
+		const event = {
+			affectsConfiguration: (section: string) => section === 'glm-copilot.apiKey',
+		};
+
+		for (const listener of mocks.configurationListeners) {
+			listener(event);
+		}
+
+		expect(mocks.showInformationMessage).toHaveBeenCalledWith(
+			'visionMcp.restart.apiKey',
+			'visionMcp.openServers',
+		);
 		manager.dispose();
 	});
 

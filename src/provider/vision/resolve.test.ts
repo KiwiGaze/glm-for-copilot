@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { VISION_MAX_IMAGE_BYTES, VISION_TEMP_MAX_FILES } from '../../consts';
-import { VisionDescriptionCache, type VisionCacheMemento } from './cache';
+import { fakeMemento } from '../../test-helpers';
+import { VisionDescriptionCache } from './cache';
 import { IMAGE_DESCRIPTION_UNAVAILABLE } from './consts';
 
 vi.mock('vscode', () => {
@@ -112,17 +113,6 @@ function userMessage(content: Part[]): vscode.LanguageModelChatRequestMessage {
 
 function toolResult(text: string): vscode.LanguageModelToolResult {
 	return { content: [new vscode.LanguageModelTextPart(text)] } as vscode.LanguageModelToolResult;
-}
-
-function fakeMemento(): VisionCacheMemento {
-	const store = new Map<string, unknown>();
-	return {
-		get: <T>(key: string) => store.get(key) as T | undefined,
-		update: (key: string, value: unknown) => {
-			store.set(key, value);
-			return Promise.resolve();
-		},
-	};
 }
 
 interface InvokeRecorder {
@@ -241,6 +231,27 @@ describe('resolveVisionMessages', () => {
 		expect(readdirSync(join(storageDir, 'vision-tmp'))).toHaveLength(3);
 	});
 
+	it('preserves text ordering around non-contiguous direct images', async () => {
+		const { invoke } = recordingInvoke((call) => `description ${call}`);
+		const message = userMessage([
+			textPart('before'),
+			imagePart([1]),
+			textPart('between'),
+			imagePart([2]),
+			textPart('after'),
+		]);
+
+		const result = await resolveVisionMessages(makeDeps(storageDir, invoke), [message], progress(), token);
+		const out = contentOf(result.messages[0]) as Array<{ value: string }>;
+
+		expect(out).toHaveLength(5);
+		expect(out[0].value).toBe('before');
+		expect(out[1].value).toContain('description 1');
+		expect(out[2].value).toBe('between');
+		expect(out[3].value).toContain('description 2');
+		expect(out[4].value).toBe('after');
+	});
+
 	it('analyzes images nested in a tool result and re-injects text inside that tool result', async () => {
 		const { invoke } = recordingInvoke(() => 'tool image description');
 		const nested = new vscode.LanguageModelToolResultPart('call-1', [
@@ -259,6 +270,30 @@ describe('resolveVisionMessages', () => {
 			.map((p) => p.value);
 		expect(texts).toContain('log output');
 		expect(texts.some((v) => v.includes('tool image description'))).toBe(true);
+	});
+
+	it('preserves text ordering around non-contiguous images in a tool result', async () => {
+		const { invoke } = recordingInvoke((call) => `tool description ${call}`);
+		const nested = new vscode.LanguageModelToolResultPart('call-1', [
+			textPart('before'),
+			imagePart([1]),
+			textPart('between'),
+			imagePart([2]),
+			textPart('after'),
+		]);
+
+		const result = await resolveVisionMessages(makeDeps(storageDir, invoke), [userMessage([nested])], progress(), token);
+		const resolved = contentOf(result.messages[0])[0] as InstanceType<
+			typeof vscode.LanguageModelToolResultPart
+		>;
+		const out = resolved.content as Array<{ value: string }>;
+
+		expect(out).toHaveLength(5);
+		expect(out[0].value).toBe('before');
+		expect(out[1].value).toContain('tool description 1');
+		expect(out[2].value).toBe('between');
+		expect(out[3].value).toContain('tool description 2');
+		expect(out[4].value).toBe('after');
 	});
 
 	it('serves identical image content from cache without a second tool call', async () => {

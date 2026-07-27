@@ -116,7 +116,7 @@ export function convertTools(tools: readonly vscode.LanguageModelChatTool[]): GL
 export function countMessageChars(messages: GLMMessage[]): number {
 	let total = 0;
 	for (const message of messages) {
-		total += typeof message.content === 'string' ? message.content.length : 0;
+		total += message.content?.length ?? 0;
 		total += message.reasoning_content?.length ?? 0;
 		if (message.tool_calls) {
 			for (const toolCall of message.tool_calls) {

@@ -11,6 +11,11 @@ interface ThinkingPartLike {
 	value: string | string[];
 }
 
+/** Whether the part is a `LanguageModelDataPart` holding image bytes. */
+export function isImageDataPart(part: unknown): part is vscode.LanguageModelDataPart {
+	return part instanceof vscode.LanguageModelDataPart && part.mimeType.startsWith('image/');
+}
+
 /** Estimate the character count of a single content part. */
 export function estimatePartChars(part: unknown): number {
 	if (part instanceof vscode.LanguageModelTextPart) {
@@ -34,10 +39,10 @@ export function estimatePartChars(part: unknown): number {
 		}
 		return chars;
 	}
+	if (isImageDataPart(part)) {
+		return IMAGE_PART_ESTIMATED_CHARS;
+	}
 	if (part instanceof vscode.LanguageModelDataPart) {
-		if (part.mimeType.startsWith('image/')) {
-			return IMAGE_PART_ESTIMATED_CHARS;
-		}
 		return Math.min(part.data?.byteLength ?? 0, DATA_PART_MAX_CHARS);
 	}
 	if (isThinkingPart(part)) {

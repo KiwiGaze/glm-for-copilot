@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { VISION_CACHE_MEMORY_MAX, VISION_CACHE_PERSIST_MAX, VISION_CACHE_STATE_KEY } from '../../consts';
+import { VISION_CACHE_PERSIST_MAX, VISION_CACHE_STATE_KEY } from '../../consts';
 
 /** Minimal subset of `vscode.Memento` used for persistence (injectable for tests). */
 export interface VisionCacheMemento {
@@ -7,7 +7,8 @@ export interface VisionCacheMemento {
 	update(key: string, value: unknown): Thenable<void>;
 }
 
-interface HashableImage {
+/** An image accepted by the vision pipeline: MIME type plus raw bytes. */
+export interface VisionImage {
 	mimeType: string;
 	data: Uint8Array;
 }
@@ -21,19 +22,19 @@ export function hashImageContent(data: Uint8Array): string {
 }
 
 /**
- * Content-addressed cache key: prompt + each image's content hash, in order.
- * Because the prompt is part of the key, changing it invalidates stale
- * descriptions with no config listeners.
+ * Content-addressed cache key: prompt + each image's content hash (from
+ * `hashImageContent`), in order. Because the prompt is part of the key,
+ * changing it invalidates stale descriptions with no config listeners.
  */
 export function computeDescriptionCacheKey(
 	prompt: string,
-	images: readonly HashableImage[],
+	imageHashes: readonly string[],
 ): string {
 	const hash = createHash('sha256');
 	hash.update(prompt);
-	for (const image of images) {
+	for (const imageHash of imageHashes) {
 		hash.update('\0');
-		hash.update(hashImageContent(image.data));
+		hash.update(imageHash);
 	}
 	return hash.digest('hex');
 }
@@ -41,12 +42,11 @@ export function computeDescriptionCacheKey(
 type PersistedEntry = [key: string, description: string];
 
 /**
- * Bounded, content-addressed store of image descriptions. A hot in-memory FIFO
- * map fronts a larger `globalState`-backed store, so descriptions survive window
- * reloads and historical images are never silently re-described.
+ * Bounded, content-addressed store of image descriptions backed by
+ * `globalState` (FIFO), so descriptions survive window reloads and historical
+ * images are never silently re-described.
  */
 export class VisionDescriptionCache {
-	private readonly hot = new Map<string, string>();
 	private readonly persisted = new Map<string, string>();
 
 	constructor(private readonly memento: VisionCacheMemento) {
@@ -59,19 +59,10 @@ export class VisionDescriptionCache {
 	}
 
 	get(key: string): string | undefined {
-		const hot = this.hot.get(key);
-		if (hot !== undefined) {
-			return hot;
-		}
-		const persisted = this.persisted.get(key);
-		if (persisted !== undefined) {
-			remember(this.hot, key, persisted, VISION_CACHE_MEMORY_MAX);
-		}
-		return persisted;
+		return this.persisted.get(key);
 	}
 
 	async set(key: string, description: string): Promise<void> {
-		remember(this.hot, key, description, VISION_CACHE_MEMORY_MAX);
 		remember(this.persisted, key, description, VISION_CACHE_PERSIST_MAX);
 		await this.memento.update(VISION_CACHE_STATE_KEY, [...this.persisted.entries()]);
 	}
