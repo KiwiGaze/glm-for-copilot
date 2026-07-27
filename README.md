@@ -27,7 +27,7 @@ Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) �
 </p>
 
 - **Keys stay in your OS keychain by default.** **GLM: Set API Key** stores your key via VS Code `SecretStorage` (macOS, Windows, Linux). The extension also honors a settings fallback for CI or automation, so do not put real keys in workspace settings.
-- **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins — the core extension needs no Python, Docker, or local server. (The optional [GLM Vision integration](#image-input-vision) runs a local MCP server through `npx`, so it requires Node.js 18+.)
+- **Zero core runtime dependencies.** Pure VS Code API and Node.js built-ins — the core extension needs no Python, Docker, or local server. (The optional [GLM Vision integration](#image-input-vision) installs an integrity-locked local npm package, so it requires Node.js 18+ with npm.)
 - **Add any model.** Newly released, fine-tuned, or proxy-hosted GLM models via [`glm-copilot.customModels`](#settings).
 - **See images, even on text-only models.** Install the official **GLM Vision** MCP server with one click and turn on image input: pasted screenshots are analyzed by GLM Vision (GLM-4.6V) and injected as text — code, logs, errors, and UI included — so any GLM model can reason about them. Agent mode also gets the full vision tool set. See [Image input (vision)](#image-input-vision).
 
@@ -111,12 +111,12 @@ Usage details rely on regional usage endpoints (`api.z.ai` for International, `o
 
 Vision is powered by the official **[Z.AI Vision MCP server](https://docs.z.ai/devpack/mcp/vision-mcp-server)** (`@z_ai/mcp-server`, GLM-4.6V). Setup is two steps, and nothing is installed without your say-so:
 
-1. **Install the server** — run **GLM: Install GLM Vision MCP Server** (or the Install button in the Getting Started walkthrough). The flow checks for your API key and Node.js, then registers **GLM Vision** in VS Code's MCP server list. The server launches through `npx` (requires Node.js 18+, 22+ recommended) with `Z_AI_MODE` set from your region (`ZAI` for International, `ZHIPU` for Mainland China); your stored API key (VS Code `SecretStorage`, or the settings fallback if you use one) is injected only when VS Code starts the server. VS Code starts it automatically when you next send a chat message. Remove it any time with **GLM: Uninstall GLM Vision MCP Server**.
+1. **Install the server** — run **GLM: Install GLM Vision MCP Server** (or the Install button in the Getting Started walkthrough). Before anything is downloaded, a modal confirmation explains that the third-party package runs locally, receives your GLM API key and attached-image paths, and sends image content to Z.AI or BigModel. After consent, the flow checks your API key and Node.js/npm (Node.js 18+, 22+ recommended), then installs `@z_ai/mcp-server@0.1.4` under the extension's global storage with `npm ci`. A bundled lockfile pins the complete dependency graph and its SHA-512 integrity hashes, and npm lifecycle scripts are disabled. VS Code launches the fixed local entry point — never a later package fetched by `npx` — with `Z_AI_MODE` set from your region (`ZAI` for International, `ZHIPU` for Mainland China). Your stored API key (VS Code `SecretStorage`, or the settings fallback if you use one) is injected only when VS Code starts the server. Remove the registration, installed npm package, toggle, and temp images any time with **GLM: Uninstall GLM Vision MCP Server**.
 2. **Turn on image input** — once the server is running, **GLM: Toggle Vision for Chat Models** appears in the Command Palette (it only shows while the server is healthy), or set [`glm-copilot.visionEnabled`](#settings). Every GLM model in the picker then accepts image input.
 
 With image input on, pasted or attached images just work — even for text-only chat models:
 
-- **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on your stored key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
+- **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on your stored key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via **GLM: Edit GLM Vision Prompt** or [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
 - **Cached** — analyses are content-addressed and cached in memory for the session (never written to extension storage), so conversation history is not re-analyzed every turn.
 - **Validated** — images larger than 5 MB, or outside `png` / `jpeg`, are skipped with a clear notice *before* any tool call.
 - **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, models fall back to text-only: the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out.
@@ -134,8 +134,9 @@ In **agent mode** the server's full tool set is also available directly to the a
 | **GLM: Show Logs** | Open the GLM output channel |
 | **GLM: Refresh Usage** | Refresh GLM usage/balance now (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
 | **GLM: Show Usage Details** | Open the GLM usage panel (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
-| **GLM: Install GLM Vision MCP Server** | Install the GLM Vision MCP server (checks API key and Node.js first). Visible when not installed |
+| **GLM: Install GLM Vision MCP Server** | Review the impact, then install the integrity-locked local package. Visible when not installed |
 | **GLM: Uninstall GLM Vision MCP Server** | Remove the GLM Vision MCP server and revert models to text-only. Visible when installed |
+| **GLM: Edit GLM Vision Prompt** | Open the multiline setting for the image-analysis instruction. Visible when installed |
 | **GLM: Toggle Vision for Chat Models** | Turn image input for chat models on/off. Visible only while GLM Vision is installed and running |
 
 ## Frequently asked questions

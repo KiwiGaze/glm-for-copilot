@@ -42,6 +42,7 @@ export const EXTERNAL_URLS = {
 	standardKeysChina: 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',
 	docs: 'https://docs.z.ai',
 	visionMcpDocs: 'https://docs.z.ai/devpack/mcp/vision-mcp-server',
+	visionMcpPackage: 'https://www.npmjs.com/package/@z_ai/mcp-server/v/0.1.4',
 } as const;
 
 /**
@@ -121,8 +122,20 @@ export const VISION_MCP_PROVIDER_ID = 'glm-copilot.vision';
 /** Display label for the registered MCP server (proper noun — intentionally not localized). */
 export const VISION_MCP_LABEL = 'GLM Vision';
 
-/** npx target for the official Z.AI vision MCP server. */
-export const VISION_MCP_PACKAGE = '@z_ai/mcp-server@0.1.4';
+/** Exact official Z.AI Vision MCP package pinned by the bundled npm lockfile. */
+export const VISION_MCP_PACKAGE_NAME = '@z_ai/mcp-server';
+export const VISION_MCP_PACKAGE_VERSION = '0.1.4';
+export const VISION_MCP_PACKAGE = `${VISION_MCP_PACKAGE_NAME}@${VISION_MCP_PACKAGE_VERSION}`;
+
+/** Local, integrity-locked MCP installation under the extension's global storage. */
+export const VISION_MCP_INSTALL_DIR_NAME = 'vision-mcp';
+export const VISION_MCP_ENTRYPOINT_PARTS = [
+	'node_modules',
+	'@z_ai',
+	'mcp-server',
+	'build',
+	'index.js',
+] as const;
 
 /** Env var names + platform-mode values consumed by the Z.AI vision MCP server. */
 export const ZAI_MODE_ENV = 'Z_AI_MODE';

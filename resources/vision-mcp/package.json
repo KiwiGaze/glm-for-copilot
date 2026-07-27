@@ -1,0 +1,8 @@
+{
+  "name": "glm-copilot-vision-mcp-runtime",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "@z_ai/mcp-server": "0.1.4"
+  }
+}

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { AuthManager } from '../auth';
 import { UsageClient } from '../client/usage';
-import { VENDOR_ID } from '../consts';
+import { CONFIG_SECTION, VENDOR_ID } from '../consts';
 import { resolveUsageHost } from '../endpoint';
 import { logger } from '../logger';
 import { GLMChatProvider } from '../provider';
@@ -19,6 +19,12 @@ export async function registerProvider(context: vscode.ExtensionContext): Promis
 		vscode.commands.registerCommand('glm-copilot.clearApiKey', () => provider.clearApiKey()),
 		vscode.commands.registerCommand('glm-copilot.installVisionMcp', () => visionMcp.install()),
 		vscode.commands.registerCommand('glm-copilot.uninstallVisionMcp', () => visionMcp.uninstall()),
+		vscode.commands.registerCommand('glm-copilot.openVisionPromptSettings', () =>
+			vscode.commands.executeCommand(
+				'workbench.action.openSettings',
+				`${CONFIG_SECTION}.visionPrompt`,
+			),
+		),
 		vscode.commands.registerCommand('glm-copilot.toggleVision', () => visionMcp.toggleVision()),
 		vscode.lm.registerLanguageModelChatProvider(VENDOR_ID, provider),
 		usageBar,

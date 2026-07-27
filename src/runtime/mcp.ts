@@ -24,6 +24,10 @@ import { logger } from '../logger';
 import { getVisionTempDir } from '../provider/vision/resolve';
 import type { IAuthManager, IVisionMcpState, Region } from '../types';
 import { findVisionAnalyzeTool } from '../vision-tool';
+import {
+	type IVisionMcpPackageInstaller,
+	VisionMcpPackageInstaller,
+} from './mcp-package';
 
 /** Stdio launch spec for the official Z.AI vision MCP server (without the API key). */
 export interface VisionMcpServerSpec {
@@ -34,30 +38,26 @@ export interface VisionMcpServerSpec {
 }
 
 /**
- * Build the launch spec for `@z_ai/mcp-server`. `Z_AI_MODE` selects the platform
- * (`ZHIPU` for the China/BigModel region, `ZAI` otherwise). On Windows `npx` is a
- * `.cmd` shim, so it must be run through `cmd.exe /c`. Pure and testable — the
- * API key is injected later, only when the server is actually started.
+ * Build the launch spec for the integrity-locked local `@z_ai/mcp-server`.
+ * The API key is injected later, only when the server is actually started.
  */
 export function buildVisionMcpServerSpec(options: {
 	region: Region;
-	platform: NodeJS.Platform;
+	entryPoint: string;
 }): VisionMcpServerSpec {
 	const mode = options.region === 'china' ? ZAI_MODE_CHINA : ZAI_MODE_INTERNATIONAL;
-	const npxArgs = ['-y', VISION_MCP_PACKAGE];
-	const isWindows = options.platform === 'win32';
 	return {
 		label: VISION_MCP_LABEL,
-		command: isWindows ? 'cmd.exe' : 'npx',
-		args: isWindows ? ['/c', 'npx', ...npxArgs] : npxArgs,
+		command: 'node',
+		args: [options.entryPoint],
 		env: { [ZAI_MODE_ENV]: mode },
 	};
 }
 
 /** Result of the local Node.js runtime preflight for the vision MCP server. */
 export interface NodeRuntimeProbe {
-	/** Whether `npx` (the server's launcher) is runnable. */
-	npxOk: boolean;
+	/** Whether npm (the locked package installer) is runnable. */
+	npmOk: boolean;
 	/** Major version of `node` on PATH; undefined when it cannot be determined. */
 	nodeMajor?: number;
 }
@@ -97,19 +97,18 @@ function runProbe(
 	});
 }
 
-/** Probe whether `npx` is runnable (the vision MCP server is launched through it). */
-async function probeNpx(platform: NodeJS.Platform): Promise<boolean> {
+/** Probe whether npm is runnable. */
+async function probeNpm(platform: NodeJS.Platform): Promise<boolean> {
 	const isWindows = platform === 'win32';
 	const result = await runProbe(
-		isWindows ? 'cmd.exe' : 'npx',
-		isWindows ? ['/c', 'npx', '--version'] : ['--version'],
+		isWindows ? 'cmd.exe' : 'npm',
+		isWindows ? ['/c', 'npm', '--version'] : ['--version'],
 	);
 	return result?.code === 0;
 }
 
 /**
- * Probe `node --version` for the major version. `node` is a real executable
- * (unlike the `npx` `.cmd` shim), so a plain spawn works on every platform.
+ * Probe `node --version` for the major version.
  */
 async function probeNodeMajor(): Promise<number | undefined> {
 	const result = await runProbe('node', ['--version']);
@@ -117,10 +116,10 @@ async function probeNodeMajor(): Promise<number | undefined> {
 	return major === undefined ? undefined : Number(major);
 }
 
-/** Full runtime preflight: npx presence plus the Node.js major version. */
+/** Full runtime preflight: npm presence plus the Node.js major version. */
 export async function probeNodeRuntime(platform: NodeJS.Platform): Promise<NodeRuntimeProbe> {
-	const [npxOk, nodeMajor] = await Promise.all([probeNpx(platform), probeNodeMajor()]);
-	return { npxOk, nodeMajor };
+	const [npmOk, nodeMajor] = await Promise.all([probeNpm(platform), probeNodeMajor()]);
+	return { npmOk, nodeMajor };
 }
 
 /**
@@ -154,9 +153,12 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly authManager: IAuthManager,
-		/** Test seam: Node.js/npx preflight probe. Defaults to spawning `npx`/`node --version`. */
+		/** Test seam: Node.js/npm preflight probe. */
 		private readonly probeRuntime: () => Promise<NodeRuntimeProbe> = () =>
 			probeNodeRuntime(process.platform),
+		private readonly packageInstaller: IVisionMcpPackageInstaller = new VisionMcpPackageInstaller(
+			context,
+		),
 	) {
 		this.disposables.push(
 			this.didChangeDefinitions,
@@ -179,15 +181,26 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	}
 
 	get isInstalled(): boolean {
-		return this.context.globalState.get<boolean>(VISION_MCP_INSTALLED_KEY) === true;
+		return this.isInstallRecorded && this.packageInstaller.isInstalled();
 	}
 
 	isVisionActive(): boolean {
-		return this.healthy && getVisionEnabled();
+		return this.isInstalled && this.healthy && getVisionEnabled();
+	}
+
+	private get isInstallRecorded(): boolean {
+		return this.context.globalState.get<boolean>(VISION_MCP_INSTALLED_KEY) === true;
 	}
 
 	/** Called once at activation: restore an explicit install and start health tracking. */
 	initialize(): void {
+		const packageInstalled = this.packageInstaller.isInstalled();
+		if (this.isInstallRecorded !== packageInstalled) {
+			void this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
+			void this.packageInstaller
+				.uninstall()
+				.catch((error) => logger.warn('Failed to clean an incomplete GLM Vision installation', error));
+		}
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, this.isInstalled);
 		// Context keys survive an extension-host restart; clear a stale healthy flag up front.
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_HEALTHY, false);
@@ -204,7 +217,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_VISION_ENABLED, getVisionEnabled());
 	}
 
-	/** Explicit install flow: key → Node.js preflight → register → confirm. */
+	/** Explicit install flow: consent → key → runtime → locked package → register. */
 	async install(): Promise<void> {
 		if (this.isInstalled) {
 			void vscode.window.showInformationMessage(t('visionMcp.install.alreadyInstalled'));
@@ -215,13 +228,37 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		}
 		this.installInProgress = true;
 		try {
+			if (!(await this.confirmInstallRisk())) {
+				return;
+			}
 			if (!(await this.ensureApiKey())) {
 				return;
 			}
 			if (!(await this.confirmNodeRuntime())) {
 				return;
 			}
+			try {
+				await vscode.window.withProgress(
+					{
+						location: vscode.ProgressLocation.Notification,
+						title: t('visionMcp.install.progress', VISION_MCP_PACKAGE),
+						cancellable: false,
+					},
+					() => this.packageInstaller.install(),
+				);
+			} catch (error) {
+				logger.error('Failed to install the locked GLM Vision MCP package', error);
+				const choice = await vscode.window.showErrorMessage(
+					t('visionMcp.install.failed'),
+					t('visionMcp.showLogs'),
+				);
+				if (choice === t('visionMcp.showLogs')) {
+					logger.show();
+				}
+				return;
+			}
 			if (!this.registerDefinitionProvider()) {
+				await this.packageInstaller.uninstall();
 				return;
 			}
 			try {
@@ -236,6 +273,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 				} catch (rollbackError) {
 					logger.warn('Failed to roll back GLM Vision installation state', rollbackError);
 				}
+				await this.packageInstaller.uninstall();
 				throw error;
 			}
 			this.startHealthPolling();
@@ -243,9 +281,12 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			const choice = await vscode.window.showInformationMessage(
 				t('visionMcp.install.success'),
 				t('visionMcp.openServers'),
+				t('visionMcp.editPrompt'),
 			);
 			if (choice === t('visionMcp.openServers')) {
 				void vscode.commands.executeCommand('workbench.mcp.listServers');
+			} else if (choice === t('visionMcp.editPrompt')) {
+				void vscode.commands.executeCommand('glm-copilot.openVisionPromptSettings');
 			}
 		} finally {
 			this.installInProgress = false;
@@ -254,13 +295,20 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 
 	/** Explicit uninstall: drop the registration, state, vision toggle, context keys, and temp images. */
 	async uninstall(): Promise<void> {
-		if (!this.isInstalled) {
+		if (!this.isInstallRecorded && !this.packageInstaller.isInstalled()) {
 			return;
 		}
 		this.registration?.dispose();
 		this.registration = undefined;
 		await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
 		await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false);
+		let cleanupFailed = false;
+		try {
+			await this.packageInstaller.uninstall();
+		} catch (error) {
+			cleanupFailed = true;
+			logger.error('Failed to remove the local GLM Vision MCP package', error);
+		}
 		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
 		const visionSetting = configuration.inspect<boolean>('visionEnabled');
 		if (visionSetting?.workspaceValue !== undefined) {
@@ -284,7 +332,17 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		this.readyPromptShown = false;
 		this.resolveKeyWarningShown = false;
 		this.refreshHealth();
-		void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
+		if (cleanupFailed) {
+			const choice = await vscode.window.showWarningMessage(
+				t('visionMcp.uninstall.cleanupFailed'),
+				t('visionMcp.showLogs'),
+			);
+			if (choice === t('visionMcp.showLogs')) {
+				logger.show();
+			}
+		} else {
+			void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
+		}
 	}
 
 	/** Flip the `visionEnabled` setting (only honored while the server is healthy). */
@@ -338,7 +396,10 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			onDidChangeMcpServerDefinitions: this.didChangeDefinitions.event,
 			provideMcpServerDefinitions: () => {
 				const region = getRegion();
-				const spec = buildVisionMcpServerSpec({ region, platform: process.platform });
+				const spec = buildVisionMcpServerSpec({
+					region,
+					entryPoint: this.packageInstaller.entryPoint,
+				});
 				// The version field lets VS Code flag tools as changed when the region flips.
 				return [new vscode.McpStdioServerDefinition(spec.label, spec.command, spec.args, spec.env, region)];
 			},
@@ -400,25 +461,38 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		return true;
 	}
 
+	private async confirmInstallRisk(): Promise<boolean> {
+		const choice = await vscode.window.showWarningMessage(
+			t('visionMcp.install.consent'),
+			{
+				modal: true,
+				detail: t('visionMcp.install.consentDetail', VISION_MCP_PACKAGE),
+			},
+			t('visionMcp.install.confirm'),
+			t('visionMcp.install.viewPackage'),
+		);
+		if (choice === t('visionMcp.install.viewPackage')) {
+			void vscode.env.openExternal(vscode.Uri.parse(EXTERNAL_URLS.visionMcpPackage));
+			return false;
+		}
+		return choice === t('visionMcp.install.confirm');
+	}
+
 	private async confirmNodeRuntime(): Promise<boolean> {
 		const probe = await this.probeRuntime();
 		const tooOld = probe.nodeMajor !== undefined && probe.nodeMajor < VISION_NODE_MIN_MAJOR;
-		if (probe.npxOk && !tooOld) {
+		if (probe.npmOk && !tooOld) {
 			return true;
 		}
-		const message = probe.npxOk
-			? t('visionMcp.npx.tooOld', String(probe.nodeMajor), String(VISION_NODE_MIN_MAJOR))
-			: t('visionMcp.npx.missing');
+		const message = probe.npmOk
+			? t('visionMcp.runtime.tooOld', String(probe.nodeMajor), String(VISION_NODE_MIN_MAJOR))
+			: t('visionMcp.runtime.missing');
 		const choice = await vscode.window.showWarningMessage(
 			message,
-			t('visionMcp.npx.installAnyway'),
-			t('visionMcp.npx.requirements'),
+			t('visionMcp.runtime.requirements'),
 			t('visionMcp.cancel'),
 		);
-		if (choice === t('visionMcp.npx.installAnyway')) {
-			return true;
-		}
-		if (choice === t('visionMcp.npx.requirements')) {
+		if (choice === t('visionMcp.runtime.requirements')) {
 			void vscode.env.openExternal(vscode.Uri.parse(EXTERNAL_URLS.visionMcpDocs));
 		}
 		return false;

@@ -99,6 +99,10 @@
 				"title": "%glm-copilot.command.uninstallVisionMcp%"
 			},
 			{
+				"command": "glm-copilot.openVisionPromptSettings",
+				"title": "%glm-copilot.command.openVisionPromptSettings%"
+			},
+			{
 				"command": "glm-copilot.toggleVision",
 				"title": "%glm-copilot.command.toggleVision%"
 			}
@@ -111,6 +115,10 @@
 				},
 				{
 					"command": "glm-copilot.uninstallVisionMcp",
+					"when": "glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.openVisionPromptSettings",
 					"when": "glmCopilot.visionMcp.installed"
 				},
 				{
