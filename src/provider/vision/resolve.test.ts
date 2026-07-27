@@ -237,6 +237,36 @@ describe('resolveVisionMessages', () => {
 		expect(readdirSync(join(storageDir, 'vision-tmp'))).toHaveLength(0);
 	});
 
+	it('finishes writing duplicate image attachments before invoking the vision tool', async () => {
+		let finishWrite!: () => void;
+		const writeStarted = new Promise<void>((resolve) => {
+			finishWrite = resolve;
+		});
+		const writeImageFile = vi.fn(async () => {
+			await writeStarted;
+			return join(storageDir, 'vision-tmp', 'run', 'duplicate.png');
+		});
+		const invoke = vi.fn<InvokeTool>(async () => toolResult('duplicate description'));
+		const imageBytes = new Uint8Array([7, 7, 7]);
+		const message = userMessage([
+			new vscode.LanguageModelDataPart(imageBytes, 'image/png'),
+			new vscode.LanguageModelDataPart(imageBytes, 'image/png'),
+		]);
+
+		const resolution = resolveVisionMessages(
+			makeDeps(storageDir, invoke, { writeImageFile }),
+			[message],
+			progress(),
+			token,
+		);
+		await vi.waitFor(() => expect(writeImageFile).toHaveBeenCalledOnce());
+		expect(invoke).not.toHaveBeenCalled();
+		finishWrite();
+		await resolution;
+
+		expect(invoke).toHaveBeenCalledTimes(2);
+	});
+
 	it('preserves text ordering around non-contiguous direct images', async () => {
 		const { invoke } = recordingInvoke((call) => `description ${call}`);
 		const message = userMessage([

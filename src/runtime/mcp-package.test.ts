@@ -1,5 +1,5 @@
 import { mkdtempSync, readFileSync } from 'node:fs';
-import { mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,9 @@ import {
 	hasInstalledVisionMcp,
 	VisionMcpPackageInstaller,
 } from './mcp-package';
+
+const mocks = vi.hoisted(() => ({ loggerWarn: vi.fn() }));
+vi.mock('../logger', () => ({ logger: { warn: mocks.loggerWarn } }));
 
 const tempDirs: string[] = [];
 
@@ -44,6 +47,7 @@ function fakeContext(extensionDir: string, storageDir: string): vscode.Extension
 
 afterEach(async () => {
 	await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+	vi.clearAllMocks();
 });
 
 describe('buildNpmCiSpec', () => {
@@ -137,6 +141,73 @@ describe('VisionMcpPackageInstaller', () => {
 
 		expect(installer.isInstalled()).toBe(false);
 		expect(await readdir(storageDir)).toEqual([]);
+	});
+
+	it('restores the previous installation when staging cannot be promoted', async () => {
+		const root = makeTempDir();
+		const extensionDir = join(root, 'extension');
+		const assetDir = join(extensionDir, 'resources', 'vision-mcp');
+		const storageDir = join(root, 'storage');
+		const installDir = join(storageDir, 'vision-mcp');
+		await mkdir(assetDir, { recursive: true });
+		await writeFile(join(assetDir, 'package.json'), '{"private":true}');
+		await writeFile(join(assetDir, 'package-lock.json'), '{"lockfileVersion":3}');
+		await seedInstalledPackage(installDir);
+		await writeFile(join(installDir, 'installation-marker'), 'previous');
+		const renamePath = vi.fn(async (source: string, destination: string) => {
+			if (source.includes('.installing-')) {
+				throw new Error('promotion failed');
+			}
+			await rename(source, destination);
+		});
+		const installer = new VisionMcpPackageInstaller(
+			fakeContext(extensionDir, storageDir),
+			async (stagingDir) => seedInstalledPackage(stagingDir),
+			renamePath,
+		);
+
+		await expect(installer.install()).rejects.toThrow('promotion failed');
+
+		expect(installer.isInstalled()).toBe(true);
+		expect(readFileSync(join(installDir, 'installation-marker'), 'utf8')).toBe('previous');
+		expect(await readdir(storageDir)).toEqual(['vision-mcp']);
+	});
+
+	it('keeps the promoted installation active when backup cleanup fails', async () => {
+		const root = makeTempDir();
+		const extensionDir = join(root, 'extension');
+		const assetDir = join(extensionDir, 'resources', 'vision-mcp');
+		const storageDir = join(root, 'storage');
+		const installDir = join(storageDir, 'vision-mcp');
+		await mkdir(assetDir, { recursive: true });
+		await writeFile(join(assetDir, 'package.json'), '{"private":true}');
+		await writeFile(join(assetDir, 'package-lock.json'), '{"lockfileVersion":3}');
+		await seedInstalledPackage(installDir);
+		await writeFile(join(installDir, 'installation-marker'), 'previous');
+		const removePath: typeof rm = async (path, options) => {
+			if (String(path).includes('.backup-')) {
+				throw new Error('backup cleanup failed');
+			}
+			return rm(path, options);
+		};
+		const installer = new VisionMcpPackageInstaller(
+			fakeContext(extensionDir, storageDir),
+			async (stagingDir) => {
+				await seedInstalledPackage(stagingDir);
+				await writeFile(join(stagingDir, 'installation-marker'), 'promoted');
+			},
+			rename,
+			removePath,
+		);
+
+		await expect(installer.install()).resolves.toBeUndefined();
+
+		expect(installer.isInstalled()).toBe(true);
+		expect(readFileSync(join(installDir, 'installation-marker'), 'utf8')).toBe('promoted');
+		expect(mocks.loggerWarn).toHaveBeenCalledWith(
+			'Failed to remove the previous GLM Vision package backup',
+			expect.any(Error),
+		);
 	});
 });
 

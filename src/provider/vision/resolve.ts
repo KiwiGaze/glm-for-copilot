@@ -43,6 +43,8 @@ type InvokeTool = (
 	token: vscode.CancellationToken,
 ) => Promise<vscode.LanguageModelToolResult>;
 
+type WriteImageFile = (dir: string, image: VisionImage, hash: string) => Promise<string>;
+
 export interface VisionResolveDeps {
 	authManager: IAuthManager;
 	cache: VisionDescriptionCache;
@@ -54,6 +56,8 @@ export interface VisionResolveDeps {
 	invokeTool?: InvokeTool;
 	/** Test seam: per-analysis timeout. Defaults to VISION_INVOKE_TIMEOUT_MS. */
 	timeoutMs?: number;
+	/** Test seam: persist one image before invoking the MCP tool. */
+	writeImageFile?: WriteImageFile;
 }
 
 export interface VisionResolveResult {
@@ -69,6 +73,7 @@ interface ContainerContext {
 	toolName: string;
 	invokeTool: InvokeTool;
 	timeoutMs: number;
+	writeImageFile: WriteImageFile;
 	/** Set when analysis cannot run at all (no tool / no API key); failures are not cached. */
 	preflightFailure?: string;
 	progress: vscode.Progress<vscode.LanguageModelResponsePart>;
@@ -131,6 +136,7 @@ export async function resolveVisionMessages(
 		toolName: toolName ?? '',
 		invokeTool: deps.invokeTool ?? defaultInvokeTool,
 		timeoutMs: deps.timeoutMs ?? VISION_INVOKE_TIMEOUT_MS,
+		writeImageFile: deps.writeImageFile ?? writeImageFile,
 		preflightFailure,
 		progress,
 		token,
@@ -279,9 +285,16 @@ async function analyzeImages(
 	}
 	const timer = setTimeout(() => cts.cancel(), ctx.timeoutMs);
 	try {
+		const pendingWrites = new Map<string, Promise<string>>();
 		const texts = await Promise.all(
 			images.map(async (image, index) => {
-				const filePath = await writeImageFile(runDir, image, imageHashes[index]);
+				const writeKey = `${imageHashes[index]}:${image.mimeType.toLowerCase()}`;
+				let pendingWrite = pendingWrites.get(writeKey);
+				if (!pendingWrite) {
+					pendingWrite = ctx.writeImageFile(runDir, image, imageHashes[index]);
+					pendingWrites.set(writeKey, pendingWrite);
+				}
+				const filePath = await pendingWrite;
 				const result = await ctx.invokeTool(
 					ctx.toolName,
 					{ image_source: filePath, prompt: ctx.prompt },

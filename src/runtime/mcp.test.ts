@@ -466,14 +466,17 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
-	it('keeps the server disabled and reports when local package cleanup fails', async () => {
+	it('retains the registered installation state when local package cleanup fails', async () => {
 		const { context, manager, packageInstaller } = makeManager(true);
 		packageInstaller.uninstall.mockRejectedValueOnce(new Error('permission denied'));
 		manager.initialize();
+		const registration = mocks.registerMcpServerDefinitionProvider.mock.results[0].value;
 
 		await manager.uninstall();
 
-		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBeUndefined();
+		expect(registration.dispose).not.toHaveBeenCalled();
+		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBe(true);
+		expect(mocks.configUpdate).not.toHaveBeenCalled();
 		expect(mocks.showWarningMessage).toHaveBeenCalledWith(
 			'visionMcp.uninstall.cleanupFailed',
 			'visionMcp.showLogs',

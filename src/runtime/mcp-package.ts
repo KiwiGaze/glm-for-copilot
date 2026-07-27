@@ -10,6 +10,7 @@ import {
 	VISION_MCP_PACKAGE_NAME,
 	VISION_MCP_PACKAGE_VERSION,
 } from '../consts';
+import { logger } from '../logger';
 
 const INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -98,6 +99,8 @@ export class VisionMcpPackageInstaller implements IVisionMcpPackageInstaller {
 		context: vscode.ExtensionContext,
 		private readonly installCommand: (cwd: string) => Promise<void> = (cwd) =>
 			runNpmCi(cwd, process.platform),
+		private readonly renamePath: typeof rename = rename,
+		private readonly removePath: typeof rm = rm,
 	) {
 		this.installDir = join(context.globalStorageUri.fsPath, VISION_MCP_INSTALL_DIR_NAME);
 		this.assetDir = join(context.extensionUri.fsPath, 'resources', 'vision-mcp');
@@ -114,6 +117,7 @@ export class VisionMcpPackageInstaller implements IVisionMcpPackageInstaller {
 	async install(): Promise<void> {
 		const parentDir = dirname(this.installDir);
 		const stagingDir = `${this.installDir}.installing-${randomUUID()}`;
+		const backupDir = `${this.installDir}.backup-${randomUUID()}`;
 		await mkdir(parentDir, { recursive: true });
 		await mkdir(stagingDir, { recursive: true });
 		try {
@@ -125,15 +129,39 @@ export class VisionMcpPackageInstaller implements IVisionMcpPackageInstaller {
 			if (!hasInstalledVisionMcp(stagingDir)) {
 				throw new Error('The installed package did not match the pinned GLM Vision version.');
 			}
-			await rm(this.installDir, { recursive: true, force: true });
-			await rename(stagingDir, this.installDir);
+			const hasPreviousInstallation = existsSync(this.installDir);
+			if (hasPreviousInstallation) {
+				await this.renamePath(this.installDir, backupDir);
+			}
+			try {
+				await this.renamePath(stagingDir, this.installDir);
+			} catch (promotionError) {
+				if (hasPreviousInstallation) {
+					try {
+						await this.renamePath(backupDir, this.installDir);
+					} catch (restoreError) {
+						throw new AggregateError(
+							[promotionError, restoreError],
+							'Failed to promote the new GLM Vision package and restore the previous installation.',
+						);
+					}
+				}
+				throw promotionError;
+			}
+			if (hasPreviousInstallation) {
+				try {
+					await this.removePath(backupDir, { recursive: true, force: true });
+				} catch (error) {
+					logger.warn('Failed to remove the previous GLM Vision package backup', error);
+				}
+			}
 		} catch (error) {
-			await rm(stagingDir, { recursive: true, force: true });
+			await this.removePath(stagingDir, { recursive: true, force: true });
 			throw error;
 		}
 	}
 
 	async uninstall(): Promise<void> {
-		await rm(this.installDir, { recursive: true, force: true });
+		await this.removePath(this.installDir, { recursive: true, force: true });
 	}
 }

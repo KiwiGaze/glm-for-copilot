@@ -309,17 +309,23 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		if (!this.isInstallRecorded && !this.packageInstaller.isInstalled()) {
 			return;
 		}
+		try {
+			await this.packageInstaller.uninstall();
+		} catch (error) {
+			logger.error('Failed to remove the local GLM Vision MCP package', error);
+			const choice = await vscode.window.showWarningMessage(
+				t('visionMcp.uninstall.cleanupFailed'),
+				t('visionMcp.showLogs'),
+			);
+			if (choice === t('visionMcp.showLogs')) {
+				logger.show();
+			}
+			return;
+		}
 		this.registration?.dispose();
 		this.registration = undefined;
 		await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
 		await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false);
-		let cleanupFailed = false;
-		try {
-			await this.packageInstaller.uninstall();
-		} catch (error) {
-			cleanupFailed = true;
-			logger.error('Failed to remove the local GLM Vision MCP package', error);
-		}
 		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
 		const visionSetting = configuration.inspect<boolean>('visionEnabled');
 		if (visionSetting?.workspaceValue !== undefined) {
@@ -343,17 +349,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		this.readyPromptShown = false;
 		this.resolveKeyWarningShown = false;
 		this.refreshHealth();
-		if (cleanupFailed) {
-			const choice = await vscode.window.showWarningMessage(
-				t('visionMcp.uninstall.cleanupFailed'),
-				t('visionMcp.showLogs'),
-			);
-			if (choice === t('visionMcp.showLogs')) {
-				logger.show();
-			}
-		} else {
-			void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
-		}
+		void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
 	}
 
 	/** Flip the `visionEnabled` setting (only honored while the server is healthy). */
