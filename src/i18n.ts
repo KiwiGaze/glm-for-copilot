@@ -57,6 +57,7 @@ const en: Record<string, string> = {
 	'vision.error.empty': 'GLM Vision returned no description',
 	'vision.error.unsupportedType': 'unsupported image type {0}',
 	'vision.error.tooLarge': 'the image is larger than {0} MB',
+	'vision.error.tooMany': 'more than {0} images attached at once',
 	'vision.error.toolUnavailable': 'the GLM Vision server is not running',
 	'vision.error.noKey': 'no GLM API key is configured',
 	'vision.error.timeout': 'image analysis timed out',
@@ -216,10 +217,11 @@ const zh: Record<string, string> = {
 	'vision.error.empty': 'GLM Vision 未返回任何描述',
 	'vision.error.unsupportedType': '不支持的图片类型 {0}',
 	'vision.error.tooLarge': '图片大小超过 {0} MB',
+	'vision.error.tooMany': '单次附带的图片超过 {0} 张',
 	'vision.error.toolUnavailable': 'GLM Vision 服务器未在运行',
 	'vision.error.noKey': '未配置 GLM API Key',
 	'vision.error.timeout': '图片分析超时',
-	'vision.error.disabled': '视觉功能已关闭，可运行 “GLM: Toggle Vision for Chat Models” 重新开启',
+	'vision.error.disabled': '视觉功能已关闭，可运行“GLM: 切换聊天模型视觉能力”重新开启',
 
 	// GLM Vision MCP 设置
 	'visionMcp.install.alreadyInstalled': 'GLM Vision 已安装。',

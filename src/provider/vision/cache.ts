@@ -1,11 +1,5 @@
 import { createHash } from 'node:crypto';
-import { VISION_CACHE_PERSIST_MAX, VISION_CACHE_STATE_KEY } from '../../consts';
-
-/** Minimal subset of `vscode.Memento` used for persistence (injectable for tests). */
-export interface VisionCacheMemento {
-	get<T>(key: string): T | undefined;
-	update(key: string, value: unknown): Thenable<void>;
-}
+import { VISION_CACHE_MAX } from '../../consts';
 
 /** An image accepted by the vision pipeline: MIME type plus raw bytes. */
 export interface VisionImage {
@@ -39,32 +33,21 @@ export function computeDescriptionCacheKey(
 	return hash.digest('hex');
 }
 
-type PersistedEntry = [key: string, description: string];
-
 /**
- * Bounded, content-addressed store of image descriptions backed by
- * `globalState` (FIFO), so descriptions survive window reloads and historical
- * images are never silently re-described.
+ * Bounded, content-addressed store of image descriptions (FIFO), kept in
+ * memory only: transcripts may contain credentials or PII, so they are never
+ * written to globalState. Session scope still avoids re-describing images
+ * that repeat within the chat history.
  */
 export class VisionDescriptionCache {
-	private readonly persisted = new Map<string, string>();
-
-	constructor(private readonly memento: VisionCacheMemento) {
-		const stored = memento.get<PersistedEntry[]>(VISION_CACHE_STATE_KEY) ?? [];
-		for (const entry of stored) {
-			if (Array.isArray(entry) && typeof entry[0] === 'string' && typeof entry[1] === 'string') {
-				this.persisted.set(entry[0], entry[1]);
-			}
-		}
-	}
+	private readonly entries = new Map<string, string>();
 
 	get(key: string): string | undefined {
-		return this.persisted.get(key);
+		return this.entries.get(key);
 	}
 
-	async set(key: string, description: string): Promise<void> {
-		remember(this.persisted, key, description, VISION_CACHE_PERSIST_MAX);
-		await this.memento.update(VISION_CACHE_STATE_KEY, [...this.persisted.entries()]);
+	set(key: string, description: string): void {
+		remember(this.entries, key, description, VISION_CACHE_MAX);
 	}
 }
 

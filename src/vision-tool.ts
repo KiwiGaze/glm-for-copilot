@@ -1,17 +1,16 @@
 import * as vscode from 'vscode';
-import { VISION_ANALYZE_TOOL_LABEL_PATTERN, VISION_ANALYZE_TOOL_SUFFIX } from './consts';
+import { VISION_ANALYZE_TOOL_SERVER_PATTERN, VISION_ANALYZE_TOOL_SUFFIX } from './consts';
 
 /**
  * Whether a tool from `vscode.lm.tools` is OUR vision server's `analyze_image`
  * tool. `vscode.lm.tools` is global across all servers and extensions, so the
- * name must carry the GLM Vision label slug (VS Code builds MCP tool names from
- * the server label, e.g. `mcp_glm_vision_analyze_image`) in addition to the
- * `analyze_image` suffix and the expected input shape — otherwise another
- * server's look-alike tool could receive the user's image files.
+ * name must carry either the official server name or the GLM Vision definition
+ * label in addition to the `analyze_image` suffix and expected input shape —
+ * otherwise another server's look-alike tool could receive the user's images.
  */
 export function isVisionAnalyzeTool(tool: vscode.LanguageModelToolInformation): boolean {
 	const name = tool.name.toLowerCase();
-	if (!name.endsWith(VISION_ANALYZE_TOOL_SUFFIX) || !VISION_ANALYZE_TOOL_LABEL_PATTERN.test(name)) {
+	if (!name.endsWith(VISION_ANALYZE_TOOL_SUFFIX) || !VISION_ANALYZE_TOOL_SERVER_PATTERN.test(name)) {
 		return false;
 	}
 	const properties = (tool.inputSchema as { properties?: Record<string, unknown> } | undefined)

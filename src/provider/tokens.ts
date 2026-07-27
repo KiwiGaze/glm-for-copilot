@@ -13,7 +13,7 @@ interface ThinkingPartLike {
 
 /** Whether the part is a `LanguageModelDataPart` holding image bytes. */
 export function isImageDataPart(part: unknown): part is vscode.LanguageModelDataPart {
-	return part instanceof vscode.LanguageModelDataPart && part.mimeType.startsWith('image/');
+	return part instanceof vscode.LanguageModelDataPart && part.mimeType.toLowerCase().startsWith('image/');
 }
 
 /** Estimate the character count of a single content part. */

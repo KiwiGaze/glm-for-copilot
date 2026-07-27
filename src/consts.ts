@@ -94,23 +94,26 @@ export const DEFAULT_VISION_PROMPT = [
 
 /**
  * Image MIME types accepted by the vision pipeline (lowercase), mapped to the
- * file extension used for the temp files handed to the MCP tool.
+ * file extension used for the temp files handed to the MCP tool. Limited to
+ * what `@z_ai/mcp-server` accepts for local paths (`.jpg`/`.jpeg`/`.png`).
  */
 export const VISION_IMAGE_MIME_EXTENSIONS: Record<string, string> = {
 	'image/png': 'png',
 	'image/jpeg': 'jpg',
-	'image/webp': 'webp',
-	'image/gif': 'gif',
 };
 
 /** Largest single image (bytes) accepted — the vision MCP server rejects images over 5 MB. */
 export const VISION_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Persisted (globalState) description cache bound (FIFO). */
-export const VISION_CACHE_PERSIST_MAX = 128;
+/**
+ * Largest image count per analyzed container. Images of one container are
+ * written to disk and analyzed concurrently, so this also bounds peak temp
+ * disk usage and parallel `analyze_image` calls per run.
+ */
+export const VISION_MAX_IMAGES_PER_CONTAINER = 16;
 
-/** globalState key holding the persisted description cache. */
-export const VISION_CACHE_STATE_KEY = 'glm-copilot.visionDescriptionCache';
+/** Session (memory-only) description cache bound (FIFO). */
+export const VISION_CACHE_MAX = 128;
 
 /** Contribution id for the Z.AI Vision MCP server definition provider. */
 export const VISION_MCP_PROVIDER_ID = 'glm-copilot.vision';
@@ -138,13 +141,14 @@ export const VISION_MCP_CTX_HEALTHY = 'glmCopilot.visionMcp.healthy';
 export const VISION_ANALYZE_TOOL_SUFFIX = 'analyze_image';
 
 /**
- * Slug of VISION_MCP_LABEL as it appears inside VS Code's prefixed tool name
- * (e.g. `mcp_glm_vision_analyze_image`). Required when matching tools so an
- * unrelated server's `analyze_image` is never treated as GLM Vision. Tolerant
- * of separator changes; a full naming-scheme change degrades to a visible
- * "server not running" state instead of a silent cross-server match.
+ * Known GLM Vision tool names as they appear in VS Code tool names. The
+ * official server reports `zai-mcp-server`; the extension definition label is
+ * `GLM Vision`. The `analyze_image` suffix is anchored to the server prefix so
+ * a look-alike server (`mcp_glm_vision_evil_analyze_image`) is never treated
+ * as GLM Vision.
  */
-export const VISION_ANALYZE_TOOL_LABEL_PATTERN = /glm[\s_-]?vision/;
+export const VISION_ANALYZE_TOOL_SERVER_PATTERN =
+	/^(?:(?:mcp[_-])?glm[\s_-]vision|mcp[_-]zai[_-]mcp[_-]server)[:\s_-]+analyze_image$/;
 
 /** Minimum Node.js major version required by the vision MCP server. */
 export const VISION_NODE_MIN_MAJOR = 18;
@@ -155,7 +159,7 @@ export const VISION_HEALTH_POLL_MS = 15_000;
 /** Directory (under globalStorage) holding temp image files handed to the MCP tool. */
 export const VISION_TEMP_DIR_NAME = 'vision-tmp';
 
-/** Upper bound on temp image files kept on disk (content-addressed, oldest mtime first). */
+/** Upper bound on leftover vision temp dir entries; analysis runs delete their own files on settle. */
 export const VISION_TEMP_MAX_FILES = 256;
 
 /** Per-analysis timeout when invoking the vision MCP tool. */

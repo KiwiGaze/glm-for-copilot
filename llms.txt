@@ -15,7 +15,7 @@ Key facts:
 - **Dual API:** choose your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`).
 - **BYOK and secure:** your API key is stored in the OS keychain via VS Code `SecretStorage`; the extension never writes it to `settings.json`.
 - **Thinking mode:** GLM step-by-step reasoning streams live as a Thinking block.
-- **Image input (vision):** one-click install of the official Z.AI vision MCP server (`@z_ai/mcp-server`, GLM-4.6V) as **GLM Vision** for agent mode. While installed and running, `glm-copilot.visionEnabled` lets every GLM model accept pasted/attached images — GLM Vision analyzes each image (cached across reloads) and the analysis is injected as text.
+- **Image input (vision):** one-click install of the official Z.AI vision MCP server (`@z_ai/mcp-server`, GLM-4.6V) as **GLM Vision** for agent mode. While installed and running, `glm-copilot.visionEnabled` lets every GLM model accept pasted/attached images — GLM Vision analyzes each image (cached in memory for the session) and the analysis is injected as text.
 - **Zero runtime dependencies:** pure VS Code API and Node.js built-ins.
 - **License:** MIT.
 

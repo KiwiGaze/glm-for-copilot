@@ -1,4 +1,5 @@
-import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as vscode from 'vscode';
 import { getVisionEnabled, getVisionPrompt } from '../../config';
@@ -6,6 +7,7 @@ import {
 	VISION_IMAGE_MIME_EXTENSIONS,
 	VISION_INVOKE_TIMEOUT_MS,
 	VISION_MAX_IMAGE_BYTES,
+	VISION_MAX_IMAGES_PER_CONTAINER,
 	VISION_TEMP_DIR_NAME,
 	VISION_TEMP_MAX_FILES,
 } from '../../consts';
@@ -86,12 +88,13 @@ interface ImageRun {
  * Turn image attachments into text so text-only GLM models can reason about
  * them. Runs on every chat request — a cheap no-op for text-only messages.
  * Each container (a user message's own images, or one tool result's images) is
- * written to temp files and analyzed through the vision MCP `analyze_image`
- * tool, cached by content, and its image parts are replaced by a text
- * description. A cancelled request propagates as cancellation; when vision is
- * turned off, the server is unavailable, or analysis fails, the container
- * degrades to the unavailable marker + notice — no image is written to disk or
- * sent anywhere. Cached descriptions still resolve so history stays coherent.
+ * written to a per-run temp directory (removed once the run settles) and
+ * analyzed through the vision MCP `analyze_image` tool, cached by content for
+ * the session, and its image parts are replaced by a text description. A
+ * cancelled request propagates as cancellation; when vision is turned off, the
+ * server is unavailable, or analysis fails, the container degrades to the
+ * unavailable marker + notice — no image is written to disk or sent anywhere.
+ * Cached descriptions still resolve so history stays coherent.
  */
 export async function resolveVisionMessages(
 	deps: VisionResolveDeps,
@@ -129,11 +132,6 @@ export async function resolveVisionMessages(
 		progress,
 		token,
 	};
-
-	if (preflightFailure === undefined) {
-		await mkdir(ctx.imageDir, { recursive: true });
-		await pruneTempImages(ctx.imageDir);
-	}
 
 	const resolved: vscode.LanguageModelChatRequestMessage[] = [];
 	let failureNotice: string | undefined;
@@ -240,6 +238,8 @@ async function resolveContainer(
 	reportDescribeProgress(ctx.progress, images.length);
 	let description: string;
 	try {
+		await mkdir(ctx.imageDir, { recursive: true });
+		await pruneTempImages(ctx.imageDir);
 		description = await analyzeImages(images, imageHashes, ctx);
 	} catch (error) {
 		if (ctx.token.isCancellationRequested) {
@@ -256,27 +256,31 @@ async function resolveContainer(
 	if (!description.trim()) {
 		return failure(t('vision.error.empty'));
 	}
-	await ctx.cache.set(key, description);
+	ctx.cache.set(key, description);
 	return { text: describedImageText(images.length, description) };
 }
 
 /**
- * Write each image to a content-addressed temp file (the MCP tool only accepts
+ * Write the images into a per-run temp directory (the MCP tool only accepts
  * paths/URLs, not data URLs) and analyze them in parallel through the vision
- * MCP tool. Multiple images are joined with `Image N:` labels.
+ * MCP tool. Multiple images are joined with `Image N:` labels. The first
+ * failed call cancels its siblings, and the run directory is removed once the
+ * run settles so image content never lingers on disk.
  */
 async function analyzeImages(
 	images: readonly VisionImage[],
 	imageHashes: readonly string[],
 	ctx: ContainerContext,
 ): Promise<string> {
+	const runDir = join(ctx.imageDir, randomUUID());
+	await mkdir(runDir, { recursive: true });
 	const cts = new vscode.CancellationTokenSource();
 	const subscription = ctx.token.onCancellationRequested(() => cts.cancel());
 	const timer = setTimeout(() => cts.cancel(), ctx.timeoutMs);
 	try {
 		const texts = await Promise.all(
 			images.map(async (image, index) => {
-				const filePath = await ensureImageFile(ctx.imageDir, image, imageHashes[index]);
+				const filePath = await writeImageFile(runDir, image, imageHashes[index]);
 				const result = await ctx.invokeTool(
 					ctx.toolName,
 					{ image_source: filePath, prompt: ctx.prompt },
@@ -289,7 +293,7 @@ async function analyzeImages(
 				return text;
 			}),
 		);
-		if (texts.every((text) => !text)) {
+		if (texts.some((text) => !text)) {
 			return '';
 		}
 		return texts.length === 1
@@ -298,7 +302,13 @@ async function analyzeImages(
 	} finally {
 		clearTimeout(timer);
 		subscription.dispose();
+		cts.cancel();
 		cts.dispose();
+		try {
+			await rm(runDir, { recursive: true, force: true });
+		} catch (error) {
+			logger.warn('Failed to remove GLM Vision temp images', error);
+		}
 	}
 }
 
@@ -307,8 +317,8 @@ export function getVisionTempDir(storageDir: string): string {
 	return join(storageDir, VISION_TEMP_DIR_NAME);
 }
 
-/** Write the image unless already present (content hash name ⇒ no duplicates). */
-async function ensureImageFile(dir: string, image: VisionImage, hash: string): Promise<string> {
+/** Write the image into the run directory unless already present (hash name ⇒ no duplicates). */
+async function writeImageFile(dir: string, image: VisionImage, hash: string): Promise<string> {
 	const ext = VISION_IMAGE_MIME_EXTENSIONS[image.mimeType.toLowerCase()];
 	const filePath = join(dir, `${hash.slice(0, 32)}.${ext}`);
 	try {
@@ -321,11 +331,12 @@ async function ensureImageFile(dir: string, image: VisionImage, hash: string): P
 	return filePath;
 }
 
-/** Bound the temp dir to VISION_TEMP_MAX_FILES, evicting oldest-mtime files. */
+/** Bound the temp dir so it stays within VISION_TEMP_MAX_FILES once the run dir is created. */
 async function pruneTempImages(dir: string): Promise<void> {
 	try {
 		const names = await readdir(dir);
-		if (names.length <= VISION_TEMP_MAX_FILES) {
+		const retainedLimit = VISION_TEMP_MAX_FILES - 1;
+		if (names.length <= retainedLimit) {
 			return;
 		}
 		const entries = await Promise.all(
@@ -335,8 +346,8 @@ async function pruneTempImages(dir: string): Promise<void> {
 			})),
 		);
 		entries.sort((a, b) => a.mtimeMs - b.mtimeMs);
-		for (const entry of entries.slice(0, entries.length - VISION_TEMP_MAX_FILES)) {
-			await unlink(join(dir, entry.name));
+		for (const entry of entries.slice(0, entries.length - retainedLimit)) {
+			await rm(join(dir, entry.name), { recursive: true, force: true });
 		}
 	} catch (error) {
 		logger.warn('Failed to prune GLM Vision temp images', error);
@@ -363,8 +374,11 @@ async function defaultInvokeTool(
 	return vscode.lm.invokeTool(name, { input, toolInvocationToken: undefined }, token);
 }
 
-/** First localized reason an image is rejected (unsupported type / too large), or undefined. */
+/** First localized reason an image run is rejected (too many / unsupported type / too large), or undefined. */
 function findInvalidImageReason(images: readonly VisionImage[]): string | undefined {
+	if (images.length > VISION_MAX_IMAGES_PER_CONTAINER) {
+		return t('vision.error.tooMany', String(VISION_MAX_IMAGES_PER_CONTAINER));
+	}
 	for (const image of images) {
 		if (VISION_IMAGE_MIME_EXTENSIONS[image.mimeType.toLowerCase()] === undefined) {
 			return t('vision.error.unsupportedType', image.mimeType);

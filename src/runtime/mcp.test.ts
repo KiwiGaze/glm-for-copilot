@@ -162,12 +162,46 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
+	it('resets the healthy context key at activation even when the server is stopped', () => {
+		const { manager } = makeManager(true);
+		manager.initialize();
+		expect(mocks.executeCommand).toHaveBeenCalledWith(
+			'setContext',
+			'glmCopilot.visionMcp.healthy',
+			false,
+		);
+		manager.dispose();
+	});
+
 	it('install registers the server, persists the flag, and confirms', async () => {
 		const { context, manager } = makeManager(false);
 		await manager.install();
 		expect(mocks.registerMcpServerDefinitionProvider).toHaveBeenCalledTimes(1);
 		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBe(true);
 		expect(mocks.showInformationMessage).toHaveBeenCalledWith('visionMcp.install.success', 'visionMcp.openServers');
+		manager.dispose();
+	});
+
+	it('rolls back the registration and persisted state when persisting installation fails', async () => {
+		const context = fakeContext(false);
+		const realUpdate = context.globalState.update.bind(context.globalState);
+		vi.spyOn(context.globalState, 'update').mockImplementation((key: string, value: unknown) => {
+			if (key === 'glm-copilot.visionMcp.installed' && value === true) {
+				return Promise.reject(new Error('persist boom'));
+			}
+			return realUpdate(key, value);
+		});
+		const manager = new VisionMcpManager(context, authWithKey(), async () => ({
+			npxOk: true,
+			nodeMajor: 22,
+		}));
+
+		await expect(manager.install()).rejects.toThrow('persist boom');
+
+		const registration = mocks.registerMcpServerDefinitionProvider.mock.results[0].value;
+		expect(registration.dispose).toHaveBeenCalled();
+		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBeUndefined();
+		expect(mocks.executeCommand).toHaveBeenCalledWith('setContext', 'glmCopilot.visionMcp.installed', false);
 		manager.dispose();
 	});
 
@@ -389,6 +423,37 @@ describe('VisionMcpManager', () => {
 		const resolved = await provider.resolveMcpServerDefinition?.({ env: { Z_AI_MODE: 'ZAI' } });
 
 		expect(resolved?.env.Z_AI_API_KEY).toBe('id.secret');
+		manager.dispose();
+	});
+
+	it('re-arms the missing-key warning after the API key recovers', async () => {
+		let apiKey: string | undefined;
+		const auth: IAuthManager = {
+			getApiKey: async () => apiKey,
+			hasApiKey: async () => apiKey !== undefined,
+			promptForApiKey: async () => false,
+			deleteApiKey: async () => {},
+		};
+		const context = fakeContext(true);
+		const manager = new VisionMcpManager(context, auth, async () => ({ npxOk: true, nodeMajor: 22 }));
+		manager.initialize();
+		const provider = mocks.registerMcpServerDefinitionProvider.mock.calls[0][1] as {
+			resolveMcpServerDefinition?: (server: {
+				env: Record<string, string>;
+			}) => Promise<{ env: Record<string, string> } | undefined>;
+		};
+		const server = { env: { Z_AI_MODE: 'ZAI' } };
+
+		expect(await provider.resolveMcpServerDefinition?.(server)).toBeUndefined();
+		expect(await provider.resolveMcpServerDefinition?.(server)).toBeUndefined();
+		expect(mocks.showWarningMessage).toHaveBeenCalledTimes(1);
+
+		apiKey = 'id.secret';
+		expect(await provider.resolveMcpServerDefinition?.(server)).toBeDefined();
+
+		apiKey = undefined;
+		expect(await provider.resolveMcpServerDefinition?.(server)).toBeUndefined();
+		expect(mocks.showWarningMessage).toHaveBeenCalledTimes(2);
 		manager.dispose();
 	});
 });

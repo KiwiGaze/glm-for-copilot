@@ -27,7 +27,7 @@ Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) �
 </p>
 
 - **Keys stay in your OS keychain by default.** **GLM: Set API Key** stores your key via VS Code `SecretStorage` (macOS, Windows, Linux). The extension also honors a settings fallback for CI or automation, so do not put real keys in workspace settings.
-- **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins. No Python, Docker, or local server.
+- **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins — the core extension needs no Python, Docker, or local server. (The optional [GLM Vision integration](#image-input-vision) runs a local MCP server through `npx`, so it requires Node.js 18+.)
 - **Add any model.** Newly released, fine-tuned, or proxy-hosted GLM models via [`glm-copilot.customModels`](#settings).
 - **See images, even on text-only models.** Install the official **GLM Vision** MCP server with one click and turn on image input: pasted screenshots are analyzed by GLM Vision (GLM-4.6V) and injected as text — code, logs, errors, and UI included — so any GLM model can reason about them. Agent mode also gets the full vision tool set. See [Image input (vision)](#image-input-vision).
 
@@ -117,7 +117,7 @@ Vision is powered by the official **[Z.AI Vision MCP server](https://docs.z.ai/d
 With image input on, pasted or attached images just work — even for text-only chat models:
 
 - **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on your stored key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
-- **Cached** — analyses are content-addressed and cached in memory and across window reloads, so conversation history is not re-analyzed every turn.
+- **Cached** — analyses are content-addressed and cached in memory for the session (never written to extension storage), so conversation history is not re-analyzed every turn.
 - **Validated** — images larger than 5 MB, or outside `png` / `jpeg` / `webp` / `gif`, are skipped with a clear notice *before* any tool call.
 - **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, models fall back to text-only: the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out.
 

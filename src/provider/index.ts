@@ -42,7 +42,9 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		private readonly visionState: IVisionMcpState,
 	) {
 		this.extensionVersion = context.extension.packageJSON.version as string;
-		this.visionCache = new VisionDescriptionCache(context.globalState);
+		// Drop descriptions persisted by pre-release builds; the cache is memory-only now.
+		void context.globalState.update('glm-copilot.visionDescriptionCache', undefined);
+		this.visionCache = new VisionDescriptionCache();
 		this.visionStorageDir = context.globalStorageUri.fsPath;
 		context.subscriptions.push(
 			this.onDidChangeLanguageModelChatInformationEmitter,

@@ -186,6 +186,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	/** Called once at activation: restore an explicit install and start health tracking. */
 	initialize(): void {
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, this.isInstalled);
+		// Context keys survive an extension-host restart; clear a stale healthy flag up front.
+		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_HEALTHY, false);
 		if (this.isInstalled) {
 			this.registerDefinitionProvider();
 			this.startHealthPolling();
@@ -213,8 +215,20 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			if (!this.registerDefinitionProvider()) {
 				return;
 			}
-			await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, true);
-			await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, true);
+			try {
+				await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, true);
+				await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, true);
+			} catch (error) {
+				this.registration?.dispose();
+				this.registration = undefined;
+				try {
+					await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
+					await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false);
+				} catch (rollbackError) {
+					logger.warn('Failed to roll back GLM Vision installation state', rollbackError);
+				}
+				throw error;
+			}
 			this.startHealthPolling();
 			this.refreshHealth();
 			const choice = await vscode.window.showInformationMessage(
@@ -345,6 +359,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			}
 			return undefined;
 		}
+		this.resolveKeyWarningShown = false;
 		server.env = { ...server.env, [ZAI_API_KEY_ENV]: apiKey };
 		return server;
 	}
