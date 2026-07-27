@@ -378,6 +378,29 @@ describe('resolveVisionMessages', () => {
 		expect(result.failureNotice).toContain('vision.error.noKey');
 	});
 
+	it('degrades to the unavailable marker when the API key lookup rejects', async () => {
+		const { calls, invoke } = recordingInvoke(() => 'unused');
+		const failingAuth = {
+			getApiKey: async (): Promise<string> => {
+				throw new Error('keychain locked');
+			},
+			hasApiKey: async () => false,
+			promptForApiKey: async () => false,
+			deleteApiKey: async () => {},
+		};
+
+		const result = await resolveVisionMessages(
+			makeDeps(storageDir, invoke, { authManager: failingAuth }),
+			[userMessage([imagePart([1], 'image/png')])],
+			progress(),
+			token,
+		);
+
+		expect(calls).toHaveLength(0);
+		expect((contentOf(result.messages[0])[0] as { value: string }).value).toBe(IMAGE_DESCRIPTION_UNAVAILABLE);
+		expect(result.failureNotice).toContain('vision.error.noKey');
+	});
+
 	it('does not analyze or write files when vision is turned off', async () => {
 		(getVisionEnabled as unknown as Mock).mockReturnValue(false);
 		const { calls, invoke } = recordingInvoke(() => 'unused');

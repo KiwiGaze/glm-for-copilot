@@ -114,10 +114,17 @@ export async function resolveVisionMessages(
 		const tool = (deps.findTool ?? findVisionAnalyzeTool)();
 		if (!tool) {
 			preflightFailure = t('vision.error.toolUnavailable');
-		} else if (!(await deps.authManager.getApiKey())) {
-			preflightFailure = t('vision.error.noKey');
 		} else {
-			toolName = tool.name;
+			try {
+				if (!(await deps.authManager.getApiKey())) {
+					preflightFailure = t('vision.error.noKey');
+				} else {
+					toolName = tool.name;
+				}
+			} catch (error) {
+				logger.warn('GLM Vision API key lookup failed', error);
+				preflightFailure = t('vision.error.noKey');
+			}
 		}
 	}
 
