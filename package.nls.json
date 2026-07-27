@@ -44,6 +44,9 @@
   "glm-copilot.config.thinking.enabled.label": "On",
   "glm-copilot.config.thinking.disabled.label": "Off",
 
+  "glm-copilot.config.visionModel.description": "GLM vision model used to describe pasted or attached images so text-only GLM models can reason about them. Leave empty to use the default `glm-4.6v`. Set `glm-4.6v-flash` for lower cost and latency. The describe call runs on your existing API key and the endpoint chosen by `apiMode`/`region`/`baseUrl`.",
+  "glm-copilot.config.visionPrompt.description": "Instruction sent to the vision model when describing image attachments. Leave empty to use the built-in prompt, which transcribes visible text/code verbatim and describes UI, diagrams, and charts without speculating. Changing this automatically re-describes images on the next turn.",
+
   "glm-copilot.config.debugLogging.description": "Enable verbose debug logging to the GLM output channel. Use [`GLM: Show Logs`](command:glm-copilot.showLogs) to view the channel. Logs may include request metadata but not prompt text.",
   "glm-copilot.config.usageRefreshIntervalMinutes.description": "How often (in minutes) to refresh the GLM usage status bar. Minimum 1, maximum 1440 (24 hours). Shows Coding Plan quota or Standard API balance for both International (z.ai) and Mainland China (bigmodel.cn) regions. Only available when no `baseUrl` override is configured.",
   "glm-copilot.config.showUsageStatusBar.description": "Show the GLM usage status-bar item. Displays Coding Plan quota or Standard API balance for both International (z.ai) and Mainland China (bigmodel.cn) regions. Only available when no `baseUrl` override is configured."

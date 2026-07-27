@@ -49,6 +49,15 @@ const en: Record<string, string> = {
 	'request.retry.rateLimited': 'GLM is rate limited. Retrying in {0}s ({1}/{2}).',
 	'request.retry.busy': 'GLM is busy. Retrying in {0}s ({1}/{2}).',
 
+	// Vision describer proxy
+	'vision.progress.one': 'Analyzing the attached image with {0}…',
+	'vision.progress.many': 'Analyzing {0} attached images with {1}…',
+	'vision.notice.failed':
+		'Note: image analysis failed ({0}), so this reply does not use the attached image(s).',
+	'vision.error.empty': 'the vision model returned no description',
+	'vision.error.unsupportedType': 'unsupported image type {0}',
+	'vision.error.tooLarge': 'the image is larger than {0} MB',
+
 	// HTTP errors
 	'error.http.400': '[{0}] Invalid request. Check the request parameters.',
 	'error.http.401':
@@ -166,6 +175,14 @@ const zh: Record<string, string> = {
 		'GLM 单次请求最多支持 {0} 个工具，但本次请求包含 {1} 个。请使用 VS Code 的“配置工具”关闭不常用的工具。',
 	'request.retry.rateLimited': 'GLM 请求过于频繁。将在 {0} 秒后重试（{1}/{2}）。',
 	'request.retry.busy': 'GLM 服务繁忙。将在 {0} 秒后重试（{1}/{2}）。',
+
+	// 视觉描述代理
+	'vision.progress.one': '正在使用 {0} 分析附带的图片…',
+	'vision.progress.many': '正在使用 {1} 分析 {0} 张附带的图片…',
+	'vision.notice.failed': '注意：图片分析失败（{0}），因此本次回复未使用所附图片。',
+	'vision.error.empty': '视觉模型未返回任何描述',
+	'vision.error.unsupportedType': '不支持的图片类型 {0}',
+	'vision.error.tooLarge': '图片大小超过 {0} MB',
 
 	'error.http.400': '[{0}] 请求无效。请检查请求参数。',
 	'error.http.401': '[{0}] 身份验证失败。请检查你的 GLM API Key，或为所选套餐创建一个。',

@@ -130,9 +130,25 @@ export interface GLMToolCall {
 	function: { name: string; arguments: string };
 }
 
+/** An image reference in multimodal content, encoded as a data URL. */
+export interface GLMImageContentPart {
+	type: 'image_url';
+	image_url: { url: string };
+}
+
+/** A text segment in multimodal content. */
+export interface GLMTextContentPart {
+	type: 'text';
+	text: string;
+}
+
+/** One part of an OpenAI-compatible multimodal message content array. */
+export type GLMContentPart = GLMImageContentPart | GLMTextContentPart;
+
 export interface GLMMessage {
 	role: 'system' | 'user' | 'assistant' | 'tool';
-	content: string;
+	/** Plain text, or a multimodal parts array (used only for the vision describe call). */
+	content: string | GLMContentPart[];
 	tool_calls?: GLMToolCall[];
 	tool_call_id?: string;
 	reasoning_content?: string;

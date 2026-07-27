@@ -5,6 +5,7 @@ import { VENDOR_ID } from '../consts';
 import { resolveUsageHost } from '../endpoint';
 import { logger } from '../logger';
 import { GLMChatProvider } from '../provider';
+import { registerVisionMcpServer } from './mcp';
 import { UsageStatusBar } from './usage-bar';
 
 export async function registerProvider(context: vscode.ExtensionContext): Promise<GLMChatProvider> {
@@ -18,6 +19,7 @@ export async function registerProvider(context: vscode.ExtensionContext): Promis
 		vscode.lm.registerLanguageModelChatProvider(VENDOR_ID, provider),
 		usageBar,
 	);
+	registerVisionMcpServer(context, authManager);
 	await activateCopilotChat();
 	provider.refreshModelPicker();
 	return provider;

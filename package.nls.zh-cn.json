@@ -44,6 +44,9 @@
   "glm-copilot.config.thinking.enabled.label": "开启",
   "glm-copilot.config.thinking.disabled.label": "关闭",
 
+  "glm-copilot.config.visionModel.description": "用于描述粘贴或附加图片的 GLM 视觉模型，使纯文本 GLM 模型也能理解图片内容。留空则使用默认的 `glm-4.6v`；可设为 `glm-4.6v-flash` 以降低成本与延迟。描述请求使用你现有的 API 密钥，并走 `apiMode`/`region`/`baseUrl` 所选的端点。",
+  "glm-copilot.config.visionPrompt.description": "描述图片附件时发送给视觉模型的指令。留空则使用内置提示词：逐字转录可见的文本/代码，并描述界面、图示与图表，且不做主观推测。修改后将在下一轮对话中重新描述图片。",
+
   "glm-copilot.config.debugLogging.description": "启用详细调试日志，输出到 GLM 输出频道。使用 [`GLM: 显示日志`](command:glm-copilot.showLogs) 查看。日志包含请求元数据，但不包含提示词文本。",
   "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔（分钟），最小值为 1，最大值为 1440（24 小时）。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均可显示。仅在未配置 baseUrl 覆盖时生效。",
   "glm-copilot.config.showUsageStatusBar.description": "是否显示 GLM 用量状态栏。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均生效。仅在未配置 baseUrl 覆盖时可用。"

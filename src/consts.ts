@@ -78,6 +78,58 @@ export const USAGE_CACHE_STALE_MS = 60 * 60 * 1000;
 export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
 export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
 
+// ---- Vision describer proxy ----
+
+/** House GLM vision model used to describe image attachments for text-only models. */
+export const DEFAULT_VISION_MODEL = 'glm-4.6v';
+
+/**
+ * Built-in describe prompt. English and out of i18n so the prompt shape (and the
+ * resulting token estimate) does not change with the VS Code display language.
+ */
+export const DEFAULT_VISION_PROMPT = [
+	'You are the eyes for a text-only coding assistant. It cannot see the attached image(s); your description is all it will have, so be precise and complete.',
+	'',
+	'If there is one image, describe it directly. If there are multiple images, describe each one in order (Image 1, Image 2, and so on), then explain how they relate to each other.',
+	'',
+	'Transcribe all visible text exactly as it appears — including code, terminal commands, log output, stack traces, and error messages — inside fenced code blocks, preserving line breaks and indentation. Describe UI layout and controls, diagrams, and charts in enough detail for the assistant to reason about them. Report only what is actually visible; do not guess, infer intent, or invent details that are not shown.',
+].join('\n');
+
+/** Output-token cap for a single describe call. */
+export const VISION_DESCRIBE_MAX_TOKENS = 2048;
+
+/** Image MIME types accepted by the describer (lowercase). */
+export const VISION_ALLOWED_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+/** Largest single image (bytes) the describer will encode and send. */
+export const VISION_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
+/** Hot in-memory description cache bound (FIFO). */
+export const VISION_CACHE_MEMORY_MAX = 32;
+
+/** Persisted (globalState) description cache bound (FIFO). */
+export const VISION_CACHE_PERSIST_MAX = 128;
+
+/** globalState key holding the persisted description cache. */
+export const VISION_CACHE_STATE_KEY = 'glm-copilot.visionDescriptionCache';
+
+// ---- Vision MCP server (Part B) ----
+
+/** Contribution id for the Z.AI Vision MCP server definition provider. */
+export const VISION_MCP_PROVIDER_ID = 'glm-copilot.vision';
+
+/** Display label for the registered MCP server. */
+export const VISION_MCP_LABEL = 'GLM Vision';
+
+/** npx target for the official Z.AI vision MCP server. */
+export const VISION_MCP_PACKAGE = '@z_ai/mcp-server@latest';
+
+/** Env var names + platform-mode values consumed by the Z.AI vision MCP server. */
+export const ZAI_MODE_ENV = 'Z_AI_MODE';
+export const ZAI_API_KEY_ENV = 'Z_AI_API_KEY';
+export const ZAI_MODE_INTERNATIONAL = 'ZAI';
+export const ZAI_MODE_CHINA = 'ZHIPU';
+
 /** Default automatic retries (after the initial attempt) for transient GLM API failures (429 / 5xx). */
 export const RETRY_DEFAULT_MAX_RETRIES = 3;
 /** Highest value accepted from the `maxRetries` setting. */
@@ -105,7 +157,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: false, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
 		availableIn: ['coding-plan', 'standard'],
 	},
 	{
@@ -116,7 +168,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: false, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
 		availableIn: ['standard'],
 	},
 	{
@@ -127,7 +179,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: false, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
 		availableIn: ['standard'],
 	},
 	{
@@ -140,7 +192,7 @@ export const MODELS: GLMModel[] = [
 		maxOutputTokens: 128000,
 		capabilities: {
 			toolCalling: DEFAULT_TOOLS_LIMIT,
-			imageInput: false,
+			imageInput: true,
 			thinking: true,
 			thinkingEffort: GLM_5_2_EFFORT,
 		},
@@ -154,7 +206,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 128000,
 		maxOutputTokens: 96000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: false, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
 		availableIn: ['coding-plan', 'standard'],
 	},
 ];

@@ -8,6 +8,7 @@ import { toChatInfo } from './models';
 import { prepareChatRequest } from './request';
 import { streamChatCompletion } from './stream';
 import { estimateTokenCount } from './tokens';
+import { resolveVisionMessages, VisionDescriptionCache } from './vision';
 
 /**
  * GLM Chat Provider — implements `vscode.LanguageModelChatProvider` so GLM
@@ -30,11 +31,14 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 
 	private readonly extensionVersion: string;
 
+	private readonly visionCache: VisionDescriptionCache;
+
 	constructor(
 		context: vscode.ExtensionContext,
 		private readonly authManager: IAuthManager,
 	) {
 		this.extensionVersion = context.extension.packageJSON.version as string;
+		this.visionCache = new VisionDescriptionCache(context.globalState);
 		context.subscriptions.push(
 			this.onDidChangeLanguageModelChatInformationEmitter,
 			vscode.workspace.onDidChangeConfiguration((e) => {
@@ -74,11 +78,35 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		progress: vscode.Progress<vscode.LanguageModelResponsePart>,
 		token: vscode.CancellationToken,
 	): Promise<void> {
+		let vision;
+		try {
+			vision = await resolveVisionMessages(
+				{
+					authManager: this.authManager,
+					extensionVersion: this.extensionVersion,
+					cache: this.visionCache,
+				},
+				messages,
+				progress,
+				token,
+			);
+		} catch (error) {
+			if (error instanceof vscode.CancellationError || token.isCancellationRequested) {
+				return;
+			}
+			throw error;
+		}
+		if (token.isCancellationRequested) {
+			return;
+		}
+		if (vision.failureNotice) {
+			progress.report(new vscode.LanguageModelTextPart(vision.failureNotice));
+		}
 		const prepared = await prepareChatRequest({
 			authManager: this.authManager,
 			extensionVersion: this.extensionVersion,
 			modelInfo: model,
-			messages,
+			messages: vision.messages,
 			options,
 			token,
 		});

@@ -55,6 +55,12 @@
 				"displayName": "GLM"
 			}
 		],
+		"mcpServerDefinitionProviders": [
+			{
+				"id": "glm-copilot.vision",
+				"label": "GLM Vision"
+			}
+		],
 		"commands": [
 			{
 				"command": "glm-copilot.setApiKey",
@@ -242,6 +248,17 @@
 						"%glm-copilot.config.thinking.disabled.label%"
 					],
 					"markdownDescription": "%glm-copilot.config.thinking.description%"
+				},
+				"glm-copilot.visionModel": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "%glm-copilot.config.visionModel.description%"
+				},
+				"glm-copilot.visionPrompt": {
+					"type": "string",
+					"editPresentation": "multilineText",
+					"default": "",
+					"markdownDescription": "%glm-copilot.config.visionPrompt.description%"
 				},
 				"glm-copilot.debugLogging": {
 					"type": "boolean",
