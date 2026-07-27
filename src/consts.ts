@@ -137,6 +137,9 @@ export const VISION_MCP_INSTALLED_KEY = 'glm-copilot.visionMcp.installed';
 export const VISION_MCP_CTX_INSTALLED = 'glmCopilot.visionMcp.installed';
 export const VISION_MCP_CTX_HEALTHY = 'glmCopilot.visionMcp.healthy';
 
+/** `setContext` key mirroring the `visionEnabled` setting, for walkthrough completion. */
+export const VISION_MCP_CTX_VISION_ENABLED = 'glmCopilot.visionEnabled';
+
 /** Name suffix of the vision analyze tool (VS Code prefixes MCP tool names). */
 export const VISION_ANALYZE_TOOL_SUFFIX = 'analyze_image';
 

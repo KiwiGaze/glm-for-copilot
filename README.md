@@ -118,7 +118,7 @@ With image input on, pasted or attached images just work — even for text-only 
 
 - **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on your stored key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
 - **Cached** — analyses are content-addressed and cached in memory for the session (never written to extension storage), so conversation history is not re-analyzed every turn.
-- **Validated** — images larger than 5 MB, or outside `png` / `jpeg` / `webp` / `gif`, are skipped with a clear notice *before* any tool call.
+- **Validated** — images larger than 5 MB, or outside `png` / `jpeg`, are skipped with a clear notice *before* any tool call.
 - **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, models fall back to text-only: the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out.
 
 In **agent mode** the server's full tool set is also available directly to the agent — UI-to-code, screenshot OCR, error-screenshot diagnosis, diagram/chart analysis, UI diffing, and video understanding. For images on disk, the agent calls these tools itself with the file path; no extra setup needed.

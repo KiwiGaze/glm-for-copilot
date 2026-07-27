@@ -8,6 +8,7 @@ import {
 	VISION_HEALTH_POLL_MS,
 	VISION_MCP_CTX_HEALTHY,
 	VISION_MCP_CTX_INSTALLED,
+	VISION_MCP_CTX_VISION_ENABLED,
 	VISION_MCP_INSTALLED_KEY,
 	VISION_MCP_LABEL,
 	VISION_MCP_PACKAGE,
@@ -165,6 +166,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 					this.onServerConfigChanged('region');
 				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.apiKey`)) {
 					this.onServerConfigChanged('apiKey');
+				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.visionEnabled`)) {
+					this.syncVisionEnabledContext();
 				}
 			}),
 			context.secrets.onDidChange((e) => {
@@ -188,11 +191,17 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, this.isInstalled);
 		// Context keys survive an extension-host restart; clear a stale healthy flag up front.
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_HEALTHY, false);
+		this.syncVisionEnabledContext();
 		if (this.isInstalled) {
 			this.registerDefinitionProvider();
 			this.startHealthPolling();
 		}
 		this.refreshHealth();
+	}
+
+	/** Mirror the visionEnabled setting into a context key for walkthrough completion. */
+	private syncVisionEnabledContext(): void {
+		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_VISION_ENABLED, getVisionEnabled());
 	}
 
 	/** Explicit install flow: key → Node.js preflight → register → confirm. */

@@ -235,6 +235,13 @@ async function resolveContainer(
 		return failure(ctx.preflightFailure);
 	}
 
+	// Abort before any side effect: an already-cancelled token only fires
+	// onCancellationRequested asynchronously, so the run would write files and
+	// call MCP for a dead request before cancellation lands.
+	if (ctx.token.isCancellationRequested) {
+		throw new vscode.CancellationError();
+	}
+
 	reportDescribeProgress(ctx.progress, images.length);
 	let description: string;
 	try {
@@ -276,6 +283,10 @@ async function analyzeImages(
 	await mkdir(runDir, { recursive: true });
 	const cts = new vscode.CancellationTokenSource();
 	const subscription = ctx.token.onCancellationRequested(() => cts.cancel());
+	// Cancellation can land between the caller's check and this subscription.
+	if (ctx.token.isCancellationRequested) {
+		cts.cancel();
+	}
 	const timer = setTimeout(() => cts.cancel(), ctx.timeoutMs);
 	try {
 		const texts = await Promise.all(

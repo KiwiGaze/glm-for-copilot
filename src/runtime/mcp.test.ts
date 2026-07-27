@@ -173,6 +173,27 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
+	it('mirrors the visionEnabled setting into its context key at activation', () => {
+		visionEnabledValue = true;
+		const { manager } = makeManager(false);
+		manager.initialize();
+		expect(mocks.executeCommand).toHaveBeenCalledWith('setContext', 'glmCopilot.visionEnabled', true);
+		manager.dispose();
+	});
+
+	it('re-mirrors the visionEnabled context key when the setting changes', () => {
+		const { manager } = makeManager(false);
+		manager.initialize();
+		expect(mocks.executeCommand).toHaveBeenCalledWith('setContext', 'glmCopilot.visionEnabled', false);
+
+		visionEnabledValue = true;
+		for (const listener of mocks.configurationListeners) {
+			listener({ affectsConfiguration: (section: string) => section === 'glm-copilot.visionEnabled' });
+		}
+		expect(mocks.executeCommand).toHaveBeenCalledWith('setContext', 'glmCopilot.visionEnabled', true);
+		manager.dispose();
+	});
+
 	it('install registers the server, persists the flag, and confirms', async () => {
 		const { context, manager } = makeManager(false);
 		await manager.install();

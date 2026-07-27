@@ -161,7 +161,7 @@
 							"markdown": "resources/walkthrough/install-vision-mcp.md"
 						},
 						"completionEvents": [
-							"onCommand:glm-copilot.installVisionMcp"
+							"onContext:glmCopilot.visionMcp.installed"
 						]
 					},
 					{
@@ -173,7 +173,7 @@
 							"markdown": "resources/walkthrough/enable-vision.md"
 						},
 						"completionEvents": [
-							"onSettingChanged:glm-copilot.visionEnabled"
+							"onContext:glmCopilot.visionEnabled"
 						]
 					}
 				]

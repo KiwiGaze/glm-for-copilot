@@ -581,6 +581,40 @@ describe('resolveVisionMessages', () => {
 		).rejects.toBeInstanceOf(vscode.CancellationError);
 	});
 
+	it('writes no files and never invokes MCP when the request is already cancelled', async () => {
+		const { calls, invoke } = recordingInvoke(() => 'unused');
+		const cts = new vscode.CancellationTokenSource();
+		cts.cancel();
+
+		await expect(
+			resolveVisionMessages(
+				makeDeps(storageDir, invoke),
+				[userMessage([imagePart([1], 'image/png')])],
+				progress(),
+				cts.token,
+			),
+		).rejects.toBeInstanceOf(vscode.CancellationError);
+
+		expect(calls).toHaveLength(0);
+		expect(existsSync(join(storageDir, 'vision-tmp'))).toBe(false);
+	});
+
+	it('still serves cached descriptions when the request is already cancelled', async () => {
+		const { calls, invoke } = recordingInvoke(() => 'cached description');
+		const cache = new VisionDescriptionCache();
+		const message = userMessage([imagePart([5, 5, 5], 'image/png')]);
+
+		await resolveVisionMessages(makeDeps(storageDir, invoke, { cache }), [message], progress(), token);
+
+		const cts = new vscode.CancellationTokenSource();
+		cts.cancel();
+		const result = await resolveVisionMessages(makeDeps(storageDir, invoke, { cache }), [message], progress(), cts.token);
+
+		expect(calls).toHaveLength(1);
+		expect(result.failureNotice).toBeUndefined();
+		expect((contentOf(result.messages[0])[0] as { value: string }).value).toContain('cached description');
+	});
+
 	it('serves cached descriptions while the vision server is unavailable', async () => {
 		const { calls, invoke } = recordingInvoke(() => 'cached description');
 		const cache = new VisionDescriptionCache();

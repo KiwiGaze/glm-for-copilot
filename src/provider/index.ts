@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { listProviderModels } from '../config';
+import { getVisionPrompt, listProviderModels } from '../config';
 import { API_KEY_SECRET, VENDOR_ID } from '../consts';
 import { t } from '../i18n';
 import { logger } from '../logger';
@@ -7,7 +7,7 @@ import type { IAuthManager, IVisionMcpState } from '../types';
 import { toChatInfo } from './models';
 import { prepareChatRequest } from './request';
 import { streamChatCompletion } from './stream';
-import { estimateTokenCount } from './tokens';
+import { cachedImageDescriptionChars, estimateTokenCount } from './tokens';
 import { VisionDescriptionCache } from './vision/cache';
 import { resolveVisionMessages } from './vision/resolve';
 
@@ -139,7 +139,11 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		text: string | vscode.LanguageModelChatRequestMessage,
 		_token: vscode.CancellationToken,
 	): Promise<number> {
-		return estimateTokenCount(text, this.charsPerToken);
+		return estimateTokenCount(
+			text,
+			this.charsPerToken,
+			cachedImageDescriptionChars(this.visionCache, getVisionPrompt()),
+		);
 	}
 
 	async hasApiKey(): Promise<boolean> {
