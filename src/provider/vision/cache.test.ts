@@ -20,30 +20,23 @@ function image(bytes: number[], mimeType = 'image/png'): { mimeType: string; dat
 }
 
 describe('computeDescriptionCacheKey', () => {
-	it('is stable for identical model, prompt, and image content', () => {
-		const a = computeDescriptionCacheKey('glm-4.6v', 'prompt', [image([1, 2, 3])]);
-		const b = computeDescriptionCacheKey('glm-4.6v', 'prompt', [image([1, 2, 3])]);
+	it('is stable for identical prompt and image content', () => {
+		const a = computeDescriptionCacheKey('prompt', [image([1, 2, 3])]);
+		const b = computeDescriptionCacheKey('prompt', [image([1, 2, 3])]);
 		expect(a).toBe(b);
 	});
 
-	it('changes when the describer model changes', () => {
-		const base = computeDescriptionCacheKey('glm-4.6v', 'prompt', [image([1, 2, 3])]);
-		expect(computeDescriptionCacheKey('glm-4.6v-flash', 'prompt', [image([1, 2, 3])])).not.toBe(base);
-	});
-
 	it('changes when the prompt changes', () => {
-		const base = computeDescriptionCacheKey('glm-4.6v', 'prompt', [image([1, 2, 3])]);
-		expect(computeDescriptionCacheKey('glm-4.6v', 'other', [image([1, 2, 3])])).not.toBe(base);
+		const base = computeDescriptionCacheKey('prompt', [image([1, 2, 3])]);
+		expect(computeDescriptionCacheKey('other', [image([1, 2, 3])])).not.toBe(base);
 	});
 
 	it('changes when image bytes or order change', () => {
 		const a = image([1, 2, 3]);
 		const b = image([9, 8, 7]);
-		expect(computeDescriptionCacheKey('m', 'p', [a, b])).not.toBe(
-			computeDescriptionCacheKey('m', 'p', [b, a]),
-		);
-		expect(computeDescriptionCacheKey('m', 'p', [image([1, 2, 3])])).not.toBe(
-			computeDescriptionCacheKey('m', 'p', [image([1, 2, 4])]),
+		expect(computeDescriptionCacheKey('p', [a, b])).not.toBe(computeDescriptionCacheKey('p', [b, a]));
+		expect(computeDescriptionCacheKey('p', [image([1, 2, 3])])).not.toBe(
+			computeDescriptionCacheKey('p', [image([1, 2, 4])]),
 		);
 	});
 });
@@ -51,7 +44,7 @@ describe('computeDescriptionCacheKey', () => {
 describe('VisionDescriptionCache', () => {
 	it('returns undefined before a value is stored (miss) and the value after (hit)', async () => {
 		const cache = new VisionDescriptionCache(fakeMemento());
-		const key = computeDescriptionCacheKey('m', 'p', [image([1])]);
+		const key = computeDescriptionCacheKey('p', [image([1])]);
 		expect(cache.get(key)).toBeUndefined();
 		await cache.set(key, 'a description');
 		expect(cache.get(key)).toBe('a description');
@@ -59,7 +52,7 @@ describe('VisionDescriptionCache', () => {
 
 	it('persists descriptions across instances (survives a window reload)', async () => {
 		const memento = fakeMemento();
-		const key = computeDescriptionCacheKey('m', 'p', [image([1])]);
+		const key = computeDescriptionCacheKey('p', [image([1])]);
 		await new VisionDescriptionCache(memento).set(key, 'persisted description');
 
 		const reloaded = new VisionDescriptionCache(memento);

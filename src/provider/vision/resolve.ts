@@ -1,33 +1,56 @@
+import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import * as vscode from 'vscode';
-import { GLMClient, GLMRequestError } from '../../client';
-import { getMaxRetries, getVisionModel, getVisionPrompt } from '../../config';
+import { getVisionEnabled, getVisionPrompt } from '../../config';
 import {
 	VISION_ALLOWED_IMAGE_MIME_TYPES,
-	VISION_DESCRIBE_MAX_TOKENS,
+	VISION_IMAGE_MIME_EXTENSIONS,
+	VISION_INVOKE_TIMEOUT_MS,
 	VISION_MAX_IMAGE_BYTES,
+	VISION_TEMP_DIR_NAME,
+	VISION_TEMP_MAX_FILES,
 } from '../../consts';
-import { resolveBaseUrl } from '../../endpoint';
 import { t } from '../../i18n';
 import { logger } from '../../logger';
-import type { GLMChatRequest, GLMContentPart, IAuthManager, IGLMClient, StreamCallbacks } from '../../types';
+import type { IAuthManager } from '../../types';
+import { findVisionAnalyzeTool } from '../../vision-tool';
 import { reportThinking } from '../thinking';
-import { computeDescriptionCacheKey, type VisionDescriptionCache } from './cache';
+import { computeDescriptionCacheKey, hashImageContent, type VisionDescriptionCache } from './cache';
 import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './consts';
 
 /** Longest failure reason shown inside the leading notice. */
 const FAILURE_REASON_MAX_LENGTH = 200;
+
+/**
+ * The vision MCP server reports tool-level failures as a single-line text
+ * payload (`Error: …`, `isError: true`); VS Code surfaces only the text to us.
+ * Multi-line results are treated as real analyses — a successful transcription
+ * of an error screenshot can legitimately start with "Error:".
+ */
+const MCP_TOOL_ERROR_PREFIX = /^error:\s/i;
 
 interface VisionImage {
 	mimeType: string;
 	data: Uint8Array;
 }
 
+type InvokeTool = (
+	name: string,
+	input: Record<string, unknown>,
+	token: vscode.CancellationToken,
+) => Promise<vscode.LanguageModelToolResult>;
+
 export interface VisionResolveDeps {
 	authManager: IAuthManager;
-	extensionVersion: string;
 	cache: VisionDescriptionCache;
-	/** Test seam: build the describe client. Defaults to the real GLM client. */
-	createClient?: (apiKey: string, extensionVersion: string) => IGLMClient;
+	/** Base directory (globalStorage) for temp image files handed to the MCP tool. */
+	storageDir: string;
+	/** Test seam: locate the vision analyze tool. Defaults to a live `lm.tools` lookup. */
+	findTool?: () => vscode.LanguageModelToolInformation | undefined;
+	/** Test seam: invoke an MCP tool. Defaults to `vscode.lm.invokeTool`. */
+	invokeTool?: InvokeTool;
+	/** Test seam: per-analysis timeout. Defaults to VISION_INVOKE_TIMEOUT_MS. */
+	timeoutMs?: number;
 }
 
 export interface VisionResolveResult {
@@ -37,10 +60,14 @@ export interface VisionResolveResult {
 }
 
 interface ContainerContext {
-	model: string;
 	prompt: string;
 	cache: VisionDescriptionCache;
-	getClient: () => IGLMClient;
+	imageDir: string;
+	toolName: string;
+	invokeTool: InvokeTool;
+	timeoutMs: number;
+	/** Set when analysis cannot run at all (no tool / no API key); failures are not cached. */
+	preflightFailure?: string;
 	progress: vscode.Progress<vscode.LanguageModelResponsePart>;
 	token: vscode.CancellationToken;
 }
@@ -52,11 +79,14 @@ interface ContainerResolution {
 
 /**
  * Turn image attachments into text so text-only GLM models can reason about
- * them. Each container (a user message's own images, or one tool result's
- * images) is described in a single batched call, cached by content, and its
- * image parts are replaced by a text description. Text-only messages (and all
- * messages when no API key is configured) are returned unchanged. A cancelled
- * describe call propagates as cancellation.
+ * them. Runs on every chat request — a cheap no-op for text-only messages.
+ * Each container (a user message's own images, or one tool result's images) is
+ * written to temp files and analyzed through the vision MCP `analyze_image`
+ * tool, cached by content, and its image parts are replaced by a text
+ * description. A cancelled request propagates as cancellation; when vision is
+ * turned off, the server is unavailable, or analysis fails, the container
+ * degrades to the unavailable marker + notice — no image is written to disk or
+ * sent anywhere. Cached descriptions still resolve so history stays coherent.
  */
 export async function resolveVisionMessages(
 	deps: VisionResolveDeps,
@@ -67,18 +97,30 @@ export async function resolveVisionMessages(
 	if (!messages.some(messageHasImages)) {
 		return { messages };
 	}
-	const apiKey = await deps.authManager.getApiKey();
-	if (!apiKey) {
-		return { messages };
+
+	let preflightFailure: string | undefined;
+	let toolName: string | undefined;
+	if (!getVisionEnabled()) {
+		preflightFailure = t('vision.error.disabled');
+	} else {
+		const tool = (deps.findTool ?? findVisionAnalyzeTool)();
+		if (!tool) {
+			preflightFailure = t('vision.error.toolUnavailable');
+		} else if (!(await deps.authManager.getApiKey())) {
+			preflightFailure = t('vision.error.noKey');
+		} else {
+			toolName = tool.name;
+		}
 	}
 
-	const createClient = deps.createClient ?? defaultCreateClient;
-	let client: IGLMClient | undefined;
 	const ctx: ContainerContext = {
-		model: getVisionModel(),
 		prompt: getVisionPrompt(),
 		cache: deps.cache,
-		getClient: () => (client ??= createClient(apiKey, deps.extensionVersion)),
+		imageDir: join(deps.storageDir, VISION_TEMP_DIR_NAME),
+		toolName: toolName ?? '',
+		invokeTool: deps.invokeTool ?? defaultInvokeTool,
+		timeoutMs: deps.timeoutMs ?? VISION_INVOKE_TIMEOUT_MS,
+		preflightFailure,
 		progress,
 		token,
 	};
@@ -154,84 +196,135 @@ async function resolveContainer(
 		return failure(invalidReason);
 	}
 
-	const key = computeDescriptionCacheKey(ctx.model, ctx.prompt, images);
+	// Cache first: a stored analysis survives a stopped/uninstalled server.
+	const key = computeDescriptionCacheKey(ctx.prompt, images);
 	const cached = ctx.cache.get(key);
 	if (cached !== undefined) {
-		return { text: describedImageText(images.length, ctx.model, cached) };
+		return { text: describedImageText(images.length, cached) };
+	}
+	if (ctx.preflightFailure) {
+		return failure(ctx.preflightFailure);
 	}
 
-	reportDescribeProgress(ctx.progress, images.length, ctx.model);
+	reportDescribeProgress(ctx.progress, images.length);
 	let description: string;
 	try {
-		description = await requestDescription(ctx.getClient(), ctx.model, ctx.prompt, images, ctx.token);
+		description = await analyzeImages(images, ctx);
 	} catch (error) {
-		if (isCancellation(error, ctx.token)) {
+		if (ctx.token.isCancellationRequested) {
 			throw error instanceof vscode.CancellationError ? error : new vscode.CancellationError();
 		}
-		logger.warn('GLM vision describe failed', error);
-		return failure(describeFailureReason(error));
+		if (isCancellationError(error)) {
+			// Only our own timeout cancels the invocation when the request is alive.
+			return failure(t('vision.error.timeout'));
+		}
+		logger.warn('GLM Vision image analysis failed', error);
+		return failure(analysisFailureReason(error));
 	}
 
 	if (!description.trim()) {
 		return failure(t('vision.error.empty'));
 	}
 	await ctx.cache.set(key, description);
-	return { text: describedImageText(images.length, ctx.model, description) };
+	return { text: describedImageText(images.length, description) };
 }
 
-/** Stream the describe request and collect its text; reuses the shared GLM client. */
-async function requestDescription(
-	client: IGLMClient,
-	model: string,
-	prompt: string,
-	images: readonly VisionImage[],
+/**
+ * Write each image to a content-addressed temp file (the MCP tool only accepts
+ * paths/URLs, not data URLs) and analyze them in parallel through the vision
+ * MCP tool. Multiple images are joined with `Image N:` labels.
+ */
+async function analyzeImages(images: readonly VisionImage[], ctx: ContainerContext): Promise<string> {
+	await mkdir(ctx.imageDir, { recursive: true });
+	await pruneTempImages(ctx.imageDir);
+
+	const cts = new vscode.CancellationTokenSource();
+	const subscription = ctx.token.onCancellationRequested(() => cts.cancel());
+	const timer = setTimeout(() => cts.cancel(), ctx.timeoutMs);
+	try {
+		const texts = await Promise.all(
+			images.map(async (image) => {
+				const filePath = await ensureImageFile(ctx.imageDir, image);
+				const result = await ctx.invokeTool(
+					ctx.toolName,
+					{ image_source: filePath, prompt: ctx.prompt },
+					cts.token,
+				);
+				const text = toolResultText(result).trim();
+				if (!text.includes('\n') && MCP_TOOL_ERROR_PREFIX.test(text)) {
+					throw new Error(text);
+				}
+				return text;
+			}),
+		);
+		if (texts.every((text) => !text)) {
+			return '';
+		}
+		return texts.length === 1
+			? texts[0]
+			: texts.map((text, index) => `Image ${index + 1}:\n${text}`).join('\n\n');
+	} finally {
+		clearTimeout(timer);
+		subscription.dispose();
+		cts.dispose();
+	}
+}
+
+/** Write the image unless already present (content hash name ⇒ no duplicates). */
+async function ensureImageFile(dir: string, image: VisionImage): Promise<string> {
+	const hash = hashImageContent(image.data).slice(0, 32);
+	const ext = VISION_IMAGE_MIME_EXTENSIONS[image.mimeType.toLowerCase()];
+	const filePath = join(dir, `${hash}.${ext}`);
+	try {
+		await writeFile(filePath, image.data, { flag: 'wx' });
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+			throw error;
+		}
+	}
+	return filePath;
+}
+
+/** Bound the temp dir to VISION_TEMP_MAX_FILES, evicting oldest-mtime files. */
+async function pruneTempImages(dir: string): Promise<void> {
+	try {
+		const names = await readdir(dir);
+		if (names.length <= VISION_TEMP_MAX_FILES) {
+			return;
+		}
+		const entries = await Promise.all(
+			names.map(async (name) => ({
+				name,
+				mtimeMs: (await stat(join(dir, name))).mtimeMs,
+			})),
+		);
+		entries.sort((a, b) => a.mtimeMs - b.mtimeMs);
+		for (const entry of entries.slice(0, entries.length - VISION_TEMP_MAX_FILES)) {
+			await unlink(join(dir, entry.name));
+		}
+	} catch (error) {
+		logger.warn('Failed to prune GLM Vision temp images', error);
+	}
+}
+
+function toolResultText(result: vscode.LanguageModelToolResult): string {
+	return result.content
+		.filter(
+			(part): part is vscode.LanguageModelTextPart =>
+				part instanceof vscode.LanguageModelTextPart,
+		)
+		.map((part) => part.value)
+		.join('\n');
+}
+
+async function defaultInvokeTool(
+	name: string,
+	input: Record<string, unknown>,
 	token: vscode.CancellationToken,
-): Promise<string> {
-	const request = buildDescribeRequest(model, prompt, images);
-	let text = '';
-	let failureError: unknown;
-	const callbacks: StreamCallbacks = {
-		onContent: (content) => {
-			text += content;
-		},
-		onThinking: () => {},
-		onToolCall: () => {},
-		onError: (error) => {
-			failureError = error;
-		},
-		onDone: () => {},
-	};
-	await client.streamChatCompletion(request, callbacks, token);
-	if (token.isCancellationRequested) {
-		throw new vscode.CancellationError();
-	}
-	if (failureError !== undefined) {
-		throw failureError;
-	}
-	return text;
-}
-
-function buildDescribeRequest(
-	model: string,
-	prompt: string,
-	images: readonly VisionImage[],
-): GLMChatRequest {
-	const content: GLMContentPart[] = images.map((image) => ({
-		type: 'image_url',
-		image_url: { url: toDataUrl(image) },
-	}));
-	content.push({ type: 'text', text: prompt });
-	return {
-		model,
-		messages: [{ role: 'user', content }],
-		stream: true,
-		max_tokens: VISION_DESCRIBE_MAX_TOKENS,
-		thinking: { type: 'disabled' },
-	};
-}
-
-function toDataUrl(image: VisionImage): string {
-	return `data:${image.mimeType};base64,${Buffer.from(image.data).toString('base64')}`;
+): Promise<vscode.LanguageModelToolResult> {
+	// `toolInvocationToken: undefined` — this runs outside a chat participant
+	// request, so VS Code shows no inline UI (except tool confirmations).
+	return vscode.lm.invokeTool(name, { input, toolInvocationToken: undefined }, token);
 }
 
 /** First localized reason an image is rejected (unsupported type / too large), or undefined. */
@@ -255,28 +348,21 @@ function failure(reason: string): ContainerResolution {
 function reportDescribeProgress(
 	progress: vscode.Progress<vscode.LanguageModelResponsePart>,
 	count: number,
-	model: string,
 ): void {
-	const message =
-		count === 1 ? t('vision.progress.one', model) : t('vision.progress.many', String(count), model);
+	const message = count === 1 ? t('vision.progress.one') : t('vision.progress.many', String(count));
 	reportThinking(progress, message);
 }
 
-function describeFailureReason(error: unknown): string {
-	const raw =
-		error instanceof GLMRequestError
-			? error.userSummary
-			: error instanceof Error
-				? error.message
-				: String(error);
+function analysisFailureReason(error: unknown): string {
+	const raw = error instanceof Error ? error.message : String(error);
 	const collapsed = raw.replace(/\s+/gu, ' ').trim();
 	return collapsed.length > FAILURE_REASON_MAX_LENGTH
 		? `${collapsed.slice(0, FAILURE_REASON_MAX_LENGTH)}…`
 		: collapsed;
 }
 
-function isCancellation(error: unknown, token: vscode.CancellationToken): boolean {
-	if (error instanceof vscode.CancellationError || token.isCancellationRequested) {
+function isCancellationError(error: unknown): boolean {
+	if (error instanceof vscode.CancellationError) {
 		return true;
 	}
 	const name = (error as { name?: string } | undefined)?.name;
@@ -313,8 +399,4 @@ function createResolvedMessage(
 		content,
 		name: message.name,
 	} as unknown as vscode.LanguageModelChatRequestMessage;
-}
-
-function defaultCreateClient(apiKey: string, extensionVersion: string): IGLMClient {
-	return new GLMClient(resolveBaseUrl(), apiKey, extensionVersion, getMaxRetries());
 }

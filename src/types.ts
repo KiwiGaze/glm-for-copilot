@@ -16,7 +16,6 @@ export interface ThinkingEffortSpec {
 export interface GLMModelCapabilities {
 	/** `true` enables tool calling with the default cap; a number sets a custom cap. */
 	toolCalling: number | boolean;
-	imageInput: boolean;
 	thinking: boolean;
 	/** Present ⇒ model supports thinking-effort selection. Absent ⇒ binary thinking only. */
 	thinkingEffort?: ThinkingEffortSpec;
@@ -43,7 +42,6 @@ export interface CustomModelConfig {
 	maxInputTokens?: number;
 	maxOutputTokens?: number;
 	toolCalling?: boolean;
-	vision?: boolean;
 	thinking?: boolean;
 }
 
@@ -226,10 +224,28 @@ export interface IGLMClient {
 	): Promise<void>;
 }
 
+/** Options for contextualizing the API-key input box (e.g. from the GLM Vision setup flow). */
+export interface ApiKeyPromptOptions {
+	title?: string;
+	prompt?: string;
+}
+
 /** API-key manager. Implemented by `auth.ts`. */
 export interface IAuthManager {
 	getApiKey(): Promise<string | undefined>;
 	hasApiKey(): Promise<boolean>;
-	promptForApiKey(): Promise<boolean>;
+	promptForApiKey(options?: ApiKeyPromptOptions): Promise<boolean>;
 	deleteApiKey(): Promise<void>;
+}
+
+/**
+ * Read-only view of the GLM Vision MCP install/health state, consumed by the
+ * chat provider to decide model capabilities and per-request image handling.
+ * Implemented by `runtime/mcp.ts` (`VisionMcpManager`).
+ */
+export interface IVisionMcpState {
+	/** True only while the user turned vision on AND the MCP analyze tool is available. */
+	isVisionActive(): boolean;
+	/** Fired when install/health state changes (the model picker should refresh). */
+	onDidChangeState: vscode.Event<void>;
 }

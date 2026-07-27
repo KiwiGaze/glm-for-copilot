@@ -41,6 +41,7 @@ export const EXTERNAL_URLS = {
 	standardKeysInternational: 'https://z.ai/manage-apikey/apikey-list',
 	standardKeysChina: 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',
 	docs: 'https://docs.z.ai',
+	visionMcpDocs: 'https://docs.z.ai/devpack/mcp/vision-mcp-server',
 } as const;
 
 /**
@@ -78,31 +79,35 @@ export const USAGE_CACHE_STALE_MS = 60 * 60 * 1000;
 export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
 export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
 
-// ---- Vision describer proxy ----
-
-/** House GLM vision model used to describe image attachments for text-only models. */
-export const DEFAULT_VISION_MODEL = 'glm-4.6v';
+// ---- Vision (GLM Vision MCP server) ----
 
 /**
- * Built-in describe prompt. English and out of i18n so the prompt shape (and the
- * resulting token estimate) does not change with the VS Code display language.
+ * Built-in analysis prompt sent as the `prompt` argument of the vision MCP
+ * `analyze_image` tool (one call per image). English and out of i18n so the
+ * prompt shape does not change with the VS Code display language.
  */
 export const DEFAULT_VISION_PROMPT = [
-	'You are the eyes for a text-only coding assistant. It cannot see the attached image(s); your description is all it will have, so be precise and complete.',
-	'',
-	'If there is one image, describe it directly. If there are multiple images, describe each one in order (Image 1, Image 2, and so on), then explain how they relate to each other.',
+	'You are the eyes for a text-only coding assistant. It cannot see the attached image; your description is all it will have, so be precise and complete.',
 	'',
 	'Transcribe all visible text exactly as it appears — including code, terminal commands, log output, stack traces, and error messages — inside fenced code blocks, preserving line breaks and indentation. Describe UI layout and controls, diagrams, and charts in enough detail for the assistant to reason about them. Report only what is actually visible; do not guess, infer intent, or invent details that are not shown.',
 ].join('\n');
 
-/** Output-token cap for a single describe call. */
-export const VISION_DESCRIBE_MAX_TOKENS = 2048;
+/**
+ * Image MIME types accepted by the vision pipeline (lowercase), mapped to the
+ * file extension used for the temp files handed to the MCP tool.
+ */
+export const VISION_IMAGE_MIME_EXTENSIONS: Record<string, string> = {
+	'image/png': 'png',
+	'image/jpeg': 'jpg',
+	'image/webp': 'webp',
+	'image/gif': 'gif',
+};
 
-/** Image MIME types accepted by the describer (lowercase). */
-export const VISION_ALLOWED_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+/** Image MIME types accepted by the vision pipeline (lowercase). */
+export const VISION_ALLOWED_IMAGE_MIME_TYPES = Object.keys(VISION_IMAGE_MIME_EXTENSIONS);
 
-/** Largest single image (bytes) the describer will encode and send. */
-export const VISION_MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+/** Largest single image (bytes) accepted — the vision MCP server rejects images over 5 MB. */
+export const VISION_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** Hot in-memory description cache bound (FIFO). */
 export const VISION_CACHE_MEMORY_MAX = 32;
@@ -113,12 +118,10 @@ export const VISION_CACHE_PERSIST_MAX = 128;
 /** globalState key holding the persisted description cache. */
 export const VISION_CACHE_STATE_KEY = 'glm-copilot.visionDescriptionCache';
 
-// ---- Vision MCP server (Part B) ----
-
 /** Contribution id for the Z.AI Vision MCP server definition provider. */
 export const VISION_MCP_PROVIDER_ID = 'glm-copilot.vision';
 
-/** Display label for the registered MCP server. */
+/** Display label for the registered MCP server (proper noun — intentionally not localized). */
 export const VISION_MCP_LABEL = 'GLM Vision';
 
 /** npx target for the official Z.AI vision MCP server. */
@@ -129,6 +132,40 @@ export const ZAI_MODE_ENV = 'Z_AI_MODE';
 export const ZAI_API_KEY_ENV = 'Z_AI_API_KEY';
 export const ZAI_MODE_INTERNATIONAL = 'ZAI';
 export const ZAI_MODE_CHINA = 'ZHIPU';
+
+/** globalState key recording that the user explicitly installed GLM Vision. */
+export const VISION_MCP_INSTALLED_KEY = 'glm-copilot.visionMcp.installed';
+
+/** `setContext` keys gating vision commands and walkthrough steps in the UI. */
+export const VISION_MCP_CTX_INSTALLED = 'glmCopilot.visionMcp.installed';
+export const VISION_MCP_CTX_HEALTHY = 'glmCopilot.visionMcp.healthy';
+
+/** Name suffix of the vision analyze tool (VS Code prefixes MCP tool names). */
+export const VISION_ANALYZE_TOOL_SUFFIX = 'analyze_image';
+
+/**
+ * Slug of VISION_MCP_LABEL as it appears inside VS Code's prefixed tool name
+ * (e.g. `mcp_glm_vision_analyze_image`). Required when matching tools so an
+ * unrelated server's `analyze_image` is never treated as GLM Vision. Tolerant
+ * of separator changes; a full naming-scheme change degrades to a visible
+ * "server not running" state instead of a silent cross-server match.
+ */
+export const VISION_ANALYZE_TOOL_LABEL_PATTERN = /glm[\s_-]?vision/;
+
+/** Minimum Node.js major version required by the vision MCP server. */
+export const VISION_NODE_MIN_MAJOR = 18;
+
+/** Interval for re-checking whether the vision analyze tool is available. */
+export const VISION_HEALTH_POLL_MS = 15_000;
+
+/** Directory (under globalStorage) holding temp image files handed to the MCP tool. */
+export const VISION_TEMP_DIR_NAME = 'vision-tmp';
+
+/** Upper bound on temp image files kept on disk (content-addressed, oldest mtime first). */
+export const VISION_TEMP_MAX_FILES = 256;
+
+/** Per-analysis timeout when invoking the vision MCP tool. */
+export const VISION_INVOKE_TIMEOUT_MS = 120_000;
 
 /** Default automatic retries (after the initial attempt) for transient GLM API failures (429 / 5xx). */
 export const RETRY_DEFAULT_MAX_RETRIES = 3;
@@ -157,7 +194,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
 		availableIn: ['coding-plan', 'standard'],
 	},
 	{
@@ -168,7 +205,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
 		availableIn: ['standard'],
 	},
 	{
@@ -179,7 +216,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
 		availableIn: ['standard'],
 	},
 	{
@@ -192,7 +229,6 @@ export const MODELS: GLMModel[] = [
 		maxOutputTokens: 128000,
 		capabilities: {
 			toolCalling: DEFAULT_TOOLS_LIMIT,
-			imageInput: true,
 			thinking: true,
 			thinkingEffort: GLM_5_2_EFFORT,
 		},
@@ -206,7 +242,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 128000,
 		maxOutputTokens: 96000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, imageInput: true, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
 		availableIn: ['coding-plan', 'standard'],
 	},
 ];

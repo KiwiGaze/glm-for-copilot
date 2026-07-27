@@ -89,8 +89,36 @@
 			{
 				"command": "glm-copilot.openUsageDetail",
 				"title": "%glm-copilot.command.openUsageDetail%"
+			},
+			{
+				"command": "glm-copilot.installVisionMcp",
+				"title": "%glm-copilot.command.installVisionMcp%"
+			},
+			{
+				"command": "glm-copilot.uninstallVisionMcp",
+				"title": "%glm-copilot.command.uninstallVisionMcp%"
+			},
+			{
+				"command": "glm-copilot.toggleVision",
+				"title": "%glm-copilot.command.toggleVision%"
 			}
 		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "glm-copilot.installVisionMcp",
+					"when": "!glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.uninstallVisionMcp",
+					"when": "glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.toggleVision",
+					"when": "glmCopilot.visionMcp.installed && glmCopilot.visionMcp.healthy"
+				}
+			]
+		},
 		"walkthroughs": [
 			{
 				"id": "glmGettingStarted",
@@ -123,6 +151,30 @@
 						"media": {
 							"markdown": "resources/walkthrough/show-models.md"
 						}
+					},
+					{
+						"id": "installVisionMcp",
+						"title": "%glm-copilot.walkthrough.installVisionMcp.title%",
+						"description": "%glm-copilot.walkthrough.installVisionMcp.description%",
+						"when": "!glmCopilot.visionMcp.installed",
+						"media": {
+							"markdown": "resources/walkthrough/install-vision-mcp.md"
+						},
+						"completionEvents": [
+							"onCommand:glm-copilot.installVisionMcp"
+						]
+					},
+					{
+						"id": "enableVision",
+						"title": "%glm-copilot.walkthrough.enableVision.title%",
+						"description": "%glm-copilot.walkthrough.enableVision.description%",
+						"when": "glmCopilot.visionMcp.installed && glmCopilot.visionMcp.healthy",
+						"media": {
+							"markdown": "resources/walkthrough/enable-vision.md"
+						},
+						"completionEvents": [
+							"onSettingChanged:glm-copilot.visionEnabled"
+						]
 					}
 				]
 			}
@@ -223,10 +275,6 @@
 										"type": "boolean",
 										"description": "Whether the model supports tool calling. Defaults to true."
 									},
-									"vision": {
-										"type": "boolean",
-										"description": "Whether the model accepts image input. Defaults to false."
-									},
 									"thinking": {
 										"type": "boolean",
 										"description": "Whether the model supports thinking. Defaults to true."
@@ -249,10 +297,10 @@
 					],
 					"markdownDescription": "%glm-copilot.config.thinking.description%"
 				},
-				"glm-copilot.visionModel": {
-					"type": "string",
-					"default": "",
-					"markdownDescription": "%glm-copilot.config.visionModel.description%"
+				"glm-copilot.visionEnabled": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%glm-copilot.config.visionEnabled.description%"
 				},
 				"glm-copilot.visionPrompt": {
 					"type": "string",

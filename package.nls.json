@@ -6,6 +6,9 @@
   "glm-copilot.command.showLogs": "GLM: Show Logs",
   "glm-copilot.command.refreshUsage": "GLM: Refresh Usage",
   "glm-copilot.command.openUsageDetail": "GLM: Show Usage Details",
+  "glm-copilot.command.installVisionMcp": "GLM: Install GLM Vision MCP Server",
+  "glm-copilot.command.uninstallVisionMcp": "GLM: Uninstall GLM Vision MCP Server",
+  "glm-copilot.command.toggleVision": "GLM: Toggle Vision for Chat Models",
 
   "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "Set up GLM models in GitHub Copilot Chat.",
@@ -18,6 +21,12 @@
 
   "glm-copilot.walkthrough.showModels.title": "Show GLM models in the picker",
   "glm-copilot.walkthrough.showModels.description": "Your GLM models appear in the Copilot Chat model picker, filtered by your selected API Mode. If they are hidden, open the Language Models manager to show them.\n[Open Language Models](command:workbench.action.chat.manage)",
+
+  "glm-copilot.walkthrough.installVisionMcp.title": "Install GLM Vision (optional)",
+  "glm-copilot.walkthrough.installVisionMcp.description": "Install the local GLM Vision MCP server to give agent mode image analysis tools.\n[Install GLM Vision](command:glm-copilot.installVisionMcp)",
+
+  "glm-copilot.walkthrough.enableVision.title": "Turn on image input (optional)",
+  "glm-copilot.walkthrough.enableVision.description": "Let text-only GLM models accept pasted images — GLM Vision analyzes them first.\n[Toggle Vision](command:glm-copilot.toggleVision)",
 
   "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
@@ -44,8 +53,8 @@
   "glm-copilot.config.thinking.enabled.label": "On",
   "glm-copilot.config.thinking.disabled.label": "Off",
 
-  "glm-copilot.config.visionModel.description": "GLM vision model used to describe pasted or attached images so text-only GLM models can reason about them. Leave empty to use the default `glm-4.6v`. Set `glm-4.6v-flash` for lower cost and latency. The describe call runs on your existing API key and the endpoint chosen by `apiMode`/`region`/`baseUrl`.",
-  "glm-copilot.config.visionPrompt.description": "Instruction sent to the vision model when describing image attachments. Leave empty to use the built-in prompt, which transcribes visible text/code verbatim and describes UI, diagrams, and charts without speculating. Changing this automatically re-describes images on the next turn.",
+  "glm-copilot.config.visionEnabled.description": "Accept pasted or attached images in chat. Images are analyzed by the local GLM Vision MCP server — install it with [`GLM: Install GLM Vision MCP Server`](command:glm-copilot.installVisionMcp) — and injected as text so text-only GLM models can reason about them. Only takes effect while the server is installed and running; requires Node.js 18+ (22+ recommended).",
+  "glm-copilot.config.visionPrompt.description": "Instruction sent to GLM Vision when analyzing image attachments. Leave empty to use the built-in prompt, which transcribes visible text/code verbatim and describes UI, diagrams, and charts without speculating. Changing this re-analyzes images on the next turn.",
 
   "glm-copilot.config.debugLogging.description": "Enable verbose debug logging to the GLM output channel. Use [`GLM: Show Logs`](command:glm-copilot.showLogs) to view the channel. Logs may include request metadata but not prompt text.",
   "glm-copilot.config.usageRefreshIntervalMinutes.description": "How often (in minutes) to refresh the GLM usage status bar. Minimum 1, maximum 1440 (24 hours). Shows Coding Plan quota or Standard API balance for both International (z.ai) and Mainland China (bigmodel.cn) regions. Only available when no `baseUrl` override is configured.",

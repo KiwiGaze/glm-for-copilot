@@ -3,7 +3,7 @@ import { listProviderModels } from '../config';
 import { API_KEY_SECRET, VENDOR_ID } from '../consts';
 import { t } from '../i18n';
 import { logger } from '../logger';
-import type { IAuthManager } from '../types';
+import type { IAuthManager, IVisionMcpState } from '../types';
 import { toChatInfo } from './models';
 import { prepareChatRequest } from './request';
 import { streamChatCompletion } from './stream';
@@ -33,12 +33,16 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 
 	private readonly visionCache: VisionDescriptionCache;
 
+	private readonly visionStorageDir: string;
+
 	constructor(
 		context: vscode.ExtensionContext,
 		private readonly authManager: IAuthManager,
+		private readonly visionState: IVisionMcpState,
 	) {
 		this.extensionVersion = context.extension.packageJSON.version as string;
 		this.visionCache = new VisionDescriptionCache(context.globalState);
+		this.visionStorageDir = context.globalStorageUri.fsPath;
 		context.subscriptions.push(
 			this.onDidChangeLanguageModelChatInformationEmitter,
 			vscode.workspace.onDidChangeConfiguration((e) => {
@@ -47,7 +51,8 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 					e.affectsConfiguration('glm-copilot.baseUrl') ||
 					e.affectsConfiguration('glm-copilot.apiMode') ||
 					e.affectsConfiguration('glm-copilot.region') ||
-					e.affectsConfiguration('glm-copilot.customModels')
+					e.affectsConfiguration('glm-copilot.customModels') ||
+					e.affectsConfiguration('glm-copilot.visionEnabled')
 				) {
 					this.refreshModelPicker();
 				}
@@ -57,6 +62,7 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 					this.refreshModelPicker();
 				}
 			}),
+			visionState.onDidChangeState(() => this.refreshModelPicker()),
 		);
 	}
 
@@ -68,7 +74,8 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 			return [];
 		}
 		const hasKey = await this.authManager.hasApiKey();
-		return listProviderModels().map((model) => toChatInfo(model, hasKey));
+		const visionActive = this.visionState.isVisionActive();
+		return listProviderModels().map((model) => toChatInfo(model, hasKey, visionActive));
 	}
 
 	async provideLanguageModelChatResponse(
@@ -78,13 +85,16 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		progress: vscode.Progress<vscode.LanguageModelResponsePart>,
 		token: vscode.CancellationToken,
 	): Promise<void> {
+		// Always run vision resolution: without images it is a cheap no-op, and
+		// with images it degrades to an explicit marker + notice instead of
+		// silently dropping them when the server is down or vision is off.
 		let vision;
 		try {
 			vision = await resolveVisionMessages(
 				{
 					authManager: this.authManager,
-					extensionVersion: this.extensionVersion,
 					cache: this.visionCache,
+					storageDir: this.visionStorageDir,
 				},
 				messages,
 				progress,

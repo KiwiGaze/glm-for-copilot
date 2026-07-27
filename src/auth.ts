@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { getSettingsApiKey } from './config';
 import { API_KEY_SECRET } from './consts';
 import { t } from './i18n';
-import type { IAuthManager } from './types';
+import type { ApiKeyPromptOptions, IAuthManager } from './types';
 
 /**
  * Manages the GLM API key via VS Code SecretStorage (secure), falling back to
@@ -19,9 +19,10 @@ export class AuthManager implements IAuthManager {
 		return !!(await this.getApiKey());
 	}
 
-	async promptForApiKey(): Promise<boolean> {
+	async promptForApiKey(options?: ApiKeyPromptOptions): Promise<boolean> {
 		const value = await vscode.window.showInputBox({
-			prompt: t('auth.prompt'),
+			title: options?.title,
+			prompt: options?.prompt ?? t('auth.prompt'),
 			placeHolder: t('auth.placeholder'),
 			password: true,
 			ignoreFocusOut: true,

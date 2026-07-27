@@ -29,7 +29,7 @@ Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) �
 - **Keys stay in your OS keychain by default.** **GLM: Set API Key** stores your key via VS Code `SecretStorage` (macOS, Windows, Linux). The extension also honors a settings fallback for CI or automation, so do not put real keys in workspace settings.
 - **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins. No Python, Docker, or local server.
 - **Add any model.** Newly released, fine-tuned, or proxy-hosted GLM models via [`glm-copilot.customModels`](#settings).
-- **See images, even on text-only models.** Paste or attach a screenshot and a house GLM vision model (`glm-4.6v`) transcribes it to text — code, logs, errors, and UI included — so any GLM model can reason about it. Plus zero-config registration of the official **GLM Vision** MCP server for agent mode. See [Image input (vision)](#image-input-vision).
+- **See images, even on text-only models.** Install the official **GLM Vision** MCP server with one click and turn on image input: pasted screenshots are analyzed by GLM Vision (GLM-4.6V) and injected as text — code, logs, errors, and UI included — so any GLM model can reason about them. Agent mode also gets the full vision tool set. See [Image input (vision)](#image-input-vision).
 
 ## Getting Started
 
@@ -84,9 +84,9 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
 | `glm-copilot.thinking` | `enabled` | Step-by-step reasoning: `enabled` (higher quality) or `disabled` (faster). Applies to thinking-capable models without a per-model Thinking Effort picker; GLM-5.2 uses None / High / Max in the model picker. |
-| `glm-copilot.visionModel` | *(empty)* | GLM vision model that describes pasted/attached images for text-only models. Empty uses `glm-4.6v`; set `glm-4.6v-flash` for lower cost and latency. Runs on your key and the active endpoint. See [Image input (vision)](#image-input-vision). |
-| `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to the vision model. Empty uses the built-in prompt (verbatim text/code transcription, UI/diagram/chart description, no speculation). Changing it re-describes images on the next turn. |
-| `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, vision?, thinking? }`. |
+| `glm-copilot.visionEnabled` | `false` | Accept pasted/attached images in chat — GLM Vision analyzes them first so text-only models can reason about them. Only takes effect while the GLM Vision MCP server is installed and running. See [Image input (vision)](#image-input-vision). |
+| `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM Vision when analyzing images. Empty uses the built-in prompt (verbatim text/code transcription, UI/diagram/chart description, no speculation). Changing it re-analyzes images on the next turn. |
+| `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking? }`. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
 | `glm-copilot.debugLogging` | `false` | Write verbose debug logs to the GLM output channel. View with **GLM: Show Logs**. |
 | `glm-copilot.usageRefreshIntervalMinutes` | `5` | How often (in minutes) to refresh the GLM usage status bar. Minimum `1`. Shows Coding Plan quota or Standard API balance for both `z.ai` and `bigmodel.cn` regions. Only when no `baseUrl` override. |
@@ -109,17 +109,19 @@ Usage details rely on regional usage endpoints (`api.z.ai` for International, `o
 
 ## Image input (vision)
 
-GLM chat models are text-only, so this extension gives them sight with a **vision describer proxy**. When your message — or a tool result — contains a pasted or attached image, a house GLM vision model turns each image into text *before* the request reaches your selected chat model:
+Vision is powered by the official **[Z.AI Vision MCP server](https://docs.z.ai/devpack/mcp/vision-mcp-server)** (`@z_ai/mcp-server`, GLM-4.6V). Setup is two steps, and nothing is installed without your say-so:
 
-- **Describer model** — `glm-4.6v` by default; set [`glm-copilot.visionModel`](#settings) to override (for example `glm-4.6v-flash` for lower cost and latency).
-- **Same key, same endpoint** — the describe call reuses your API key and the endpoint chosen by `apiMode` / `region` / `baseUrl`. No extra key or configuration.
-- **Batched and cached** — every image in one container (a single message, or a single tool result) is described in one call; descriptions are content-addressed and cached in memory and across window reloads, so conversation history is not re-described each turn. Changing the model or prompt invalidates the cache automatically.
-- **Validated and private** — images larger than 10 MB, or outside `png` / `jpeg` / `webp` / `gif`, are skipped with a clear notice *before* any network call. Image bytes go only to your configured GLM endpoint and are never written to logs.
-- **Visible progress, graceful failure** — a status line ("Analyzing … with glm-4.6v…") streams into the thinking block while a real describe call runs. If a description fails, the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out.
+1. **Install the server** — run **GLM: Install GLM Vision MCP Server** (or the Install button in the Getting Started walkthrough). The flow checks for your API key and Node.js, then registers **GLM Vision** in VS Code's MCP server list. The server launches through `npx` (requires Node.js 18+, 22+ recommended) with `Z_AI_MODE` set from your region (`ZAI` for International, `ZHIPU` for Mainland China); your stored API key (VS Code `SecretStorage`, or the settings fallback if you use one) is injected only when VS Code starts the server. VS Code starts it automatically when you next send a chat message. Remove it any time with **GLM: Uninstall GLM Vision MCP Server**.
+2. **Turn on image input** — once the server is running, **GLM: Toggle Vision for Chat Models** appears in the Command Palette (it only shows while the server is healthy), or set [`glm-copilot.visionEnabled`](#settings). Every GLM model in the picker then accepts image input.
 
-### GLM Vision MCP server (agent mode)
+With image input on, pasted or attached images just work — even for text-only chat models:
 
-For agent workflows the extension also registers the official **[Z.AI Vision MCP server](https://docs.z.ai/devpack/mcp/vision-mcp-server)** (`@z_ai/mcp-server`) with zero configuration — it appears in VS Code's MCP list as **GLM Vision**. It launches through `npx` (requires Node.js 22+), with `Z_AI_MODE` set from your region (`ZAI` for International, `ZHIPU` for Mainland China). Your API key is injected from `SecretStorage` only when VS Code starts the server; if none is stored you are prompted once.
+- **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on your stored key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
+- **Cached** — analyses are content-addressed and cached in memory and across window reloads, so conversation history is not re-analyzed every turn.
+- **Validated** — images larger than 5 MB, or outside `png` / `jpeg` / `webp` / `gif`, are skipped with a clear notice *before* any tool call.
+- **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, models fall back to text-only: the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out.
+
+In **agent mode** the server's full tool set is also available directly to the agent — UI-to-code, screenshot OCR, error-screenshot diagnosis, diagram/chart analysis, UI diffing, and video understanding. For images on disk, the agent calls these tools itself with the file path; no extra setup needed.
 
 ## Commands
 
@@ -132,6 +134,9 @@ For agent workflows the extension also registers the official **[Z.AI Vision MCP
 | **GLM: Show Logs** | Open the GLM output channel |
 | **GLM: Refresh Usage** | Refresh GLM usage/balance now (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
 | **GLM: Show Usage Details** | Open the GLM usage panel (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
+| **GLM: Install GLM Vision MCP Server** | Install the GLM Vision MCP server (checks API key and Node.js first). Visible when not installed |
+| **GLM: Uninstall GLM Vision MCP Server** | Remove the GLM Vision MCP server and revert models to text-only. Visible when installed |
+| **GLM: Toggle Vision for Chat Models** | Turn image input for chat models on/off. Visible only while GLM Vision is installed and running |
 
 ## Frequently asked questions
 

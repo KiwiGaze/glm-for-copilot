@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, DEFAULT_VISION_MODEL, DEFAULT_VISION_PROMPT, MODELS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
+import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, DEFAULT_VISION_PROMPT, MODELS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
 import { t } from './i18n';
 import type { ApiMode, CustomModelConfig, GLMModel, Region, ThinkingMode } from './types';
 
@@ -50,13 +50,12 @@ export function getDebugLogging(): boolean {
 	return cfg().get<boolean>('debugLogging', false);
 }
 
-/** Describer model id for the vision proxy (empty setting ⇒ the built-in default). */
-export function getVisionModel(): string {
-	const value = (cfg().get<string>('visionModel', '') ?? '').trim();
-	return value || DEFAULT_VISION_MODEL;
+/** Whether the user turned on image input for chat models (requires a running GLM Vision MCP server). */
+export function getVisionEnabled(): boolean {
+	return cfg().get<boolean>('visionEnabled', false);
 }
 
-/** Describe prompt for the vision proxy (empty setting ⇒ the built-in default). */
+/** Analysis prompt passed to the vision MCP tool (empty setting ⇒ the built-in default). */
 export function getVisionPrompt(): string {
 	const value = (cfg().get<string>('visionPrompt', '') ?? '').trim();
 	return value || DEFAULT_VISION_PROMPT;
@@ -87,7 +86,6 @@ export function getCustomModels(): GLMModel[] {
 			maxOutputTokens: config.maxOutputTokens ?? 128000,
 			capabilities: {
 				toolCalling: config.toolCalling === false ? false : DEFAULT_TOOLS_LIMIT,
-				imageInput: config.vision === true,
 				thinking: config.thinking !== false,
 			},
 			availableIn: ['coding-plan', 'standard'],
