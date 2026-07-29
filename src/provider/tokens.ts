@@ -3,6 +3,7 @@ import { VISION_DESCRIPTION_MAX_TOKENS } from '../consts';
 import { computeDescriptionCacheKey, hashImageContent, type VisionDescriptionCache } from './vision/cache';
 import { describedImageText } from './vision/consts';
 import { collectImagePartRun, isImageDataPart } from './vision/parts';
+import { isThinkingPart } from './thinking';
 
 const DATA_PART_MAX_CHARS = 10000;
 const MULTI_IMAGE_LABEL_ESTIMATED_CHARS = 16;
@@ -28,15 +29,6 @@ export function cachedImageDescriptionChars(
 	};
 }
 
-/**
- * A `LanguageModelThinkingPart`-shaped value. The thinking part is a proposed
- * VS Code API, so it is feature-detected and read through this narrow shape.
- */
-interface ThinkingPartLike {
-	value: string | string[];
-}
-
-/** Estimate the character count of a single non-image content part. */
 function estimatePartChars(
 	part: unknown,
 	charsPerToken: number,
@@ -135,9 +127,4 @@ export function estimateTokenCount(
 	}
 	const totalChars = estimateContentChars(text.content, charsPerToken, imageChars);
 	return Math.max(1, Math.ceil(totalChars / charsPerToken));
-}
-
-function isThinkingPart(part: unknown): part is ThinkingPartLike {
-	const ctor = (vscode as { LanguageModelThinkingPart?: unknown }).LanguageModelThinkingPart;
-	return typeof ctor === 'function' && part instanceof (ctor as new (...args: never[]) => object);
 }

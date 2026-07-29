@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, type Hash } from 'node:crypto';
 import { VISION_CACHE_MAX } from '../../consts';
 
 /** An image accepted by the vision pipeline: MIME type plus raw bytes. */
@@ -17,7 +17,8 @@ export function hashImageContent(data: Uint8Array): string {
 
 /**
  * Content-addressed cache key: prompt + each image's content hash (from
- * `hashImageContent`), in order. Because the prompt is part of the key,
+ * `hashImageContent`), in order, each length-prefixed so no prompt content
+ * can collide with a hash sequence. Because the prompt is part of the key,
  * changing it invalidates stale descriptions with no config listeners.
  */
 export function computeDescriptionCacheKey(
@@ -25,12 +26,16 @@ export function computeDescriptionCacheKey(
 	imageHashes: readonly string[],
 ): string {
 	const hash = createHash('sha256');
-	hash.update(prompt);
+	updateLengthPrefixed(hash, prompt);
 	for (const imageHash of imageHashes) {
-		hash.update('\0');
-		hash.update(imageHash);
+		updateLengthPrefixed(hash, imageHash);
 	}
 	return hash.digest('hex');
+}
+
+function updateLengthPrefixed(hash: Hash, value: string): void {
+	hash.update(`${Buffer.byteLength(value)}:`);
+	hash.update(value);
 }
 
 /**
@@ -51,15 +56,10 @@ export class VisionDescriptionCache {
 	}
 }
 
-/** Insert (or refresh) `key`, then evict oldest entries until `map` fits `max`. */
 function remember(map: Map<string, string>, key: string, value: string, max: number): void {
 	map.delete(key);
 	map.set(key, value);
 	while (map.size > max) {
-		const oldest = map.keys().next().value;
-		if (oldest === undefined) {
-			break;
-		}
-		map.delete(oldest);
+		map.delete(map.keys().next().value!);
 	}
 }

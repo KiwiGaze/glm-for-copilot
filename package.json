@@ -3,7 +3,7 @@
 	"displayName": "GLM Models for GitHub Copilot Chat",
 	"description": "Bring GLM-5.2 and the full GLM lineup (Z.ai / Zhipu) into GitHub Copilot Chat with visible thinking. Coding Plan or Standard API.",
 	"icon": "resources/icon.png",
-	"version": "0.2.10",
+	"version": "0.3.0",
 	"publisher": "yijiazhen-qi",
 	"license": "MIT",
 	"repository": {
@@ -123,7 +123,7 @@
 				},
 				{
 					"command": "glm-copilot.toggleVision",
-					"when": "glmCopilot.visionMcp.installed && glmCopilot.visionMcp.healthy"
+					"when": "glmCopilot.visionMcp.installed"
 				}
 			]
 		},
@@ -176,7 +176,7 @@
 						"id": "enableVision",
 						"title": "%glm-copilot.walkthrough.enableVision.title%",
 						"description": "%glm-copilot.walkthrough.enableVision.description%",
-						"when": "glmCopilot.visionMcp.installed && glmCopilot.visionMcp.healthy",
+						"when": "glmCopilot.visionMcp.installed",
 						"media": {
 							"markdown": "resources/walkthrough/enable-vision.md"
 						},

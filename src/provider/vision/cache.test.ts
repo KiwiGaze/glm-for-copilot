@@ -18,6 +18,14 @@ describe('computeDescriptionCacheKey', () => {
 		expect(computeDescriptionCacheKey('other', [imageHash([1, 2, 3])])).not.toBe(base);
 	});
 
+	it('does not collide when the prompt embeds a delimiter and an image hash', () => {
+		const first = imageHash([1, 2, 3]);
+		const second = imageHash([4, 5, 6]);
+		expect(computeDescriptionCacheKey(`p\0${first}`, [second])).not.toBe(
+			computeDescriptionCacheKey('p', [first, second]),
+		);
+	});
+
 	it('changes when image bytes or order change', () => {
 		const a = imageHash([1, 2, 3]);
 		const b = imageHash([9, 8, 7]);

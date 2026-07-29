@@ -42,8 +42,10 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		private readonly visionState: IVisionMcpState,
 	) {
 		this.extensionVersion = context.extension.packageJSON.version as string;
-		// Drop descriptions persisted by pre-release builds; the cache is memory-only now.
-		void context.globalState.update('glm-copilot.visionDescriptionCache', undefined);
+		const legacyVisionCacheKey = 'glm-copilot.visionDescriptionCache';
+		if (context.globalState.get(legacyVisionCacheKey) !== undefined) {
+			void context.globalState.update(legacyVisionCacheKey, undefined);
+		}
 		this.visionCache = new VisionDescriptionCache();
 		this.visionStorageDir = context.globalStorageUri.fsPath;
 		context.subscriptions.push(
@@ -77,8 +79,8 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 			return [];
 		}
 		const hasKey = await this.authManager.hasApiKey();
-		const visionActive = this.visionState.isVisionActive();
-		return listProviderModels().map((model) => toChatInfo(model, hasKey, visionActive));
+		const imageInputEnabled = this.visionState.isImageInputEnabled();
+		return listProviderModels().map((model) => toChatInfo(model, hasKey, imageInputEnabled));
 	}
 
 	async provideLanguageModelChatResponse(

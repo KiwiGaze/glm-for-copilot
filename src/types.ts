@@ -223,13 +223,13 @@ export interface IAuthManager {
 }
 
 /**
- * Read-only view of the GLM Vision MCP install/health state, consumed by the
- * chat provider to decide model capabilities and per-request image handling.
- * Implemented by `runtime/mcp.ts` (`VisionMcpManager`).
+ * Read-only view of the GLM Vision MCP install/health state. The chat provider
+ * uses it to decide model capabilities. Implemented by `runtime/mcp.ts`
+ * (`VisionMcpManager`).
  */
 export interface IVisionMcpState {
-	/** True only while the user turned vision on AND the MCP analyze tool is available. */
-	isVisionActive(): boolean;
-	/** Fired when install/health state changes (the model picker should refresh). */
+	/** True when the verified MCP package is installed and the user enabled image input. */
+	isImageInputEnabled(): boolean;
+	/** Fired when install or health state changes (the model picker should refresh). */
 	onDidChangeState: vscode.Event<void>;
 }

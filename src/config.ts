@@ -50,7 +50,7 @@ export function getDebugLogging(): boolean {
 	return cfg().get<boolean>('debugLogging', false);
 }
 
-/** Whether the user turned on image input for chat models (requires a running GLM Vision MCP server). */
+/** Whether the user turned on image input for chat models. */
 export function getVisionEnabled(): boolean {
 	return cfg().get<boolean>('visionEnabled', false);
 }

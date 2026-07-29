@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { VISION_ANALYZE_TOOL_SERVER_PATTERN, VISION_ANALYZE_TOOL_SUFFIX } from './consts';
+import { VISION_ANALYZE_TOOL_SERVER_PATTERN } from './consts';
 
 /**
  * Whether a tool from `vscode.lm.tools` is OUR vision server's `analyze_image`
@@ -10,7 +10,7 @@ import { VISION_ANALYZE_TOOL_SERVER_PATTERN, VISION_ANALYZE_TOOL_SUFFIX } from '
  */
 export function isVisionAnalyzeTool(tool: vscode.LanguageModelToolInformation): boolean {
 	const name = tool.name.toLowerCase();
-	if (!name.endsWith(VISION_ANALYZE_TOOL_SUFFIX) || !VISION_ANALYZE_TOOL_SERVER_PATTERN.test(name)) {
+	if (!VISION_ANALYZE_TOOL_SERVER_PATTERN.test(name)) {
 		return false;
 	}
 	const properties = (tool.inputSchema as { properties?: Record<string, unknown> } | undefined)

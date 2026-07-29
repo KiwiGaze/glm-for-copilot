@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const APPROVAL_GUIDANCE_MESSAGE = 'visionMcp.approval.guidance';
+const MANAGE_TOOL_APPROVAL_ACTION = 'visionMcp.approval.manage';
 
 const mocks = vi.hoisted(() => ({
 	showInformationMessage: vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => undefined),
@@ -81,12 +84,25 @@ vi.mock('../logger', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.
 vi.mock('../vision-tool', () => ({ findVisionAnalyzeTool: () => mocks.findVisionAnalyzeTool() }));
 
 import * as vscode from 'vscode';
+import { VISION_HEALTH_POLL_MS } from '../consts';
 import { fakeMemento } from '../test-helpers';
 import type { IAuthManager } from '../types';
 import { buildVisionMcpServerSpec, VisionMcpManager, type NodeRuntimeProbe } from './mcp';
 import type { IVisionMcpPackageInstaller } from './mcp-package';
 
 let visionEnabledValue = false;
+
+function emitConfigurationChange(section: string): void {
+	for (const listener of mocks.configurationListeners) {
+		listener({ affectsConfiguration: (candidate: string) => candidate === section });
+	}
+}
+
+function getApprovalGuidanceCalls(): unknown[][] {
+	return mocks.showInformationMessage.mock.calls.filter(
+		(call) => call[0] === APPROVAL_GUIDANCE_MESSAGE,
+	);
+}
 
 function fakeContext(installed: boolean) {
 	const globalState = fakeMemento();
@@ -144,9 +160,20 @@ beforeEach(() => {
 	mocks.configurationListeners.length = 0;
 	mocks.configInspect.mockReturnValue(undefined);
 	mocks.findVisionAnalyzeTool.mockReturnValue(undefined);
+	mocks.configUpdate.mockImplementation(async (section: unknown, value: unknown) => {
+		if (section === 'visionEnabled') {
+			visionEnabledValue = value === true;
+			emitConfigurationChange('glm-copilot.visionEnabled');
+		}
+	});
+	mocks.showInformationMessage.mockImplementation(async () => undefined);
 	mocks.showWarningMessage.mockImplementation(async (message: unknown) =>
 		message === 'visionMcp.install.consent' ? 'visionMcp.install.confirm' : undefined,
 	);
+});
+
+afterEach(() => {
+	vi.useRealTimers();
 });
 
 describe('buildVisionMcpServerSpec', () => {
@@ -192,11 +219,10 @@ describe('VisionMcpManager', () => {
 	});
 
 	it('restores the MCP server registration at activation when installed', () => {
-		const { context, manager } = makeManager(true);
+		const { manager } = makeManager(true);
 		manager.initialize();
 		expect(mocks.registerMcpServerDefinitionProvider).toHaveBeenCalledTimes(1);
 		expect(mocks.registerMcpServerDefinitionProvider.mock.calls[0][0]).toBe('glm-copilot.vision');
-		expect(context.subscriptions).toHaveLength(0);
 		manager.dispose();
 	});
 
@@ -243,9 +269,7 @@ describe('VisionMcpManager', () => {
 		expect(mocks.executeCommand).toHaveBeenCalledWith('setContext', 'glmCopilot.visionEnabled', false);
 
 		visionEnabledValue = true;
-		for (const listener of mocks.configurationListeners) {
-			listener({ affectsConfiguration: (section: string) => section === 'glm-copilot.visionEnabled' });
-		}
+		emitConfigurationChange('glm-copilot.visionEnabled');
 		expect(mocks.executeCommand).toHaveBeenCalledWith('setContext', 'glmCopilot.visionEnabled', true);
 		manager.dispose();
 	});
@@ -261,6 +285,33 @@ describe('VisionMcpManager', () => {
 			'visionMcp.openServers',
 			'visionMcp.editPrompt',
 		);
+		manager.dispose();
+	});
+
+	it('notifies listeners after installation makes configured image input available', async () => {
+		visionEnabledValue = true;
+		const { manager } = makeManager(false);
+		const imageInputStates: boolean[] = [];
+		manager.onDidChangeState(() => {
+			imageInputStates.push(manager.isImageInputEnabled());
+		});
+
+		await manager.install();
+
+		expect(imageInputStates).toEqual([true]);
+		manager.dispose();
+	});
+
+	it('guides approval after installation makes configured image input healthy', async () => {
+		visionEnabledValue = true;
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		const { manager } = makeManager(false);
+
+		await manager.install();
+
+		expect(getApprovalGuidanceCalls()).toEqual([
+			[APPROVAL_GUIDANCE_MESSAGE, MANAGE_TOOL_APPROVAL_ACTION],
+		]);
 		manager.dispose();
 	});
 
@@ -419,6 +470,21 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
+	it('notifies listeners after uninstall removes image input', async () => {
+		visionEnabledValue = true;
+		const { manager } = makeManager(true);
+		manager.initialize();
+		const imageInputStates: boolean[] = [];
+		manager.onDidChangeState(() => {
+			imageInputStates.push(manager.isImageInputEnabled());
+		});
+
+		await manager.uninstall();
+
+		expect(imageInputStates).toEqual([false]);
+		manager.dispose();
+	});
+
 	it('uninstall resets the visionEnabled setting so a reinstall asks for consent again', async () => {
 		visionEnabledValue = true;
 		mocks.configInspect.mockReturnValue({ globalValue: true });
@@ -493,13 +559,145 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
-	it('enables the visionEnabled setting when healthy', async () => {
+	it('guides approval once when healthy vision changes from off to on', async () => {
 		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
 		const { manager } = makeManager(true);
 		manager.initialize();
+		mocks.showInformationMessage.mockClear();
+
 		await manager.toggleVision();
+
 		expect(mocks.configUpdate).toHaveBeenCalledWith('visionEnabled', true, 1);
-		expect(mocks.showInformationMessage).toHaveBeenCalledWith('visionMcp.toggle.on');
+		expect(getApprovalGuidanceCalls()).toEqual([
+			[APPROVAL_GUIDANCE_MESSAGE, MANAGE_TOOL_APPROVAL_ACTION],
+		]);
+		manager.dispose();
+	});
+
+	it('opens the VS Code tool approval manager when the guidance action is selected', async () => {
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		mocks.showInformationMessage.mockImplementation(async (message: unknown) =>
+			message === APPROVAL_GUIDANCE_MESSAGE ? MANAGE_TOOL_APPROVAL_ACTION : undefined,
+		);
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		await manager.toggleVision();
+		await Promise.resolve();
+
+		expect(mocks.executeCommand).toHaveBeenCalledWith(
+			'workbench.action.chat.editToolApproval',
+		);
+		manager.dispose();
+	});
+
+	it('does not change approval settings when the guidance is dismissed', async () => {
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		await manager.toggleVision();
+		await Promise.resolve();
+
+		expect(mocks.executeCommand).not.toHaveBeenCalledWith(
+			'workbench.action.chat.editToolApproval',
+		);
+		expect(mocks.configUpdate.mock.calls).toEqual([['visionEnabled', true, 1]]);
+		manager.dispose();
+	});
+
+	it('guides approval after a direct visionEnabled setting transition', () => {
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		const { manager } = makeManager(true);
+		manager.initialize();
+		mocks.showInformationMessage.mockClear();
+
+		visionEnabledValue = true;
+		emitConfigurationChange('glm-copilot.visionEnabled');
+
+		expect(getApprovalGuidanceCalls()).toEqual([
+			[APPROVAL_GUIDANCE_MESSAGE, MANAGE_TOOL_APPROVAL_ACTION],
+		]);
+		manager.dispose();
+	});
+
+	it('defers approval guidance until analyze_image becomes visible', async () => {
+		vi.useFakeTimers();
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		visionEnabledValue = true;
+		emitConfigurationChange('glm-copilot.visionEnabled');
+		expect(getApprovalGuidanceCalls()).toHaveLength(0);
+
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		await vi.advanceTimersByTimeAsync(VISION_HEALTH_POLL_MS);
+
+		expect(getApprovalGuidanceCalls()).toEqual([
+			[APPROVAL_GUIDANCE_MESSAGE, MANAGE_TOOL_APPROVAL_ACTION],
+		]);
+		manager.dispose();
+	});
+
+	it('cancels deferred approval guidance when vision is disabled before recovery', async () => {
+		vi.useFakeTimers();
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		visionEnabledValue = true;
+		emitConfigurationChange('glm-copilot.visionEnabled');
+		visionEnabledValue = false;
+		emitConfigurationChange('glm-copilot.visionEnabled');
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		await vi.advanceTimersByTimeAsync(VISION_HEALTH_POLL_MS);
+
+		expect(getApprovalGuidanceCalls()).toHaveLength(0);
+		manager.dispose();
+	});
+
+	it('does not guide approval at startup or duplicate an open notice during health polls', async () => {
+		vi.useFakeTimers();
+		visionEnabledValue = true;
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		let dismissGuidance: (() => void) | undefined;
+		mocks.showInformationMessage.mockImplementation(
+			(message: unknown) =>
+				message === APPROVAL_GUIDANCE_MESSAGE
+					? new Promise((resolve) => {
+							dismissGuidance = () => resolve(undefined);
+						})
+					: Promise.resolve(undefined),
+		);
+		const { manager } = makeManager(true);
+		manager.initialize();
+		expect(getApprovalGuidanceCalls()).toHaveLength(0);
+
+		visionEnabledValue = false;
+		emitConfigurationChange('glm-copilot.visionEnabled');
+		visionEnabledValue = true;
+		emitConfigurationChange('glm-copilot.visionEnabled');
+		await vi.advanceTimersByTimeAsync(VISION_HEALTH_POLL_MS * 3);
+
+		expect(getApprovalGuidanceCalls()).toHaveLength(1);
+		dismissGuidance?.();
+		await Promise.resolve();
+		manager.dispose();
+	});
+
+	it('guides approval again after a later off-to-on transition', async () => {
+		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
+		const { manager } = makeManager(true);
+		manager.initialize();
+		mocks.showInformationMessage.mockClear();
+
+		await manager.toggleVision();
+		await Promise.resolve();
+		await manager.toggleVision();
+		expect(mocks.showInformationMessage).toHaveBeenCalledWith('visionMcp.toggle.off');
+		await manager.toggleVision();
+		await Promise.resolve();
+
+		expect(getApprovalGuidanceCalls()).toHaveLength(2);
 		manager.dispose();
 	});
 
@@ -533,13 +731,21 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
-	it('isVisionActive requires both a healthy server and the visionEnabled setting', async () => {
+	it('enables image input when the verified package is installed and vision is enabled', () => {
+		visionEnabledValue = true;
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		expect(manager.isImageInputEnabled()).toBe(true);
+		manager.dispose();
+	});
+
+	it('keeps image input disabled when vision is off even if the server is healthy', () => {
 		mocks.findVisionAnalyzeTool.mockReturnValue({ name: 'mcp_glm_vision_analyze_image' });
 		const { manager } = makeManager(true);
 		manager.initialize();
-		expect(manager.isVisionActive()).toBe(false);
-		visionEnabledValue = true;
-		expect(manager.isVisionActive()).toBe(true);
+
+		expect(manager.isImageInputEnabled()).toBe(false);
 		manager.dispose();
 	});
 
@@ -550,7 +756,7 @@ describe('VisionMcpManager', () => {
 
 		manager.initialize();
 
-		expect(manager.isVisionActive()).toBe(false);
+		expect(manager.isImageInputEnabled()).toBe(false);
 		manager.dispose();
 	});
 

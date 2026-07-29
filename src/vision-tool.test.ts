@@ -20,6 +20,7 @@ describe('isVisionAnalyzeTool', () => {
 	it('matches the VS Code-prefixed MCP tool name with the expected schema', () => {
 		expect(isVisionAnalyzeTool(tool('mcp_glm_vision_analyze_image', VISION_SCHEMA))).toBe(true);
 		expect(isVisionAnalyzeTool(tool('mcp_zai_mcp_server_analyze_image', VISION_SCHEMA))).toBe(true);
+		expect(isVisionAnalyzeTool(tool('mcp_zai-mcp-serve_analyze_image', VISION_SCHEMA))).toBe(true);
 	});
 
 	it('matches label-slug separator variants', () => {
@@ -39,9 +40,13 @@ describe('isVisionAnalyzeTool', () => {
 		expect(isVisionAnalyzeTool(tool('mcp_other_zai_mcp_server_analyze_image', VISION_SCHEMA))).toBe(false);
 	});
 
-	it('rejects look-alike servers that only start with the GLM Vision name', () => {
+	it('rejects look-alike server names with extra segments', () => {
 		expect(isVisionAnalyzeTool(tool('mcp_glm_vision_evil_analyze_image', VISION_SCHEMA))).toBe(false);
 		expect(isVisionAnalyzeTool(tool('mcp_glm_visionary_analyze_image', VISION_SCHEMA))).toBe(false);
+		expect(isVisionAnalyzeTool(tool('mcp_zai_mcp_serve_evil_analyze_image', VISION_SCHEMA))).toBe(
+			false,
+		);
+		expect(isVisionAnalyzeTool(tool('mcp_zai_mcp_served_analyze_image', VISION_SCHEMA))).toBe(false);
 	});
 
 	it('rejects other tools, including similarly named ones', () => {

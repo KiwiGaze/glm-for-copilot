@@ -1,5 +1,11 @@
 import * as vscode from 'vscode';
 
+/** Detect a proposed VS Code thinking part without importing its unavailable type. */
+export function isThinkingPart(part: unknown): part is { value: string | string[] } {
+	const ctor = (vscode as { LanguageModelThinkingPart?: unknown }).LanguageModelThinkingPart;
+	return typeof ctor === 'function' && part instanceof (ctor as new (...args: never[]) => object);
+}
+
 /**
  * Report transient status text into the reasoning/thinking block. The thinking
  * part is a proposed VS Code API, so it is feature-detected before use; when it

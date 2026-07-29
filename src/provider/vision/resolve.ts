@@ -25,7 +25,6 @@ import {
 import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './consts';
 import { collectImagePartRun, isImageDataPart } from './parts';
 
-/** Longest failure reason shown inside the leading notice. */
 const FAILURE_REASON_MAX_LENGTH = 200;
 
 /**
@@ -82,6 +81,12 @@ interface ContainerContext {
 
 interface ContainerResolution {
 	text: string;
+	failureNotice?: string;
+}
+
+interface ResolvedImagePartRun {
+	part: vscode.LanguageModelTextPart;
+	nextIndex: number;
 	failureNotice?: string;
 }
 
@@ -167,11 +172,10 @@ async function resolveMessageContent(
 	for (let index = 0; index < parts.length; index += 1) {
 		const part = parts[index];
 		if (isImageDataPart(part)) {
-			const run = collectImagePartRun(parts, index);
-			const resolution = await resolveContainer(run.images.map(toVisionImage), ctx);
+			const resolution = await resolveImagePartRun(parts, index, ctx);
 			notice ??= resolution.failureNotice;
-			content.push(new vscode.LanguageModelTextPart(resolution.text));
-			index = run.nextIndex - 1;
+			content.push(resolution.part);
+			index = resolution.nextIndex - 1;
 			continue;
 		}
 		if (isToolResultWithImages(part)) {
@@ -195,11 +199,10 @@ async function resolveToolResult(
 	for (let index = 0; index < items.length; index += 1) {
 		const item = items[index];
 		if (isImageDataPart(item)) {
-			const run = collectImagePartRun(items, index);
-			const resolution = await resolveContainer(run.images.map(toVisionImage), ctx);
+			const resolution = await resolveImagePartRun(items, index, ctx);
 			failureNotice ??= resolution.failureNotice;
-			content.push(new vscode.LanguageModelTextPart(resolution.text));
-			index = run.nextIndex - 1;
+			content.push(resolution.part);
+			index = resolution.nextIndex - 1;
 		} else {
 			content.push(item);
 		}
@@ -207,6 +210,20 @@ async function resolveToolResult(
 	return {
 		part: new vscode.LanguageModelToolResultPart(part.callId, content),
 		failureNotice,
+	};
+}
+
+async function resolveImagePartRun(
+	parts: readonly unknown[],
+	startIndex: number,
+	ctx: ContainerContext,
+): Promise<ResolvedImagePartRun> {
+	const run = collectImagePartRun(parts, startIndex);
+	const resolution = await resolveContainer(run.images.map(toVisionImage), ctx);
+	return {
+		part: new vscode.LanguageModelTextPart(resolution.text),
+		nextIndex: run.nextIndex,
+		failureNotice: resolution.failureNotice,
 	};
 }
 
@@ -275,7 +292,8 @@ async function analyzeImages(
 	ctx: ContainerContext,
 ): Promise<string> {
 	const runDir = join(ctx.imageDir, randomUUID());
-	await mkdir(runDir, { recursive: true });
+	// Protect the run dir before it exists on disk: a concurrent prune must
+	// never observe it outside activeRunDirs.
 	activeRunDirs.add(runDir);
 	const cts = new vscode.CancellationTokenSource();
 	const subscription = ctx.token.onCancellationRequested(() => cts.cancel());
@@ -285,6 +303,7 @@ async function analyzeImages(
 	}
 	const timer = setTimeout(() => cts.cancel(), ctx.timeoutMs);
 	try {
+		await mkdir(runDir, { recursive: true });
 		const pendingWrites = new Map<string, Promise<string>>();
 		const texts = await Promise.all(
 			images.map(async (image, index) => {
@@ -333,7 +352,6 @@ export function getVisionTempDir(storageDir: string): string {
 	return join(storageDir, VISION_TEMP_DIR_NAME);
 }
 
-/** Write the image into the run directory unless already present (hash name ⇒ no duplicates). */
 async function writeImageFile(dir: string, image: VisionImage, hash: string): Promise<string> {
 	const ext = VISION_IMAGE_MIME_EXTENSIONS[image.mimeType.toLowerCase()];
 	const filePath = join(dir, `${hash.slice(0, 32)}.${ext}`);
@@ -347,7 +365,6 @@ async function writeImageFile(dir: string, image: VisionImage, hash: string): Pr
 	return filePath;
 }
 
-/** Bound the temp dir so it stays within VISION_TEMP_MAX_FILES once the run dir is created. */
 async function pruneTempImages(dir: string): Promise<void> {
 	try {
 		const names = await readdir(dir);
@@ -391,7 +408,6 @@ async function defaultInvokeTool(
 	return vscode.lm.invokeTool(name, { input, toolInvocationToken: undefined }, token);
 }
 
-/** First localized reason an image run is rejected (too many / unsupported type / too large), or undefined. */
 function findInvalidImageReason(images: readonly VisionImage[]): string | undefined {
 	if (images.length > VISION_MAX_IMAGES_PER_CONTAINER) {
 		return t('vision.error.tooMany', String(VISION_MAX_IMAGES_PER_CONTAINER));

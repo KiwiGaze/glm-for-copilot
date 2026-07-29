@@ -80,8 +80,6 @@ export const USAGE_CACHE_STALE_MS = 60 * 60 * 1000;
 export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
 export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
 
-// ---- Vision (GLM Vision MCP server) ----
-
 /**
  * Built-in analysis prompt sent as the `prompt` argument of the vision MCP
  * `analyze_image` tool (one call per image). English and out of i18n so the
@@ -156,18 +154,15 @@ export const VISION_MCP_CTX_HEALTHY = 'glmCopilot.visionMcp.healthy';
 /** `setContext` key mirroring the `visionEnabled` setting, for walkthrough completion. */
 export const VISION_MCP_CTX_VISION_ENABLED = 'glmCopilot.visionEnabled';
 
-/** Name suffix of the vision analyze tool (VS Code prefixes MCP tool names). */
-export const VISION_ANALYZE_TOOL_SUFFIX = 'analyze_image';
-
 /**
  * Known GLM Vision tool names as they appear in VS Code tool names. The
- * official server reports `zai-mcp-server`; the extension definition label is
- * `GLM Vision`. The `analyze_image` suffix is anchored to the server prefix so
- * a look-alike server (`mcp_glm_vision_evil_analyze_image`) is never treated
- * as GLM Vision.
+ * official server reports `zai-mcp-serve` or `zai-mcp-server`; the extension
+ * definition label is `GLM Vision`. The `analyze_image` suffix is anchored to
+ * the server prefix so a look-alike server
+ * (`mcp_glm_vision_evil_analyze_image`) is never treated as GLM Vision.
  */
 export const VISION_ANALYZE_TOOL_SERVER_PATTERN =
-	/^(?:(?:mcp[_-])?glm[\s_-]vision|mcp[_-]zai[_-]mcp[_-]server)[:\s_-]+analyze_image$/;
+	/^(?:(?:mcp[_-])?glm[\s_-]vision|mcp[_-]zai[_-]mcp[_-]serve(?:r)?)[:\s_-]+analyze_image$/;
 
 /** Minimum Node.js major version required by the vision MCP server. */
 export const VISION_NODE_MIN_MAJOR = 18;

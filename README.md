@@ -1,6 +1,6 @@
 # GLM Models for GitHub Copilot Chat
 
-[![Latest Release](https://img.shields.io/github/v/release/KiwiGaze/glm-for-copilot?label=version)](https://github.com/KiwiGaze/glm-for-copilot/releases/latest)
+[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.3.0-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![VS Marketplace Installs](https://vsmarketplacebadges.dev/installs-short/yijiazhen-qi.glm-for-github-copilot-chat.svg)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![Install from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-007ACC)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![CI](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml)
@@ -84,7 +84,7 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
 | `glm-copilot.thinking` | `enabled` | Step-by-step reasoning: `enabled` (higher quality) or `disabled` (faster). Applies to thinking-capable models without a per-model Thinking Effort picker; GLM-5.2 uses None / High / Max in the model picker. |
-| `glm-copilot.visionEnabled` | `false` | Accept pasted/attached images in chat — GLM Vision analyzes them first so text-only models can reason about them. Only takes effect while the GLM Vision MCP server is installed and running. See [Image input (vision)](#image-input-vision). |
+| `glm-copilot.visionEnabled` | `false` | Accept pasted/attached images in chat when the verified GLM Vision package is installed. GLM Vision analyzes them first so text-only models can reason about them. If the server is unavailable, the reply shows an analysis-failure notice and continues without the image. See [Image input (vision)](#image-input-vision). |
 | `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM Vision when analyzing images. Empty uses the built-in prompt (verbatim text/code transcription, UI/diagram/chart description, no speculation). Changing it re-analyzes images on the next turn. |
 | `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking? }`. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
@@ -112,14 +112,22 @@ Usage details rely on regional usage endpoints (`api.z.ai` for International, `o
 Vision is powered by the official **[Z.AI Vision MCP server](https://docs.z.ai/devpack/mcp/vision-mcp-server)** (`@z_ai/mcp-server`, GLM-4.6V). Setup is two steps, and nothing is installed without your say-so:
 
 1. **Install the server** — run **GLM: Install GLM Vision MCP Server** (or the Install button in the Getting Started walkthrough). Before anything is downloaded, a modal confirmation explains that the third-party package runs locally, receives your GLM API key and attached-image paths, and sends image content to Z.AI or BigModel. After consent, the flow checks your API key and Node.js/npm (Node.js 18+, 22+ recommended), then installs `@z_ai/mcp-server@0.1.4` under the extension's global storage with `npm ci`. A bundled lockfile pins the complete dependency graph and its SHA-512 integrity hashes, and npm lifecycle scripts are disabled. VS Code launches the fixed local entry point — never a later package fetched by `npx` — with `Z_AI_MODE` set from your region (`ZAI` for International, `ZHIPU` for Mainland China). Your stored API key (VS Code `SecretStorage`, or the settings fallback if you use one) is injected only when VS Code starts the server. Remove the registration, installed npm package, toggle, and temp images any time with **GLM: Uninstall GLM Vision MCP Server**.
-2. **Turn on image input** — once the server is running, **GLM: Toggle Vision for Chat Models** appears in the Command Palette (it only shows while the server is healthy), or set [`glm-copilot.visionEnabled`](#settings). Every GLM model in the picker then accepts image input.
+2. **Turn on image input** — after installation, **GLM: Toggle Vision for Chat Models** appears in the Command Palette. Turn it on while the server is healthy, or set [`glm-copilot.visionEnabled`](#settings). Every GLM model in the picker then accepts image input. A temporary server outage does not remove image support from the model picker.
+
+Each time image input changes from off to on, the extension waits until VS Code can see `GLM Vision > analyze_image`, then shows approval guidance. To stop the repeated confirmation before each analysis:
+
+- Select **Manage Tool Approval** in the notice.
+- In the workspace Tool Approval manager, find **GLM Vision > analyze_image**.
+- Enable **without approval** only for that tool.
+
+The extension does not change approval settings or approve tools for you. Organization policy can still require confirmation.
 
 With image input on, pasted or attached images just work — even for text-only chat models:
 
 - **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on your stored key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via **GLM: Edit GLM Vision Prompt** or [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
 - **Cached** — analyses are content-addressed and cached in memory for the session (never written to extension storage), so conversation history is not re-analyzed every turn.
 - **Validated** — images larger than 5 MB, or outside `png` / `jpeg`, are skipped with a clear notice *before* any tool call.
-- **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, models fall back to text-only: the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out.
+- **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, the model keeps image input enabled, but the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out. Turning vision off or uninstalling the package removes image input from the model picker.
 
 In **agent mode** the server's full tool set is also available directly to the agent — UI-to-code, screenshot OCR, error-screenshot diagnosis, diagram/chart analysis, UI diffing, and video understanding. For images on disk, the agent calls these tools itself with the file path; no extra setup needed.
 
@@ -137,7 +145,7 @@ In **agent mode** the server's full tool set is also available directly to the a
 | **GLM: Install GLM Vision MCP Server** | Review the impact, then install the integrity-locked local package. Visible when not installed |
 | **GLM: Uninstall GLM Vision MCP Server** | Remove the GLM Vision MCP server and revert models to text-only. Visible when installed |
 | **GLM: Edit GLM Vision Prompt** | Open the multiline setting for the image-analysis instruction. Visible when installed |
-| **GLM: Toggle Vision for Chat Models** | Turn image input for chat models on/off. Visible only while GLM Vision is installed and running |
+| **GLM: Toggle Vision for Chat Models** | Turn image input for chat models on/off. Visible while GLM Vision is installed |
 
 ## Frequently asked questions
 

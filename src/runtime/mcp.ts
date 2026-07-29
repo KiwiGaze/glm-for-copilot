@@ -73,10 +73,6 @@ export interface NodeRuntimeProbe {
 	nodeMajor?: number;
 }
 
-/**
- * Spawn a probe command with a 10 s kill timer, capturing stdout. Resolves
- * undefined when the command cannot be spawned, errors, or times out.
- */
 function runProbe(
 	command: string,
 	args: string[],
@@ -108,7 +104,6 @@ function runProbe(
 	});
 }
 
-/** Probe whether npm is runnable. */
 async function probeNpm(platform: NodeJS.Platform): Promise<boolean> {
 	const isWindows = platform === 'win32';
 	const result = await runProbe(
@@ -118,9 +113,6 @@ async function probeNpm(platform: NodeJS.Platform): Promise<boolean> {
 	return result?.code === 0;
 }
 
-/**
- * Probe `node --version` for the major version.
- */
 async function probeNodeMajor(): Promise<number | undefined> {
 	const result = await runProbe('node', ['--version']);
 	const major = result?.code === 0 ? /^v(\d+)\./.exec(result.stdout.trim())?.[1] : undefined;
@@ -159,18 +151,21 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	private resolveKeyWarningShown = false;
 	private readyPromptShown = false;
 	private unhealthyNoticeShown = false;
+	private imageInputEnabled: boolean;
+	private approvalGuidancePending = false;
+	private approvalGuidanceOpen = false;
 	private readonly disposables: vscode.Disposable[] = [];
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		private readonly authManager: IAuthManager,
-		/** Test seam: Node.js/npm preflight probe. */
 		private readonly probeRuntime: () => Promise<NodeRuntimeProbe> = () =>
 			probeNodeRuntime(process.platform),
 		private readonly packageInstaller: IVisionMcpPackageInstaller = new VisionMcpPackageInstaller(
 			context,
 		),
 	) {
+		this.imageInputEnabled = this.isImageInputEnabled();
 		this.disposables.push(
 			this.didChangeDefinitions,
 			this.didChangeState,
@@ -180,7 +175,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.apiKey`)) {
 					this.onServerConfigChanged('apiKey');
 				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.visionEnabled`)) {
-					this.syncVisionEnabledContext();
+					this.onVisionEnabledChanged();
 				}
 			}),
 			context.secrets.onDidChange((e) => {
@@ -195,8 +190,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		return this.isInstallRecorded && this.packageInstaller.isInstalled();
 	}
 
-	isVisionActive(): boolean {
-		return this.isInstalled && this.healthy && getVisionEnabled();
+	isImageInputEnabled(): boolean {
+		return this.isInstalled && getVisionEnabled();
 	}
 
 	private get isInstallRecorded(): boolean {
@@ -215,6 +210,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, this.isInstalled);
 		// Context keys survive an extension-host restart; clear a stale healthy flag up front.
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_HEALTHY, false);
+		this.imageInputEnabled = this.isImageInputEnabled();
+		this.approvalGuidancePending = false;
 		this.syncVisionEnabledContext();
 		if (this.isInstalled) {
 			this.registerDefinitionProvider();
@@ -223,7 +220,6 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		this.refreshHealth();
 	}
 
-	/** Mirror the visionEnabled setting into a context key for walkthrough completion. */
 	private syncVisionEnabledContext(): void {
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_VISION_ENABLED, getVisionEnabled());
 	}
@@ -287,6 +283,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 				await this.packageInstaller.uninstall();
 				throw error;
 			}
+			this.updateImageInputState();
+			this.didChangeState.fire();
 			this.startHealthPolling();
 			this.refreshHealth();
 			const choice = await vscode.window.showInformationMessage(
@@ -326,6 +324,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		this.registration = undefined;
 		await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
 		await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false);
+		this.updateImageInputState();
+		this.didChangeState.fire();
 		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
 		const visionSetting = configuration.inspect<boolean>('visionEnabled');
 		if (visionSetting?.workspaceValue !== undefined) {
@@ -348,11 +348,12 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		// uninstall is not an outage: the "stopped" notice only fires while installed.
 		this.readyPromptShown = false;
 		this.resolveKeyWarningShown = false;
+		this.unhealthyNoticeShown = false;
 		this.refreshHealth();
 		void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
 	}
 
-	/** Flip the `visionEnabled` setting (only honored while the server is healthy). */
+	/** Flip `visionEnabled`; enabling requires a healthy server, but disabling does not. */
 	async toggleVision(): Promise<void> {
 		const enable = !getVisionEnabled();
 		if (enable && !this.healthy) {
@@ -365,9 +366,12 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 				? vscode.ConfigurationTarget.Workspace
 				: vscode.ConfigurationTarget.Global;
 		await configuration.update('visionEnabled', enable, target);
-		void vscode.window.showInformationMessage(
-			t(enable ? 'visionMcp.toggle.on' : 'visionMcp.toggle.off'),
-		);
+		if (this.updateImageInputState()) {
+			this.didChangeState.fire();
+		}
+		if (!enable) {
+			void vscode.window.showInformationMessage(t('visionMcp.toggle.off'));
+		}
 	}
 
 	dispose(): void {
@@ -416,7 +420,6 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		return true;
 	}
 
-	/** Inject the API key at server start; on failure, point the user at the fix. */
 	private async resolveServer(
 		server: vscode.McpStdioServerDefinition,
 	): Promise<vscode.McpStdioServerDefinition | undefined> {
@@ -440,7 +443,6 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		return server;
 	}
 
-	/** Prompt with the vision setup wording, then return the (maybe) stored key. */
 	private async promptForVisionApiKey(): Promise<string | undefined> {
 		await this.authManager.promptForApiKey({
 			title: t('visionMcp.auth.title'),
@@ -513,6 +515,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		void vscode.commands.executeCommand('setContext', VISION_MCP_CTX_HEALTHY, found);
 		if (found) {
 			this.unhealthyNoticeShown = false;
+			this.showApprovalGuidanceIfReady();
 			if (!this.readyPromptShown) {
 				this.readyPromptShown = true;
 				void this.promptEnableVision();
@@ -522,6 +525,51 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			void vscode.window.showWarningMessage(t('visionMcp.unhealthy'));
 		}
 		this.didChangeState.fire();
+	}
+
+	private onVisionEnabledChanged(): void {
+		this.syncVisionEnabledContext();
+		if (this.updateImageInputState()) {
+			this.didChangeState.fire();
+		}
+	}
+
+	private updateImageInputState(): boolean {
+		const enabled = this.isImageInputEnabled();
+		if (enabled === this.imageInputEnabled) {
+			return false;
+		}
+		this.imageInputEnabled = enabled;
+		this.approvalGuidancePending = enabled;
+		if (enabled) {
+			this.showApprovalGuidanceIfReady();
+		}
+		return true;
+	}
+
+	private showApprovalGuidanceIfReady(): void {
+		if (
+			!this.approvalGuidancePending ||
+			!this.healthy ||
+			!this.imageInputEnabled ||
+			this.approvalGuidanceOpen
+		) {
+			return;
+		}
+		this.approvalGuidancePending = false;
+		this.approvalGuidanceOpen = true;
+		void vscode.window
+			.showInformationMessage(
+				t('visionMcp.approval.guidance'),
+				t('visionMcp.approval.manage'),
+			)
+			.then((choice) => {
+				this.approvalGuidanceOpen = false;
+				if (choice === t('visionMcp.approval.manage')) {
+					void vscode.commands.executeCommand('workbench.action.chat.editToolApproval');
+				}
+				this.showApprovalGuidanceIfReady();
+			});
 	}
 
 	private async promptEnableVision(): Promise<void> {
@@ -538,7 +586,6 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		}
 	}
 
-	/** Region/key changes only take effect on server (re)start — re-publish and nudge. */
 	private onServerConfigChanged(kind: 'region' | 'apiKey'): void {
 		if (!this.isInstalled) {
 			return;

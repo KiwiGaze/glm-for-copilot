@@ -94,13 +94,16 @@ const en: Record<string, string> = {
 		'GLM Vision was disabled, but its local package files could not be removed. See the logs for details.',
 	'visionMcp.ready': 'GLM Vision is running. Turn on image input for chat models?',
 	'visionMcp.ready.enable': 'Enable Vision',
-	'visionMcp.unhealthy': 'GLM Vision stopped, so image input is temporarily off.',
+	'visionMcp.approval.guidance':
+		'Vision is on. VS Code asks before GLM Vision runs analyze_image. To stop repeated prompts, open Tool Approval and enable “without approval” only for GLM Vision > analyze_image.',
+	'visionMcp.approval.manage': 'Manage Tool Approval',
+	'visionMcp.unhealthy':
+		'GLM Vision stopped. Chat models still accept images, but new image analysis will fail until the server restarts.',
 	'visionMcp.restart.region': 'Region changed — restart GLM Vision from the MCP server list to apply it.',
 	'visionMcp.restart.apiKey': 'API key changed — restart GLM Vision from the MCP server list to apply it.',
 	'visionMcp.openServers': 'Open MCP Servers',
 	'visionMcp.editPrompt': 'Edit Vision Prompt',
 	'visionMcp.resolveKeyRequired': 'GLM Vision cannot start without an API key.',
-	'visionMcp.toggle.on': 'Vision on — chat models now accept image input.',
 	'visionMcp.toggle.off': 'Vision off — chat models are text-only again.',
 	'visionMcp.toggle.notRunning': 'GLM Vision is not running yet. Start it from the MCP server list, then try again.',
 
@@ -260,13 +263,15 @@ const zh: Record<string, string> = {
 	'visionMcp.uninstall.cleanupFailed': 'GLM Vision 已停用，但无法移除本地软件包文件。请查看日志了解详情。',
 	'visionMcp.ready': 'GLM Vision 正在运行。要为聊天模型开启图片输入吗？',
 	'visionMcp.ready.enable': '开启视觉',
-	'visionMcp.unhealthy': 'GLM Vision 已停止，图片输入已暂时关闭。',
+	'visionMcp.approval.guidance':
+		'视觉功能已开启。GLM Vision 运行 analyze_image 前，VS Code 会请求确认。若要停止重复提示，请打开“工具批准”，并仅为 GLM Vision > analyze_image 启用“无需批准”。',
+	'visionMcp.approval.manage': '管理工具批准',
+	'visionMcp.unhealthy': 'GLM Vision 已停止。聊天模型仍接受图片，但在服务器重新启动前，新的图片分析会失败。',
 	'visionMcp.restart.region': '区域已更改——请在 MCP 服务器列表中重启 GLM Vision 以应用。',
 	'visionMcp.restart.apiKey': 'API Key 已更改——请在 MCP 服务器列表中重启 GLM Vision 以应用。',
 	'visionMcp.openServers': '打开 MCP 服务器',
 	'visionMcp.editPrompt': '编辑视觉提示词',
 	'visionMcp.resolveKeyRequired': '缺少 API Key，GLM Vision 无法启动。',
-	'visionMcp.toggle.on': '视觉已开启——聊天模型现在接受图片输入。',
 	'visionMcp.toggle.off': '视觉已关闭——聊天模型已恢复为纯文本。',
 	'visionMcp.toggle.notRunning': 'GLM Vision 尚未运行。请先在 MCP 服务器列表中启动它，然后重试。',
 
