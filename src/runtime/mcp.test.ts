@@ -14,7 +14,9 @@ const mocks = vi.hoisted(() => ({
 	registerMcpServerDefinitionProvider: vi.fn(() => ({ dispose: vi.fn() })),
 	configUpdate: vi.fn<(...args: unknown[]) => Promise<void>>(async () => {}),
 	configInspect: vi.fn<() => unknown>(() => undefined),
+	deleteWorkspaceFiles: vi.fn<(...args: unknown[]) => Promise<void>>(async () => {}),
 	configurationListeners: [] as Array<(event: { affectsConfiguration(section: string): boolean }) => void>,
+	secretListeners: [] as Array<(event: { key: string }) => void>,
 	findVisionAnalyzeTool: vi.fn<() => unknown>(() => undefined),
 }));
 
@@ -64,7 +66,9 @@ vi.mock('vscode', () => {
 				inspect: () => mocks.configInspect(),
 				update: (...args: unknown[]) => mocks.configUpdate(...args),
 			}),
-			fs: { delete: async () => {} },
+			fs: {
+				delete: (...args: unknown[]) => mocks.deleteWorkspaceFiles(...args),
+			},
 		},
 		Uri: { file: (path: string) => ({ fsPath: path }), parse: (v: string) => ({ v }) },
 		env: { openExternal: async () => true },
@@ -73,6 +77,7 @@ vi.mock('vscode', () => {
 });
 
 vi.mock('../config', () => ({
+	getBaseUrlOverride: () => baseUrlOverrideValue,
 	getRegion: () => 'international',
 	getVisionEnabled: () => visionEnabledValue,
 }));
@@ -84,17 +89,24 @@ vi.mock('../logger', () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.
 vi.mock('../vision-tool', () => ({ findVisionAnalyzeTool: () => mocks.findVisionAnalyzeTool() }));
 
 import * as vscode from 'vscode';
-import { VISION_HEALTH_POLL_MS } from '../consts';
+import { VISION_API_KEY_SECRET, VISION_HEALTH_POLL_MS } from '../consts';
 import { fakeMemento } from '../test-helpers';
-import type { IAuthManager } from '../types';
+import type { IAuthManager, IVisionApiKeyManager } from '../types';
 import { buildVisionMcpServerSpec, VisionMcpManager, type NodeRuntimeProbe } from './mcp';
 import type { IVisionMcpPackageInstaller } from './mcp-package';
 
+let baseUrlOverrideValue = '';
 let visionEnabledValue = false;
 
 function emitConfigurationChange(section: string): void {
 	for (const listener of mocks.configurationListeners) {
 		listener({ affectsConfiguration: (candidate: string) => candidate === section });
+	}
+}
+
+function emitSecretChange(key: string): void {
+	for (const listener of mocks.secretListeners) {
+		listener({ key });
 	}
 }
 
@@ -111,20 +123,39 @@ function fakeContext(installed: boolean) {
 	}
 	return {
 		globalState,
-		secrets: { onDidChange: () => ({ dispose: () => {} }) },
+		secrets: {
+			onDidChange: (listener: (event: { key: string }) => void) => {
+				mocks.secretListeners.push(listener);
+				return { dispose: () => {} };
+			},
+		},
 		subscriptions: [] as Array<{ dispose(): void }>,
 		globalStorageUri: { fsPath: '/tmp/glm-test-storage' },
 		extensionUri: { fsPath: '/tmp/glm-test-extension' },
 	} as unknown as vscode.ExtensionContext;
 }
 
-function authWithKey(): IAuthManager {
+interface AuthFixtureOptions {
+	chatApiKey?: string;
+	visionApiKey?: string;
+}
+
+function authWithCredentials(
+	options: AuthFixtureOptions = {},
+): IAuthManager & IVisionApiKeyManager {
 	return {
-		getApiKey: async () => 'id.secret',
-		hasApiKey: async () => true,
-		promptForApiKey: async () => true,
-		deleteApiKey: async () => {},
+		getApiKey: vi.fn(async () => options.chatApiKey),
+		hasApiKey: vi.fn(async () => options.chatApiKey !== undefined),
+		promptForApiKey: vi.fn(async () => false),
+		deleteApiKey: vi.fn(async () => {}),
+		getVisionApiKey: vi.fn(async () => options.visionApiKey),
+		promptForVisionApiKey: vi.fn(async () => false),
+		deleteVisionApiKey: vi.fn(async () => {}),
 	};
+}
+
+function authWithKey(): IAuthManager & IVisionApiKeyManager {
+	return authWithCredentials({ chatApiKey: 'id.secret' });
 }
 
 function makeManager(
@@ -155,10 +186,14 @@ function fakePackageInstaller(installed: boolean): IVisionMcpPackageInstaller & 
 }
 
 beforeEach(() => {
+	baseUrlOverrideValue = '';
 	visionEnabledValue = false;
 	vi.clearAllMocks();
 	mocks.configurationListeners.length = 0;
+	mocks.secretListeners.length = 0;
 	mocks.configInspect.mockReturnValue(undefined);
+	mocks.deleteWorkspaceFiles.mockReset();
+	mocks.deleteWorkspaceFiles.mockResolvedValue(undefined);
 	mocks.findVisionAnalyzeTool.mockReturnValue(undefined);
 	mocks.configUpdate.mockImplementation(async (section: unknown, value: unknown) => {
 		if (section === 'visionEnabled') {
@@ -370,12 +405,7 @@ describe('VisionMcpManager', () => {
 	});
 
 	it('install aborts without registering when the API key prompt is declined', async () => {
-		const noKeyAuth: IAuthManager = {
-			getApiKey: async () => undefined,
-			hasApiKey: async () => false,
-			promptForApiKey: vi.fn(async () => false),
-			deleteApiKey: async () => {},
-		};
+		const noKeyAuth = authWithCredentials();
 		const context = fakeContext(false);
 		const packageInstaller = fakePackageInstaller(false);
 		const manager = new VisionMcpManager(context, noKeyAuth, async () => ({
@@ -393,6 +423,32 @@ describe('VisionMcpManager', () => {
 		);
 		expect(mocks.registerMcpServerDefinitionProvider).not.toHaveBeenCalled();
 		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBeUndefined();
+		manager.dispose();
+	});
+
+	it('install requires a separate Vision key when a custom Base URL is active', async () => {
+		baseUrlOverrideValue = 'https://proxy.example/v4';
+		const auth = authWithCredentials({ chatApiKey: 'proxy.secret' });
+		const context = fakeContext(false);
+		const packageInstaller = fakePackageInstaller(false);
+		const manager = new VisionMcpManager(
+			context,
+			auth,
+			async () => ({ npmOk: true, nodeMajor: 22 }),
+			packageInstaller,
+		);
+
+		await manager.install();
+
+		expect(auth.getApiKey).not.toHaveBeenCalled();
+		expect(auth.promptForApiKey).not.toHaveBeenCalled();
+		expect(auth.promptForVisionApiKey).toHaveBeenCalledOnce();
+		expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+			'visionMcp.auth.separateRequired',
+			'visionMcp.auth.enterVisionKey',
+			'visionMcp.notNow',
+		);
+		expect(packageInstaller.install).not.toHaveBeenCalled();
 		manager.dispose();
 	});
 
@@ -532,20 +588,102 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
-	it('retains the registered installation state when local package cleanup fails', async () => {
-		const { context, manager, packageInstaller } = makeManager(true);
-		packageInstaller.uninstall.mockRejectedValueOnce(new Error('permission denied'));
+	it('disables Vision before reporting residual package files after cleanup fails', async () => {
+		visionEnabledValue = true;
+		mocks.configInspect.mockReturnValue({ globalValue: true });
+		const context = fakeContext(true);
+		const auth = {
+			...authWithKey(),
+			deleteVisionApiKey: vi.fn(async () => {}),
+		};
+		const packageInstaller = fakePackageInstaller(true);
+		const manager = new VisionMcpManager(
+			context,
+			auth,
+			async () => ({ npmOk: true, nodeMajor: 22 }),
+			packageInstaller,
+		);
 		manager.initialize();
 		const registration = mocks.registerMcpServerDefinitionProvider.mock.results[0].value;
+		packageInstaller.uninstall.mockImplementationOnce(async () => {
+			expect(registration.dispose).toHaveBeenCalledOnce();
+			expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBeUndefined();
+			expect(visionEnabledValue).toBe(false);
+			expect(auth.deleteVisionApiKey).toHaveBeenCalledOnce();
+			throw new Error('permission denied');
+		});
 
 		await manager.uninstall();
 
-		expect(registration.dispose).not.toHaveBeenCalled();
-		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBe(true);
-		expect(mocks.configUpdate).not.toHaveBeenCalled();
+		expect(registration.dispose).toHaveBeenCalledOnce();
+		expect(context.globalState.get('glm-copilot.visionMcp.installed')).toBeUndefined();
+		expect(mocks.executeCommand).toHaveBeenCalledWith(
+			'setContext',
+			'glmCopilot.visionMcp.installed',
+			false,
+		);
+		expect(mocks.configUpdate).toHaveBeenCalledWith('visionEnabled', undefined, 1);
+		expect(auth.deleteVisionApiKey).toHaveBeenCalledOnce();
+		expect(manager.isInstalled).toBe(false);
+		expect(manager.isImageInputEnabled()).toBe(false);
+		expect(packageInstaller.isInstalled()).toBe(true);
 		expect(mocks.showWarningMessage).toHaveBeenCalledWith(
 			'visionMcp.uninstall.cleanupFailed',
 			'visionMcp.showLogs',
+		);
+		manager.dispose();
+	});
+
+	it('still removes the package when Vision key cleanup fails', async () => {
+		visionEnabledValue = true;
+		mocks.configInspect.mockReturnValue({ globalValue: true });
+		const context = fakeContext(true);
+		const auth = {
+			...authWithKey(),
+			deleteVisionApiKey: vi.fn(async () => {
+				throw new Error('keychain locked');
+			}),
+		};
+		const packageInstaller = fakePackageInstaller(true);
+		const manager = new VisionMcpManager(
+			context,
+			auth,
+			async () => ({ npmOk: true, nodeMajor: 22 }),
+			packageInstaller,
+		);
+		manager.initialize();
+
+		await manager.uninstall();
+
+		expect(packageInstaller.uninstall).toHaveBeenCalledOnce();
+		expect(manager.isInstalled).toBe(false);
+		expect(manager.isImageInputEnabled()).toBe(false);
+		expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+			'visionMcp.uninstall.cleanupFailed',
+			'visionMcp.showLogs',
+		);
+		expect(mocks.showInformationMessage).not.toHaveBeenCalledWith(
+			'visionMcp.uninstall.done',
+		);
+		manager.dispose();
+	});
+
+	it('reports temp-image cleanup failure after it removes the package', async () => {
+		const { manager, packageInstaller } = makeManager(true);
+		mocks.deleteWorkspaceFiles.mockRejectedValueOnce(new Error('permission denied'));
+		manager.initialize();
+
+		await manager.uninstall();
+
+		expect(packageInstaller.uninstall).toHaveBeenCalledOnce();
+		expect(manager.isInstalled).toBe(false);
+		expect(manager.isImageInputEnabled()).toBe(false);
+		expect(mocks.showWarningMessage).toHaveBeenCalledWith(
+			'visionMcp.uninstall.cleanupFailed',
+			'visionMcp.showLogs',
+		);
+		expect(mocks.showInformationMessage).not.toHaveBeenCalledWith(
+			'visionMcp.uninstall.done',
 		);
 		manager.dispose();
 	});
@@ -731,6 +869,32 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
+	it('prompts for a server restart when the dedicated Vision key changes', () => {
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		emitSecretChange(VISION_API_KEY_SECRET);
+
+		expect(mocks.showInformationMessage).toHaveBeenCalledWith(
+			'visionMcp.restart.apiKey',
+			'visionMcp.openServers',
+		);
+		manager.dispose();
+	});
+
+	it('prompts for a server restart when the custom Base URL changes', () => {
+		const { manager } = makeManager(true);
+		manager.initialize();
+
+		emitConfigurationChange('glm-copilot.baseUrl');
+
+		expect(mocks.showInformationMessage).toHaveBeenCalledWith(
+			'visionMcp.restart.endpoint',
+			'visionMcp.openServers',
+		);
+		manager.dispose();
+	});
+
 	it('enables image input when the verified package is installed and vision is enabled', () => {
 		visionEnabledValue = true;
 		const { manager } = makeManager(true);
@@ -795,13 +959,97 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
+	it('injects the separate Vision key instead of the proxy credential', async () => {
+		baseUrlOverrideValue = 'https://proxy.example/v4';
+		const auth = authWithCredentials({
+			chatApiKey: 'proxy.secret',
+			visionApiKey: 'vision.secret',
+		});
+		const context = fakeContext(true);
+		const manager = new VisionMcpManager(
+			context,
+			auth,
+			async () => ({ npmOk: true, nodeMajor: 22 }),
+			fakePackageInstaller(true),
+		);
+		manager.initialize();
+		const provider = mocks.registerMcpServerDefinitionProvider.mock.calls[0][1] as {
+			resolveMcpServerDefinition?: (server: {
+				env: Record<string, string>;
+			}) => Promise<{ env: Record<string, string> } | undefined>;
+		};
+
+		const resolved = await provider.resolveMcpServerDefinition?.({ env: { Z_AI_MODE: 'ZAI' } });
+
+		expect(resolved?.env.Z_AI_API_KEY).toBe('vision.secret');
+		expect(auth.getApiKey).not.toHaveBeenCalled();
+		manager.dispose();
+	});
+
+	it('does not fall back to the proxy credential when no Vision key is configured', async () => {
+		baseUrlOverrideValue = 'https://proxy.example/v4';
+		const auth = authWithCredentials({ chatApiKey: 'proxy.secret' });
+		const context = fakeContext(true);
+		const manager = new VisionMcpManager(
+			context,
+			auth,
+			async () => ({ npmOk: true, nodeMajor: 22 }),
+			fakePackageInstaller(true),
+		);
+		manager.initialize();
+		const provider = mocks.registerMcpServerDefinitionProvider.mock.calls[0][1] as {
+			resolveMcpServerDefinition?: (server: {
+				env: Record<string, string>;
+			}) => Promise<{ env: Record<string, string> } | undefined>;
+		};
+
+		const resolved = await provider.resolveMcpServerDefinition?.({ env: { Z_AI_MODE: 'ZAI' } });
+
+		expect(resolved).toBeUndefined();
+		expect(auth.getApiKey).not.toHaveBeenCalled();
+		expect(auth.promptForApiKey).not.toHaveBeenCalled();
+		expect(auth.promptForVisionApiKey).toHaveBeenCalledOnce();
+		manager.dispose();
+	});
+
+	it('does not inject the chat key if a custom Base URL appears during key lookup', async () => {
+		const auth: IAuthManager & IVisionApiKeyManager = {
+			...authWithCredentials(),
+			getApiKey: async () => {
+				baseUrlOverrideValue = 'https://proxy.example/v4';
+				return 'proxy.secret';
+			},
+		};
+		const context = fakeContext(true);
+		const manager = new VisionMcpManager(
+			context,
+			auth,
+			async () => ({ npmOk: true, nodeMajor: 22 }),
+			fakePackageInstaller(true),
+		);
+		manager.initialize();
+		const provider = mocks.registerMcpServerDefinitionProvider.mock.calls[0][1] as {
+			resolveMcpServerDefinition?: (server: {
+				env: Record<string, string>;
+			}) => Promise<{ env: Record<string, string> } | undefined>;
+		};
+
+		const resolved = await provider.resolveMcpServerDefinition?.({ env: { Z_AI_MODE: 'ZAI' } });
+
+		expect(resolved).toBeUndefined();
+		manager.dispose();
+	});
+
 	it('re-arms the missing-key warning after the API key recovers', async () => {
 		let apiKey: string | undefined;
-		const auth: IAuthManager = {
+		const auth: IAuthManager & IVisionApiKeyManager = {
 			getApiKey: async () => apiKey,
 			hasApiKey: async () => apiKey !== undefined,
 			promptForApiKey: async () => false,
 			deleteApiKey: async () => {},
+			getVisionApiKey: async () => undefined,
+			promptForVisionApiKey: async () => false,
+			deleteVisionApiKey: async () => {},
 		};
 		const context = fakeContext(true);
 		const manager = new VisionMcpManager(

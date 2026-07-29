@@ -97,7 +97,7 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		try {
 			vision = await resolveVisionMessages(
 				{
-					authManager: this.authManager,
+					hasVisionApiKey: () => this.visionState.hasVisionApiKey(),
 					cache: this.visionCache,
 					storageDir: this.visionStorageDir,
 				},

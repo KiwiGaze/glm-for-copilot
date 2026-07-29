@@ -8,6 +8,7 @@
   "glm-copilot.command.openUsageDetail": "GLM: Show Usage Details",
   "glm-copilot.command.installVisionMcp": "GLM: Install GLM Vision MCP Server",
   "glm-copilot.command.uninstallVisionMcp": "GLM: Uninstall GLM Vision MCP Server",
+  "glm-copilot.command.setVisionApiKey": "GLM: Set Vision API Key",
   "glm-copilot.command.openVisionPromptSettings": "GLM: Edit GLM Vision Prompt",
   "glm-copilot.command.toggleVision": "GLM: Toggle Vision for Chat Models",
 
@@ -37,11 +38,11 @@
   "glm-copilot.config.apiMode.standard.label": "Standard API",
   "glm-copilot.config.apiMode.standard.description": "Pay-as-you-go access via the GLM Open Platform. The active endpoint is chosen by the `region` setting.",
 
-  "glm-copilot.config.region.description": "Server region for **Coding Plan** and **Standard API** modes (ignored when `baseUrl` is set).\n\n- **International** (Z.ai account) — Coding Plan `api.z.ai/api/coding/paas/v4`, Standard `api.z.ai/api/paas/v4`\n- **Mainland China** (Zhipu AI account) — Coding Plan `open.bigmodel.cn/api/coding/paas/v4`, Standard `open.bigmodel.cn/api/paas/v4`",
+  "glm-copilot.config.region.description": "Server region for **Coding Plan**, **Standard API**, and GLM Vision. A custom `baseUrl` overrides this setting for chat only; GLM Vision still uses it to select the official endpoint.\n\n- **International** (Z.ai account) — Coding Plan `api.z.ai/api/coding/paas/v4`, Standard `api.z.ai/api/paas/v4`\n- **Mainland China** (Zhipu AI account) — Coding Plan `open.bigmodel.cn/api/coding/paas/v4`, Standard `open.bigmodel.cn/api/paas/v4`",
   "glm-copilot.config.region.international.label": "International (z.ai)",
   "glm-copilot.config.region.china.label": "Mainland China (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "Override the GLM API base URL. When set, this value is used verbatim and both `apiMode` and `region` are ignored. Use this for self-hosted proxies or compatible third-party endpoints.",
+  "glm-copilot.config.baseUrl.description": "Override the chat GLM API base URL. When set, this value is used verbatim for chat and both `apiMode` and `region` are ignored. Use this for self-hosted proxies or compatible third-party endpoints. GLM Vision continues to use the official endpoint selected by `region`. When Vision starts with this override active, it requires the separate key stored with [`GLM: Set Vision API Key`](command:glm-copilot.setVisionApiKey) and does not select this endpoint's credential.",
 
   "glm-copilot.config.maxTokens.description": "Maximum number of output tokens per request. Set to `0` to use the API default (no explicit limit). Useful for controlling costs.",
 

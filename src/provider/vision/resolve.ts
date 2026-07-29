@@ -13,7 +13,6 @@ import {
 } from '../../consts';
 import { t } from '../../i18n';
 import { logger } from '../../logger';
-import type { IAuthManager } from '../../types';
 import { findVisionAnalyzeTool } from '../../vision-tool';
 import { reportThinking } from '../thinking';
 import {
@@ -45,7 +44,7 @@ type InvokeTool = (
 type WriteImageFile = (dir: string, image: VisionImage, hash: string) => Promise<string>;
 
 export interface VisionResolveDeps {
-	authManager: IAuthManager;
+	hasVisionApiKey: () => Promise<boolean>;
 	cache: VisionDescriptionCache;
 	/** Base directory (globalStorage) for temp image files handed to the MCP tool. */
 	storageDir: string;
@@ -122,7 +121,7 @@ export async function resolveVisionMessages(
 			preflightFailure = t('vision.error.toolUnavailable');
 		} else {
 			try {
-				if (!(await deps.authManager.getApiKey())) {
+				if (!(await deps.hasVisionApiKey())) {
 					preflightFailure = t('vision.error.noKey');
 				} else {
 					toolName = tool.name;

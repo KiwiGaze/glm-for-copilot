@@ -99,6 +99,10 @@
 				"title": "%glm-copilot.command.uninstallVisionMcp%"
 			},
 			{
+				"command": "glm-copilot.setVisionApiKey",
+				"title": "%glm-copilot.command.setVisionApiKey%"
+			},
+			{
 				"command": "glm-copilot.openVisionPromptSettings",
 				"title": "%glm-copilot.command.openVisionPromptSettings%"
 			},
@@ -115,6 +119,10 @@
 				},
 				{
 					"command": "glm-copilot.uninstallVisionMcp",
+					"when": "glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.setVisionApiKey",
 					"when": "glmCopilot.visionMcp.installed"
 				},
 				{

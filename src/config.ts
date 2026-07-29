@@ -18,7 +18,7 @@ export function getRegion(): Region {
 	return cfg().get<Region>('region', 'international');
 }
 
-/** User-supplied base URL override (empty = use the apiMode/region-derived endpoint). */
+/** User-supplied chat base URL override (empty = use the apiMode/region-derived endpoint). */
 export function getBaseUrlOverride(): string {
 	return (cfg().get<string>('baseUrl', '') ?? '').trim();
 }

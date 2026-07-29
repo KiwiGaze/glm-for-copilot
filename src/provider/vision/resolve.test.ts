@@ -130,12 +130,7 @@ function recordingInvoke(result: (call: number) => string): InvokeRecorder {
 
 function makeDeps(storageDir: string, invoke: InvokeTool, extra?: Partial<VisionResolveDeps>): VisionResolveDeps {
 	return {
-		authManager: {
-			getApiKey: async () => 'id.secret',
-			hasApiKey: async () => true,
-			promptForApiKey: async () => true,
-			deleteApiKey: async () => {},
-		},
+		hasVisionApiKey: async () => true,
 		cache: new VisionDescriptionCache(),
 		storageDir,
 		findTool: () => FAKE_TOOL,
@@ -393,15 +388,9 @@ describe('resolveVisionMessages', () => {
 
 	it('fails with the unavailable marker when no API key is configured', async () => {
 		const { calls, invoke } = recordingInvoke(() => 'unused');
-		const noKeyAuth = {
-			getApiKey: async () => undefined,
-			hasApiKey: async () => false,
-			promptForApiKey: async () => false,
-			deleteApiKey: async () => {},
-		};
 
 		const result = await resolveVisionMessages(
-			makeDeps(storageDir, invoke, { authManager: noKeyAuth }),
+			makeDeps(storageDir, invoke, { hasVisionApiKey: async () => false }),
 			[userMessage([imagePart([1], 'image/png')])],
 			progress(),
 			token,
@@ -414,17 +403,13 @@ describe('resolveVisionMessages', () => {
 
 	it('degrades to the unavailable marker when the API key lookup rejects', async () => {
 		const { calls, invoke } = recordingInvoke(() => 'unused');
-		const failingAuth = {
-			getApiKey: async (): Promise<string> => {
-				throw new Error('keychain locked');
-			},
-			hasApiKey: async () => false,
-			promptForApiKey: async () => false,
-			deleteApiKey: async () => {},
-		};
 
 		const result = await resolveVisionMessages(
-			makeDeps(storageDir, invoke, { authManager: failingAuth }),
+			makeDeps(storageDir, invoke, {
+				hasVisionApiKey: async () => {
+					throw new Error('keychain locked');
+				},
+			}),
 			[userMessage([imagePart([1], 'image/png')])],
 			progress(),
 			token,

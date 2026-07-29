@@ -8,6 +8,7 @@
   "glm-copilot.command.openUsageDetail": "GLM: 显示用量详情",
   "glm-copilot.command.installVisionMcp": "GLM: 安装 GLM Vision MCP 服务器",
   "glm-copilot.command.uninstallVisionMcp": "GLM: 卸载 GLM Vision MCP 服务器",
+  "glm-copilot.command.setVisionApiKey": "GLM: 设置 Vision API 密钥",
   "glm-copilot.command.openVisionPromptSettings": "GLM: 编辑 GLM Vision 提示词",
   "glm-copilot.command.toggleVision": "GLM: 切换聊天模型视觉能力",
 
@@ -37,11 +38,11 @@
   "glm-copilot.config.apiMode.standard.label": "标准 API",
   "glm-copilot.config.apiMode.standard.description": "通过 GLM 开放平台按量付费访问，实际端点由 `region` 设置决定。",
 
-  "glm-copilot.config.region.description": "**编程计划**与**标准 API** 模式下使用的服务器区域（设置 `baseUrl` 时忽略）。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
+  "glm-copilot.config.region.description": "**编程计划**、**标准 API** 和 GLM Vision 使用的服务器区域。自定义 `baseUrl` 仅会覆盖聊天的此设置；GLM Vision 仍使用它选择官方端点。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "覆盖 GLM API 的基础 URL。设置后将直接使用此值，`apiMode` 和 `region` 均被忽略。适用于自托管代理或兼容的第三方端点。",
+  "glm-copilot.config.baseUrl.description": "覆盖聊天所用的 GLM API 基础 URL。设置后，聊天会直接使用此值并忽略 `apiMode` 和 `region`。适用于自托管代理或兼容的第三方端点。GLM Vision 仍使用由 `region` 选择的官方端点。若 Vision 启动时此覆盖处于启用状态，它会要求使用通过 [`GLM: 设置 Vision API 密钥`](command:glm-copilot.setVisionApiKey) 单独存储的密钥，而不会选择此端点的凭据。",
 
   "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
 

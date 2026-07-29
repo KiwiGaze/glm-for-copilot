@@ -14,6 +14,9 @@ export const VENDOR_ID = 'glm';
 /** SecretStorage key for the GLM API key. */
 export const API_KEY_SECRET = 'glm-copilot.apiKey';
 
+/** SecretStorage key for an explicit GLM Vision API key. */
+export const VISION_API_KEY_SECRET = 'glm-copilot.visionApiKey';
+
 /** Memento key tracking whether the welcome walkthrough has been shown. */
 export const WELCOME_SHOWN_KEY = 'glm-copilot.welcomeShown';
 

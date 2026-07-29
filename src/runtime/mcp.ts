@@ -1,10 +1,11 @@
 import { spawn } from 'node:child_process';
 import * as vscode from 'vscode';
-import { getRegion, getVisionEnabled } from '../config';
+import { getBaseUrlOverride, getRegion, getVisionEnabled } from '../config';
 import {
 	API_KEY_SECRET,
 	CONFIG_SECTION,
 	EXTERNAL_URLS,
+	VISION_API_KEY_SECRET,
 	VISION_DESCRIPTION_MAX_TOKENS,
 	VISION_HEALTH_POLL_MS,
 	VISION_MCP_CTX_HEALTHY,
@@ -24,7 +25,12 @@ import {
 import { t } from '../i18n';
 import { logger } from '../logger';
 import { getVisionTempDir } from '../provider/vision/resolve';
-import type { IAuthManager, IVisionMcpState, Region } from '../types';
+import type {
+	IAuthManager,
+	IVisionApiKeyManager,
+	IVisionMcpState,
+	Region,
+} from '../types';
 import { findVisionAnalyzeTool } from '../vision-tool';
 import {
 	type IVisionMcpPackageInstaller,
@@ -146,6 +152,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	private registration: vscode.Disposable | undefined;
 	private healthy = false;
 	private installInProgress = false;
+	private uninstallRequested = false;
 	private pollTimer: ReturnType<typeof setInterval> | undefined;
 	private restartPromptOpen = false;
 	private resolveKeyWarningShown = false;
@@ -158,7 +165,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 
 	constructor(
 		private readonly context: vscode.ExtensionContext,
-		private readonly authManager: IAuthManager,
+		private readonly authManager: IAuthManager & IVisionApiKeyManager,
 		private readonly probeRuntime: () => Promise<NodeRuntimeProbe> = () =>
 			probeNodeRuntime(process.platform),
 		private readonly packageInstaller: IVisionMcpPackageInstaller = new VisionMcpPackageInstaller(
@@ -172,6 +179,8 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			vscode.workspace.onDidChangeConfiguration((e) => {
 				if (e.affectsConfiguration(`${CONFIG_SECTION}.region`)) {
 					this.onServerConfigChanged('region');
+				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.baseUrl`)) {
+					this.onServerConfigChanged('endpoint');
 				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.apiKey`)) {
 					this.onServerConfigChanged('apiKey');
 				} else if (e.affectsConfiguration(`${CONFIG_SECTION}.visionEnabled`)) {
@@ -179,7 +188,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 				}
 			}),
 			context.secrets.onDidChange((e) => {
-				if (e.key === API_KEY_SECRET) {
+				if (e.key === API_KEY_SECRET || e.key === VISION_API_KEY_SECRET) {
 					this.onServerConfigChanged('apiKey');
 				}
 			}),
@@ -187,11 +196,19 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	}
 
 	get isInstalled(): boolean {
-		return this.isInstallRecorded && this.packageInstaller.isInstalled();
+		return (
+			!this.uninstallRequested &&
+			this.isInstallRecorded &&
+			this.packageInstaller.isInstalled()
+		);
 	}
 
 	isImageInputEnabled(): boolean {
 		return this.isInstalled && getVisionEnabled();
+	}
+
+	async hasVisionApiKey(): Promise<boolean> {
+		return (await this.getEffectiveVisionApiKey()) !== undefined;
 	}
 
 	private get isInstallRecorded(): boolean {
@@ -271,6 +288,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			try {
 				await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, true);
 				await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, true);
+				this.uninstallRequested = false;
 			} catch (error) {
 				this.registration?.dispose();
 				this.registration = undefined;
@@ -302,15 +320,88 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		}
 	}
 
-	/** Explicit uninstall: drop the registration, state, vision toggle, context keys, and temp images. */
+	/** Explicit uninstall: disable Vision, then remove its credential, temp images, and package. */
 	async uninstall(): Promise<void> {
 		if (!this.isInstallRecorded && !this.packageInstaller.isInstalled()) {
 			return;
 		}
+		const cleanupFailures: unknown[] = [];
+		const recordCleanupFailure = (message: string, error: unknown): void => {
+			logger.error(message, error);
+			cleanupFailures.push(error);
+		};
+		const runCleanup = async (
+			message: string,
+			cleanup: () => PromiseLike<unknown> | unknown,
+		): Promise<void> => {
+			try {
+				await cleanup();
+			} catch (error) {
+				recordCleanupFailure(message, error);
+			}
+		};
+
+		this.uninstallRequested = true;
 		try {
-			await this.packageInstaller.uninstall();
+			this.registration?.dispose();
 		} catch (error) {
-			logger.error('Failed to remove the local GLM Vision MCP package', error);
+			recordCleanupFailure('Failed to unregister the GLM Vision MCP server', error);
+		}
+		this.registration = undefined;
+		this.stopHealthPolling();
+		this.updateImageInputState();
+		this.didChangeState.fire();
+		this.readyPromptShown = false;
+		this.resolveKeyWarningShown = false;
+		this.unhealthyNoticeShown = false;
+		this.refreshHealth();
+
+		await runCleanup('Failed to clear GLM Vision installation state', () =>
+			this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined),
+		);
+		await runCleanup('Failed to clear the GLM Vision installed context', () =>
+			vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false),
+		);
+		await runCleanup('Failed to clear the GLM Vision enabled context', () =>
+			vscode.commands.executeCommand('setContext', VISION_MCP_CTX_VISION_ENABLED, false),
+		);
+
+		try {
+			const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
+			const visionSetting = configuration.inspect<boolean>('visionEnabled');
+			if (visionSetting?.workspaceValue !== undefined) {
+				await runCleanup('Failed to clear the workspace GLM Vision setting', () =>
+					configuration.update(
+						'visionEnabled',
+						undefined,
+						vscode.ConfigurationTarget.Workspace,
+					),
+				);
+			}
+			if (visionSetting?.globalValue !== undefined) {
+				await runCleanup('Failed to clear the global GLM Vision setting', () =>
+					configuration.update(
+						'visionEnabled',
+						undefined,
+						vscode.ConfigurationTarget.Global,
+					),
+				);
+			}
+		} catch (error) {
+			recordCleanupFailure('Failed to inspect the GLM Vision setting', error);
+		}
+
+		await runCleanup('Failed to remove the GLM Vision API key', () =>
+			this.authManager.deleteVisionApiKey(),
+		);
+		await runCleanup('Failed to delete GLM Vision temp images', () =>
+			this.deleteTempImages(),
+		);
+		await runCleanup('Failed to remove the local GLM Vision MCP package', () =>
+			this.packageInstaller.uninstall(),
+		);
+
+		if (cleanupFailures.length > 0) {
 			const choice = await vscode.window.showWarningMessage(
 				t('visionMcp.uninstall.cleanupFailed'),
 				t('visionMcp.showLogs'),
@@ -320,37 +411,15 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			}
 			return;
 		}
-		this.registration?.dispose();
-		this.registration = undefined;
-		await this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined);
-		await vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false);
-		this.updateImageInputState();
-		this.didChangeState.fire();
-		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
-		const visionSetting = configuration.inspect<boolean>('visionEnabled');
-		if (visionSetting?.workspaceValue !== undefined) {
-			await configuration.update(
-				'visionEnabled',
-				undefined,
-				vscode.ConfigurationTarget.Workspace,
-			);
-		}
-		if (visionSetting?.globalValue !== undefined) {
-			await configuration.update(
-				'visionEnabled',
-				undefined,
-				vscode.ConfigurationTarget.Global,
-			);
-		}
-		this.stopHealthPolling();
-		await this.deleteTempImages();
-		// Re-arm the install-flow latches for a future reinstall. An explicit
-		// uninstall is not an outage: the "stopped" notice only fires while installed.
-		this.readyPromptShown = false;
-		this.resolveKeyWarningShown = false;
-		this.unhealthyNoticeShown = false;
-		this.refreshHealth();
 		void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
+	}
+
+	/** Store or replace the credential used only by the official Vision server. */
+	async configureVisionApiKey(): Promise<void> {
+		await this.authManager.promptForVisionApiKey({
+			title: t('visionMcp.auth.title'),
+			prompt: t('visionMcp.auth.separatePrompt'),
+		});
 	}
 
 	/** Flip `visionEnabled`; enabling requires a healthy server, but disabling does not. */
@@ -423,16 +492,27 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 	private async resolveServer(
 		server: vscode.McpStdioServerDefinition,
 	): Promise<vscode.McpStdioServerDefinition | undefined> {
-		const apiKey = (await this.authManager.getApiKey()) ?? (await this.promptForVisionApiKey());
+		const apiKey =
+			(await this.getEffectiveVisionApiKey()) ?? (await this.promptForVisionApiKey());
 		if (!apiKey) {
 			if (!this.resolveKeyWarningShown) {
 				this.resolveKeyWarningShown = true;
+				const requiresSeparateKey = getBaseUrlOverride() !== '';
+				const enterKeyAction = requiresSeparateKey
+					? t('visionMcp.auth.enterVisionKey')
+					: t('error.action.setApiKey');
 				const choice = await vscode.window.showWarningMessage(
-					t('visionMcp.resolveKeyRequired'),
-					t('error.action.setApiKey'),
+					t(
+						requiresSeparateKey
+							? 'visionMcp.resolveSeparateKeyRequired'
+							: 'visionMcp.resolveKeyRequired',
+					),
+					enterKeyAction,
 					t('visionMcp.notNow'),
 				);
-				if (choice === t('error.action.setApiKey')) {
+				if (choice === t('visionMcp.auth.enterVisionKey')) {
+					await this.configureVisionApiKey();
+				} else if (choice === t('error.action.setApiKey')) {
 					await vscode.commands.executeCommand('glm-copilot.setApiKey');
 				}
 			}
@@ -443,25 +523,49 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		return server;
 	}
 
+	private async getEffectiveVisionApiKey(): Promise<string | undefined> {
+		const visionApiKey = await this.authManager.getVisionApiKey();
+		if (visionApiKey) {
+			return visionApiKey;
+		}
+		if (getBaseUrlOverride()) {
+			return undefined;
+		}
+		const sharedApiKey = await this.authManager.getApiKey();
+		return getBaseUrlOverride() ? undefined : sharedApiKey;
+	}
+
 	private async promptForVisionApiKey(): Promise<string | undefined> {
-		await this.authManager.promptForApiKey({
-			title: t('visionMcp.auth.title'),
-			prompt: t('visionMcp.auth.prompt'),
-		});
-		return this.authManager.getApiKey();
+		if (getBaseUrlOverride()) {
+			await this.configureVisionApiKey();
+		} else {
+			await this.authManager.promptForApiKey({
+				title: t('visionMcp.auth.title'),
+				prompt: t('visionMcp.auth.prompt'),
+			});
+		}
+		return this.getEffectiveVisionApiKey();
 	}
 
 	private async ensureApiKey(): Promise<boolean> {
-		let apiKey = await this.authManager.getApiKey();
+		let apiKey = await this.getEffectiveVisionApiKey();
 		while (!apiKey) {
 			apiKey = await this.promptForVisionApiKey();
 			if (!apiKey) {
+				const requiresSeparateKey = getBaseUrlOverride() !== '';
+				const enterKeyAction = requiresSeparateKey
+					? t('visionMcp.auth.enterVisionKey')
+					: t('visionMcp.auth.enterKey');
 				const choice = await vscode.window.showWarningMessage(
-					t('visionMcp.auth.required'),
-					t('visionMcp.auth.enterKey'),
+					t(
+						requiresSeparateKey
+							? 'visionMcp.auth.separateRequired'
+							: 'visionMcp.auth.required',
+					),
+					enterKeyAction,
 					t('visionMcp.notNow'),
 				);
-				if (choice !== t('visionMcp.auth.enterKey')) {
+				if (choice !== enterKeyAction) {
 					return false;
 				}
 			}
@@ -586,7 +690,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		}
 	}
 
-	private onServerConfigChanged(kind: 'region' | 'apiKey'): void {
+	private onServerConfigChanged(kind: 'region' | 'endpoint' | 'apiKey'): void {
 		if (!this.isInstalled) {
 			return;
 		}
@@ -595,7 +699,13 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			return;
 		}
 		this.restartPromptOpen = true;
-		const message = t(kind === 'region' ? 'visionMcp.restart.region' : 'visionMcp.restart.apiKey');
+		const messageKey =
+			kind === 'region'
+				? 'visionMcp.restart.region'
+				: kind === 'endpoint'
+					? 'visionMcp.restart.endpoint'
+					: 'visionMcp.restart.apiKey';
+		const message = t(messageKey);
 		void vscode.window
 			.showInformationMessage(message, t('visionMcp.openServers'))
 			.then((choice) => {
@@ -608,10 +718,6 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 
 	private async deleteTempImages(): Promise<void> {
 		const dir = vscode.Uri.file(getVisionTempDir(this.context.globalStorageUri.fsPath));
-		try {
-			await vscode.workspace.fs.delete(dir, { recursive: true, useTrash: false });
-		} catch (error) {
-			logger.warn('Failed to delete GLM Vision temp images', error);
-		}
+		await vscode.workspace.fs.delete(dir, { recursive: true, useTrash: false });
 	}
 }

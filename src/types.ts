@@ -222,6 +222,13 @@ export interface IAuthManager {
 	deleteApiKey(): Promise<void>;
 }
 
+/** Dedicated GLM Vision API-key manager. Implemented by `auth.ts`. */
+export interface IVisionApiKeyManager {
+	getVisionApiKey(): Promise<string | undefined>;
+	promptForVisionApiKey(options?: ApiKeyPromptOptions): Promise<boolean>;
+	deleteVisionApiKey(): Promise<void>;
+}
+
 /**
  * Read-only view of the GLM Vision MCP install/health state. The chat provider
  * uses it to decide model capabilities. Implemented by `runtime/mcp.ts`
@@ -230,6 +237,8 @@ export interface IAuthManager {
 export interface IVisionMcpState {
 	/** True when the verified MCP package is installed and the user enabled image input. */
 	isImageInputEnabled(): boolean;
+	/** True when Vision has an API key that is safe for its official regional endpoint. */
+	hasVisionApiKey(): Promise<boolean>;
 	/** Fired when install or health state changes (the model picker should refresh). */
 	onDidChangeState: vscode.Event<void>;
 }

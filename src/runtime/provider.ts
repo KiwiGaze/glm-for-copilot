@@ -19,6 +19,9 @@ export async function registerProvider(context: vscode.ExtensionContext): Promis
 		vscode.commands.registerCommand('glm-copilot.clearApiKey', () => provider.clearApiKey()),
 		vscode.commands.registerCommand('glm-copilot.installVisionMcp', () => visionMcp.install()),
 		vscode.commands.registerCommand('glm-copilot.uninstallVisionMcp', () => visionMcp.uninstall()),
+		vscode.commands.registerCommand('glm-copilot.setVisionApiKey', () =>
+			visionMcp.configureVisionApiKey(),
+		),
 		vscode.commands.registerCommand('glm-copilot.openVisionPromptSettings', () =>
 			vscode.commands.executeCommand(
 				'workbench.action.openSettings',
