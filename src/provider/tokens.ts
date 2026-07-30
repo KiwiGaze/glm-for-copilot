@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { VISION_DESCRIPTION_MAX_TOKENS } from '../consts';
 import { computeDescriptionCacheKey, hashImageContent, type VisionDescriptionCache } from './vision/cache';
-import { describedImageText } from './vision/consts';
+import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './vision/consts';
 import { collectImagePartRun, isImageDataPart } from './vision/parts';
+import { findInvalidImageReason } from './vision/resolve';
 import { isThinkingPart } from './thinking';
 
 const DATA_PART_MAX_CHARS = 10000;
@@ -104,6 +105,9 @@ function estimateImageContainerChars(
 	charsPerToken: number,
 	imageChars?: ImageContainerChars,
 ): number {
+	if (findInvalidImageReason(images) !== undefined) {
+		return IMAGE_DESCRIPTION_UNAVAILABLE.length;
+	}
 	const cachedChars = imageChars?.(images);
 	if (cachedChars !== undefined) {
 		return cachedChars;

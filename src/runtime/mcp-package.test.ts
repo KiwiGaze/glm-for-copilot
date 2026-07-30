@@ -173,6 +173,36 @@ describe('VisionMcpPackageInstaller', () => {
 		expect(await readdir(storageDir)).toEqual(['vision-mcp']);
 	});
 
+	it('removes the backup when promotion and restore both fail', async () => {
+		const root = makeTempDir();
+		const extensionDir = join(root, 'extension');
+		const assetDir = join(extensionDir, 'resources', 'vision-mcp');
+		const storageDir = join(root, 'storage');
+		const installDir = join(storageDir, 'vision-mcp');
+		await mkdir(assetDir, { recursive: true });
+		await writeFile(join(assetDir, 'package.json'), '{"private":true}');
+		await writeFile(join(assetDir, 'package-lock.json'), '{"lockfileVersion":3}');
+		await seedInstalledPackage(installDir);
+		const renamePath = vi.fn(async (source: string, destination: string) => {
+			if (source.includes('.installing-')) {
+				throw new Error('promotion failed');
+			}
+			if (source.includes('.backup-')) {
+				throw new Error('restore failed');
+			}
+			await rename(source, destination);
+		});
+		const installer = new VisionMcpPackageInstaller(
+			fakeContext(extensionDir, storageDir),
+			async (stagingDir) => seedInstalledPackage(stagingDir),
+			renamePath,
+		);
+
+		await expect(installer.install()).rejects.toThrow(AggregateError);
+
+		expect(await readdir(storageDir)).toEqual([]);
+	});
+
 	it('keeps the promoted installation active when backup cleanup fails', async () => {
 		const root = makeTempDir();
 		const extensionDir = join(root, 'extension');

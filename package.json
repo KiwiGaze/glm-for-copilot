@@ -15,6 +15,7 @@
 	},
 	"homepage": "https://github.com/KiwiGaze/glm-for-copilot#readme",
 	"qna": "https://github.com/KiwiGaze/glm-for-copilot/issues",
+	"packageManager": "pnpm@11.17.0",
 	"engines": {
 		"vscode": "^1.116.0",
 		"node": ">=20"

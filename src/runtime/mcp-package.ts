@@ -140,6 +140,10 @@ export class VisionMcpPackageInstaller implements IVisionMcpPackageInstaller {
 					try {
 						await this.renamePath(backupDir, this.installDir);
 					} catch (restoreError) {
+						await this.removePath(backupDir, { recursive: true, force: true }).catch(
+							(cleanupError) =>
+								logger.warn('Failed to remove the stranded GLM Vision package backup', cleanupError),
+						);
 						throw new AggregateError(
 							[promotionError, restoreError],
 							'Failed to promote the new GLM Vision package and restore the previous installation.',

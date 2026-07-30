@@ -53,6 +53,13 @@ describe('AuthManager Vision credentials', () => {
 		expect(await authManager.getVisionApiKey()).toBeUndefined();
 	});
 
+	it('does not fall back to the settings credential for the Vision key', async () => {
+		const authManager = new AuthManager(fakeContext(new Map()));
+
+		expect(await authManager.getApiKey()).toBe('settings.secret');
+		expect(await authManager.getVisionApiKey()).toBeUndefined();
+	});
+
 	it('stores and removes the Vision key without changing the chat credential', async () => {
 		const storedSecrets = new Map([[API_KEY_SECRET, 'proxy.secret']]);
 		const authManager = new AuthManager(fakeContext(storedSecrets));

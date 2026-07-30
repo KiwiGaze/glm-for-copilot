@@ -151,7 +151,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 
 	private registration: vscode.Disposable | undefined;
 	private healthy = false;
-	private installInProgress = false;
+	private operationInProgress = false;
 	private uninstallRequested = false;
 	private pollTimer: ReturnType<typeof setInterval> | undefined;
 	private restartPromptOpen = false;
@@ -247,10 +247,10 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 			void vscode.window.showInformationMessage(t('visionMcp.install.alreadyInstalled'));
 			return;
 		}
-		if (this.installInProgress) {
+		if (this.operationInProgress) {
 			return;
 		}
-		this.installInProgress = true;
+		this.operationInProgress = true;
 		try {
 			if (!(await this.confirmInstallRisk())) {
 				return;
@@ -316,7 +316,7 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 				void vscode.commands.executeCommand('glm-copilot.openVisionPromptSettings');
 			}
 		} finally {
-			this.installInProgress = false;
+			this.operationInProgress = false;
 		}
 	}
 
@@ -325,93 +325,101 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 		if (!this.isInstallRecorded && !this.packageInstaller.isInstalled()) {
 			return;
 		}
-		const cleanupFailures: unknown[] = [];
-		const recordCleanupFailure = (message: string, error: unknown): void => {
-			logger.error(message, error);
-			cleanupFailures.push(error);
-		};
-		const runCleanup = async (
-			message: string,
-			cleanup: () => PromiseLike<unknown> | unknown,
-		): Promise<void> => {
-			try {
-				await cleanup();
-			} catch (error) {
-				recordCleanupFailure(message, error);
-			}
-		};
-
-		this.uninstallRequested = true;
-		try {
-			this.registration?.dispose();
-		} catch (error) {
-			recordCleanupFailure('Failed to unregister the GLM Vision MCP server', error);
-		}
-		this.registration = undefined;
-		this.stopHealthPolling();
-		this.updateImageInputState();
-		this.didChangeState.fire();
-		this.readyPromptShown = false;
-		this.resolveKeyWarningShown = false;
-		this.unhealthyNoticeShown = false;
-		this.refreshHealth();
-
-		await runCleanup('Failed to clear GLM Vision installation state', () =>
-			this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined),
-		);
-		await runCleanup('Failed to clear the GLM Vision installed context', () =>
-			vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false),
-		);
-		await runCleanup('Failed to clear the GLM Vision enabled context', () =>
-			vscode.commands.executeCommand('setContext', VISION_MCP_CTX_VISION_ENABLED, false),
-		);
-
-		try {
-			const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
-			const visionSetting = configuration.inspect<boolean>('visionEnabled');
-			if (visionSetting?.workspaceValue !== undefined) {
-				await runCleanup('Failed to clear the workspace GLM Vision setting', () =>
-					configuration.update(
-						'visionEnabled',
-						undefined,
-						vscode.ConfigurationTarget.Workspace,
-					),
-				);
-			}
-			if (visionSetting?.globalValue !== undefined) {
-				await runCleanup('Failed to clear the global GLM Vision setting', () =>
-					configuration.update(
-						'visionEnabled',
-						undefined,
-						vscode.ConfigurationTarget.Global,
-					),
-				);
-			}
-		} catch (error) {
-			recordCleanupFailure('Failed to inspect the GLM Vision setting', error);
-		}
-
-		await runCleanup('Failed to remove the GLM Vision API key', () =>
-			this.authManager.deleteVisionApiKey(),
-		);
-		await runCleanup('Failed to delete GLM Vision temp images', () =>
-			this.deleteTempImages(),
-		);
-		await runCleanup('Failed to remove the local GLM Vision MCP package', () =>
-			this.packageInstaller.uninstall(),
-		);
-
-		if (cleanupFailures.length > 0) {
-			const choice = await vscode.window.showWarningMessage(
-				t('visionMcp.uninstall.cleanupFailed'),
-				t('visionMcp.showLogs'),
-			);
-			if (choice === t('visionMcp.showLogs')) {
-				logger.show();
-			}
+		if (this.operationInProgress) {
 			return;
 		}
-		void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
+		this.operationInProgress = true;
+		try {
+			const cleanupFailures: unknown[] = [];
+			const recordCleanupFailure = (message: string, error: unknown): void => {
+				logger.error(message, error);
+				cleanupFailures.push(error);
+			};
+			const runCleanup = async (
+				message: string,
+				cleanup: () => PromiseLike<unknown> | unknown,
+			): Promise<void> => {
+				try {
+					await cleanup();
+				} catch (error) {
+					recordCleanupFailure(message, error);
+				}
+			};
+
+			this.uninstallRequested = true;
+			try {
+				this.registration?.dispose();
+			} catch (error) {
+				recordCleanupFailure('Failed to unregister the GLM Vision MCP server', error);
+			}
+			this.registration = undefined;
+			this.stopHealthPolling();
+			this.updateImageInputState();
+			this.didChangeState.fire();
+			this.readyPromptShown = false;
+			this.resolveKeyWarningShown = false;
+			this.unhealthyNoticeShown = false;
+			this.refreshHealth();
+
+			await runCleanup('Failed to clear GLM Vision installation state', () =>
+				this.context.globalState.update(VISION_MCP_INSTALLED_KEY, undefined),
+			);
+			await runCleanup('Failed to clear the GLM Vision installed context', () =>
+				vscode.commands.executeCommand('setContext', VISION_MCP_CTX_INSTALLED, false),
+			);
+			await runCleanup('Failed to clear the GLM Vision enabled context', () =>
+				vscode.commands.executeCommand('setContext', VISION_MCP_CTX_VISION_ENABLED, false),
+			);
+
+			try {
+				const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
+				const visionSetting = configuration.inspect<boolean>('visionEnabled');
+				if (visionSetting?.workspaceValue !== undefined) {
+					await runCleanup('Failed to clear the workspace GLM Vision setting', () =>
+						configuration.update(
+							'visionEnabled',
+							undefined,
+							vscode.ConfigurationTarget.Workspace,
+						),
+					);
+				}
+				if (visionSetting?.globalValue !== undefined) {
+					await runCleanup('Failed to clear the global GLM Vision setting', () =>
+						configuration.update(
+							'visionEnabled',
+							undefined,
+							vscode.ConfigurationTarget.Global,
+						),
+					);
+				}
+			} catch (error) {
+				recordCleanupFailure('Failed to inspect the GLM Vision setting', error);
+			}
+
+			await runCleanup('Failed to remove the GLM Vision API key', () =>
+				this.authManager.deleteVisionApiKey(),
+			);
+			await runCleanup('Failed to delete GLM Vision temp images', () =>
+				this.deleteTempImages(),
+			);
+			await runCleanup('Failed to remove the local GLM Vision MCP package', () =>
+				this.packageInstaller.uninstall(),
+			);
+
+			if (cleanupFailures.length > 0) {
+				const choice = await vscode.window.showWarningMessage(
+					t('visionMcp.uninstall.cleanupFailed'),
+					t('visionMcp.showLogs'),
+				);
+				if (choice === t('visionMcp.showLogs')) {
+					logger.show();
+				}
+				return;
+			}
+			void vscode.window.showInformationMessage(t('visionMcp.uninstall.done'));
+		} finally {
+			this.operationInProgress = false;
+		}
 	}
 
 	/** Store or replace the credential used only by the official Vision server. */
@@ -718,6 +726,13 @@ export class VisionMcpManager implements IVisionMcpState, vscode.Disposable {
 
 	private async deleteTempImages(): Promise<void> {
 		const dir = vscode.Uri.file(getVisionTempDir(this.context.globalStorageUri.fsPath));
-		await vscode.workspace.fs.delete(dir, { recursive: true, useTrash: false });
+		try {
+			await vscode.workspace.fs.delete(dir, { recursive: true, useTrash: false });
+		} catch (error) {
+			// The temp directory only exists once an image analysis ran.
+			if (!(error instanceof vscode.FileSystemError) || error.code !== 'FileNotFound') {
+				throw error;
+			}
+		}
 	}
 }

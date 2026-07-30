@@ -43,9 +43,18 @@ vi.mock('vscode', () => {
 			public version?: string,
 		) {}
 	}
+	class FileSystemError extends Error {
+		constructor(readonly code: string) {
+			super(code);
+		}
+		static FileNotFound(): FileSystemError {
+			return new FileSystemError('FileNotFound');
+		}
+	}
 	return {
 		EventEmitter,
 		McpStdioServerDefinition,
+		FileSystemError,
 		ConfigurationTarget: { Global: 1, Workspace: 2, WorkspaceFolder: 3 },
 		ProgressLocation: { Notification: 15 },
 		commands: { executeCommand: (...args: unknown[]) => mocks.executeCommand(...args) },
@@ -512,6 +521,30 @@ describe('VisionMcpManager', () => {
 		manager.dispose();
 	});
 
+	it('ignores uninstall while an install is in flight', async () => {
+		const { manager, packageInstaller } = makeManager(false);
+		let finishInstall!: () => void;
+		packageInstaller.install.mockImplementationOnce(() => {
+			packageInstaller.isInstalled = () => true;
+			return new Promise<void>((resolve) => {
+				finishInstall = resolve;
+			});
+		});
+		manager.initialize();
+
+		const installPromise = manager.install();
+		await vi.waitFor(() => expect(packageInstaller.install).toHaveBeenCalledOnce());
+
+		await manager.uninstall();
+
+		expect(packageInstaller.uninstall).not.toHaveBeenCalled();
+
+		finishInstall();
+		await installPromise;
+		expect(manager.isInstalled).toBe(true);
+		manager.dispose();
+	});
+
 	it('uninstall disposes the registration and clears the installed flag', async () => {
 		const { context, manager, packageInstaller } = makeManager(true);
 		manager.initialize();
@@ -662,9 +695,9 @@ describe('VisionMcpManager', () => {
 			'visionMcp.uninstall.cleanupFailed',
 			'visionMcp.showLogs',
 		);
-		expect(mocks.showInformationMessage).not.toHaveBeenCalledWith(
-			'visionMcp.uninstall.done',
-		);
+		expect(
+			mocks.showInformationMessage.mock.calls.map((call) => call[0]),
+		).not.toContain('visionMcp.uninstall.done');
 		manager.dispose();
 	});
 
@@ -682,9 +715,25 @@ describe('VisionMcpManager', () => {
 			'visionMcp.uninstall.cleanupFailed',
 			'visionMcp.showLogs',
 		);
-		expect(mocks.showInformationMessage).not.toHaveBeenCalledWith(
-			'visionMcp.uninstall.done',
+		expect(
+			mocks.showInformationMessage.mock.calls.map((call) => call[0]),
+		).not.toContain('visionMcp.uninstall.done');
+		manager.dispose();
+	});
+
+	it('treats a missing temp-image directory as already-clean during uninstall', async () => {
+		const { manager, packageInstaller } = makeManager(true);
+		mocks.deleteWorkspaceFiles.mockRejectedValueOnce(vscode.FileSystemError.FileNotFound());
+		manager.initialize();
+
+		await manager.uninstall();
+
+		expect(packageInstaller.uninstall).toHaveBeenCalledOnce();
+		expect(mocks.showWarningMessage).not.toHaveBeenCalledWith(
+			'visionMcp.uninstall.cleanupFailed',
+			'visionMcp.showLogs',
 		);
+		expect(mocks.showInformationMessage).toHaveBeenCalledWith('visionMcp.uninstall.done');
 		manager.dispose();
 	});
 

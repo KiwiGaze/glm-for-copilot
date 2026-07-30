@@ -407,7 +407,8 @@ async function defaultInvokeTool(
 	return vscode.lm.invokeTool(name, { input, toolInvocationToken: undefined }, token);
 }
 
-function findInvalidImageReason(images: readonly VisionImage[]): string | undefined {
+/** Reason a container is rejected without calling the vision tool, if any. */
+export function findInvalidImageReason(images: readonly VisionImage[]): string | undefined {
 	if (images.length > VISION_MAX_IMAGES_PER_CONTAINER) {
 		return t('vision.error.tooMany', String(VISION_MAX_IMAGES_PER_CONTAINER));
 	}

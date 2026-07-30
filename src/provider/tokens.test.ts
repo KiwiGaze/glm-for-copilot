@@ -23,14 +23,20 @@ vi.mock('vscode', () => {
 			public input: object,
 		) {}
 	}
-	return { LanguageModelTextPart, LanguageModelDataPart, LanguageModelToolResultPart, LanguageModelToolCallPart };
+	return {
+		LanguageModelTextPart,
+		LanguageModelDataPart,
+		LanguageModelToolResultPart,
+		LanguageModelToolCallPart,
+		env: { language: 'en' },
+	};
 });
 
 import * as vscode from 'vscode';
-import { VISION_DESCRIPTION_MAX_TOKENS } from '../consts';
+import { VISION_DESCRIPTION_MAX_TOKENS, VISION_MAX_IMAGES_PER_CONTAINER } from '../consts';
 import { cachedImageDescriptionChars, estimateTokenCount } from './tokens';
 import { computeDescriptionCacheKey, hashImageContent, VisionDescriptionCache } from './vision/cache';
-import { describedImageText } from './vision/consts';
+import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './vision/consts';
 
 const PROMPT = 'PROMPT';
 
@@ -73,6 +79,22 @@ describe('estimateTokenCount', () => {
 			cachedImageDescriptionChars(cache, PROMPT),
 		);
 		expect(count).toBeGreaterThan(VISION_DESCRIPTION_MAX_TOKENS);
+	});
+
+	it('counts a rejected container at the unavailable-marker size', () => {
+		const images = Array.from(
+			{ length: VISION_MAX_IMAGES_PER_CONTAINER + 1 },
+			(_, index) => new vscode.LanguageModelDataPart(new Uint8Array([index]), 'image/png'),
+		);
+		const message = {
+			role: 1,
+			content: images,
+			name: undefined,
+		} as unknown as vscode.LanguageModelChatRequestMessage;
+
+		expect(estimateTokenCount(message, 4)).toBe(
+			Math.ceil(IMAGE_DESCRIPTION_UNAVAILABLE.length / 4),
+		);
 	});
 
 	it('counts a cached multi-image container using its ordered image hashes', () => {
