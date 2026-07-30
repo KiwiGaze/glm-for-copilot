@@ -2,15 +2,7 @@ import * as vscode from 'vscode';
 import { LANGUAGE_MODEL_CHAT_SYSTEM_ROLE } from '../consts';
 import { safeStringify } from '../json';
 import type { GLMMessage, GLMTool, GLMToolCall } from '../types';
-
-/**
- * A `LanguageModelThinkingPart`-shaped value. The thinking part is a proposed
- * VS Code API, so it is feature-detected and read through this narrow shape
- * instead of importing the type directly.
- */
-interface ThinkingPartLike {
-	value: string | string[];
-}
+import { isThinkingPart } from './thinking';
 
 interface PendingToolResult {
 	callId: string;
@@ -126,11 +118,6 @@ export function countMessageChars(messages: GLMMessage[]): number {
 		}
 	}
 	return total;
-}
-
-function isThinkingPart(part: unknown): part is ThinkingPartLike {
-	const ctor = (vscode as { LanguageModelThinkingPart?: unknown }).LanguageModelThinkingPart;
-	return typeof ctor === 'function' && part instanceof (ctor as new (...args: never[]) => object);
 }
 
 function normalizeThinkingText(value: string | string[]): string {

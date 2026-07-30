@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, MODELS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
+import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, DEFAULT_VISION_PROMPT, MODELS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
 import { t } from './i18n';
 import type { ApiMode, CustomModelConfig, GLMModel, Region, ThinkingMode } from './types';
 
@@ -18,7 +18,7 @@ export function getRegion(): Region {
 	return cfg().get<Region>('region', 'international');
 }
 
-/** User-supplied base URL override (empty = use the apiMode/region-derived endpoint). */
+/** User-supplied chat base URL override (empty = use the apiMode/region-derived endpoint). */
 export function getBaseUrlOverride(): string {
 	return (cfg().get<string>('baseUrl', '') ?? '').trim();
 }
@@ -50,6 +50,17 @@ export function getDebugLogging(): boolean {
 	return cfg().get<boolean>('debugLogging', false);
 }
 
+/** Whether the user turned on image input for chat models. */
+export function getVisionEnabled(): boolean {
+	return cfg().get<boolean>('visionEnabled', false);
+}
+
+/** Analysis prompt passed to the vision MCP tool (empty setting ⇒ the built-in default). */
+export function getVisionPrompt(): string {
+	const value = (cfg().get<string>('visionPrompt', '') ?? '').trim();
+	return value || DEFAULT_VISION_PROMPT;
+}
+
 /** Settings-based fallback API key (less secure; for CI/automation). */
 export function getSettingsApiKey(): string {
 	return (cfg().get<string>('apiKey', '') ?? '').trim();
@@ -75,7 +86,6 @@ export function getCustomModels(): GLMModel[] {
 			maxOutputTokens: config.maxOutputTokens ?? 128000,
 			capabilities: {
 				toolCalling: config.toolCalling === false ? false : DEFAULT_TOOLS_LIMIT,
-				imageInput: config.vision === true,
 				thinking: config.thinking !== false,
 			},
 			availableIn: ['coding-plan', 'standard'],

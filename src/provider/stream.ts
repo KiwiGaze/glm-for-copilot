@@ -4,6 +4,7 @@ import { t } from '../i18n';
 import { logger } from '../logger';
 import type { GLMToolCall, GLMUsage, RetryBackoffInfo, StreamCallbacks } from '../types';
 import type { PreparedChatRequest } from './request';
+import { reportThinking } from './thinking';
 
 const USAGE_DATA_PART_MIME = 'usage';
 
@@ -62,17 +63,6 @@ function reportRetryBackoff(
 		String(info.nextAttempt),
 		String(info.maxAttempts),
 	));
-}
-
-function reportThinking(
-	progress: vscode.Progress<vscode.LanguageModelResponsePart>,
-	text: string,
-): void {
-	const ctor = (vscode as { LanguageModelThinkingPart?: new (value: string) => unknown })
-		.LanguageModelThinkingPart;
-	if (typeof ctor === 'function') {
-		progress.report(new ctor(text) as vscode.LanguageModelResponsePart);
-	}
 }
 
 function reportToolCall(

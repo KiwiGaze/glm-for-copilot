@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { getSettingsApiKey } from './config';
-import { API_KEY_SECRET } from './consts';
+import { API_KEY_SECRET, VISION_API_KEY_SECRET } from './consts';
 import { t } from './i18n';
-import type { IAuthManager } from './types';
+import type { ApiKeyPromptOptions, IAuthManager, IVisionApiKeyManager } from './types';
 
 /**
- * Manages the GLM API key via VS Code SecretStorage (secure), falling back to
- * the extension settings value (less secure, for CI/automation).
+ * Manages the chat and dedicated Vision API keys in VS Code SecretStorage.
+ * Only the chat key falls back to the extension setting for CI or automation.
  */
-export class AuthManager implements IAuthManager {
+export class AuthManager implements IAuthManager, IVisionApiKeyManager {
 	constructor(private context: vscode.ExtensionContext) {}
 
 	async getApiKey(): Promise<string | undefined> {
@@ -19,23 +19,48 @@ export class AuthManager implements IAuthManager {
 		return !!(await this.getApiKey());
 	}
 
-	async promptForApiKey(): Promise<boolean> {
+	async promptForApiKey(options?: ApiKeyPromptOptions): Promise<boolean> {
+		return this.promptAndStoreApiKey(API_KEY_SECRET, t('auth.saved'), options);
+	}
+
+	async deleteApiKey(): Promise<void> {
+		await this.context.secrets.delete(API_KEY_SECRET);
+	}
+
+	async getVisionApiKey(): Promise<string | undefined> {
+		return this.context.secrets.get(VISION_API_KEY_SECRET);
+	}
+
+	async promptForVisionApiKey(options?: ApiKeyPromptOptions): Promise<boolean> {
+		return this.promptAndStoreApiKey(
+			VISION_API_KEY_SECRET,
+			t('visionMcp.auth.saved'),
+			options,
+		);
+	}
+
+	async deleteVisionApiKey(): Promise<void> {
+		await this.context.secrets.delete(VISION_API_KEY_SECRET);
+	}
+
+	private async promptAndStoreApiKey(
+		secretKey: string,
+		savedMessage: string,
+		options?: ApiKeyPromptOptions,
+	): Promise<boolean> {
 		const value = await vscode.window.showInputBox({
-			prompt: t('auth.prompt'),
+			title: options?.title,
+			prompt: options?.prompt ?? t('auth.prompt'),
 			placeHolder: t('auth.placeholder'),
 			password: true,
 			ignoreFocusOut: true,
 			validateInput: (v) => (v?.trim() ? undefined : t('auth.emptyValidation')),
 		});
 		if (value) {
-			await this.context.secrets.store(API_KEY_SECRET, value.trim());
-			vscode.window.showInformationMessage(t('auth.saved'));
+			await this.context.secrets.store(secretKey, value.trim());
+			vscode.window.showInformationMessage(savedMessage);
 			return true;
 		}
 		return false;
-	}
-
-	async deleteApiKey(): Promise<void> {
-		await this.context.secrets.delete(API_KEY_SECRET);
 	}
 }

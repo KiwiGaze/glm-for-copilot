@@ -49,6 +49,74 @@ const en: Record<string, string> = {
 	'request.retry.rateLimited': 'GLM is rate limited. Retrying in {0}s ({1}/{2}).',
 	'request.retry.busy': 'GLM is busy. Retrying in {0}s ({1}/{2}).',
 
+	// Vision (GLM Vision MCP)
+	'vision.progress.one': 'Analyzing the attached image with GLM Vision…',
+	'vision.progress.many': 'Analyzing {0} attached images with GLM Vision…',
+	'vision.notice.failed':
+		'Note: image analysis failed ({0}), so this reply does not use the attached image(s).',
+	'vision.error.empty': 'GLM Vision returned no description',
+	'vision.error.unsupportedType': 'unsupported image type {0}',
+	'vision.error.tooLarge': 'the image is larger than {0} MB',
+	'vision.error.tooMany': 'more than {0} images attached at once',
+	'vision.error.toolUnavailable': 'the GLM Vision server is not running',
+	'vision.error.noKey': 'no GLM Vision API key is configured',
+	'vision.error.timeout': 'image analysis timed out',
+	'vision.error.disabled': 'vision is turned off — run "GLM: Toggle Vision for Chat Models" to enable it',
+
+	// GLM Vision MCP setup
+	'visionMcp.install.alreadyInstalled': 'GLM Vision is already installed.',
+	'visionMcp.install.consent': 'Install a third-party MCP server?',
+	'visionMcp.install.consentDetail':
+		'{0} will be downloaded from npm and run as a local Node.js process. It receives the API key selected for GLM Vision and attached image paths, then sends image content to Z.AI or BigModel for analysis.\n\nEvery dependency is pinned with an integrity hash and npm install scripts are disabled, but running third-party code still carries risk. You can remove the package at any time with “GLM: Uninstall GLM Vision MCP Server”.',
+	'visionMcp.install.confirm': 'I Understand, Install',
+	'visionMcp.install.viewPackage': 'View npm Package',
+	'visionMcp.install.progress': 'Installing verified {0}…',
+	'visionMcp.install.failed': 'GLM Vision could not be installed. No MCP server was enabled.',
+	'visionMcp.install.success':
+		'GLM Vision installed locally from integrity-locked dependencies. It starts automatically with your next chat message.',
+	'visionMcp.install.unsupported': 'GLM Vision requires a newer version of VS Code.',
+	'visionMcp.showLogs': 'Show Logs',
+	'visionMcp.auth.title': 'Set up GLM Vision',
+	'visionMcp.auth.prompt':
+		'Enter your GLM API key (format: id.secret). It is stored in VS Code Secret Storage and sent by the local GLM Vision server only to your selected Z.AI or BigModel endpoint.',
+	'visionMcp.auth.separatePrompt':
+		'Enter a separate Z.AI or BigModel API key for GLM Vision (format: id.secret). It is stored in VS Code Secret Storage and is selected instead of your custom endpoint credential the next time Vision starts.',
+	'visionMcp.auth.saved': 'GLM Vision API key saved.',
+	'visionMcp.auth.required': 'GLM Vision needs your GLM API key to run.',
+	'visionMcp.auth.separateRequired':
+		'GLM Vision needs a separate Z.AI or BigModel API key while a custom Base URL is active.',
+	'visionMcp.auth.enterKey': 'Enter API Key',
+	'visionMcp.auth.enterVisionKey': 'Enter Vision API Key',
+	'visionMcp.notNow': 'Not Now',
+	'visionMcp.runtime.missing':
+		'Node.js 18+ (22+ recommended) with npm was not found on PATH. GLM Vision cannot be installed securely without it.',
+	'visionMcp.runtime.tooOld':
+		'Node.js {0} was found, but GLM Vision requires Node.js {1}+ (22+ recommended).',
+	'visionMcp.runtime.requirements': 'Requirements',
+	'visionMcp.cancel': 'Cancel',
+	'visionMcp.uninstall.done':
+		'GLM Vision and its local npm package were removed. Chat models are text-only again.',
+	'visionMcp.uninstall.cleanupFailed':
+		'GLM Vision was disabled, but some settings, credentials, or local package files could not be removed. See the logs for details.',
+	'visionMcp.ready': 'GLM Vision is running. Turn on image input for chat models?',
+	'visionMcp.ready.enable': 'Enable Vision',
+	'visionMcp.approval.guidance':
+		'Vision is on. VS Code asks before GLM Vision runs analyze_image. To stop repeated prompts, open Tool Approval and enable “without approval” only for GLM Vision > analyze_image.',
+	'visionMcp.approval.manage': 'Manage Tool Approval',
+	'visionMcp.unhealthy':
+		'GLM Vision stopped. Chat models still accept images, but new image analysis will fail until the server restarts.',
+	'visionMcp.restart.region': 'Region changed — restart GLM Vision from the MCP server list to apply it.',
+	'visionMcp.restart.endpoint':
+		'Base URL changed — restart GLM Vision from the MCP server list to apply the credential change.',
+	'visionMcp.restart.apiKey': 'API key changed — restart GLM Vision from the MCP server list to apply it.',
+	'visionMcp.openServers': 'Open MCP Servers',
+	'visionMcp.editPrompt': 'Edit Vision Prompt',
+	'visionMcp.resolveKeyRequired': 'GLM Vision cannot start without an API key.',
+	'visionMcp.resolveSeparateKeyRequired':
+		'GLM Vision cannot start with a custom Base URL until a separate Z.AI or BigModel API key is configured.',
+	'visionMcp.toggle.off': 'Vision off — chat models are text-only again.',
+	'visionMcp.toggle.notRunning': 'GLM Vision is not running yet. Start it from the MCP server list, then try again.',
+
 	// HTTP errors
 	'error.http.400': '[{0}] Invalid request. Check the request parameters.',
 	'error.http.401':
@@ -166,6 +234,62 @@ const zh: Record<string, string> = {
 		'GLM 单次请求最多支持 {0} 个工具，但本次请求包含 {1} 个。请使用 VS Code 的“配置工具”关闭不常用的工具。',
 	'request.retry.rateLimited': 'GLM 请求过于频繁。将在 {0} 秒后重试（{1}/{2}）。',
 	'request.retry.busy': 'GLM 服务繁忙。将在 {0} 秒后重试（{1}/{2}）。',
+
+	// 视觉（GLM Vision MCP）
+	'vision.progress.one': '正在使用 GLM Vision 分析附带的图片…',
+	'vision.progress.many': '正在使用 GLM Vision 分析 {0} 张附带的图片…',
+	'vision.notice.failed': '注意：图片分析失败（{0}），因此本次回复未使用所附图片。',
+	'vision.error.empty': 'GLM Vision 未返回任何描述',
+	'vision.error.unsupportedType': '不支持的图片类型 {0}',
+	'vision.error.tooLarge': '图片大小超过 {0} MB',
+	'vision.error.tooMany': '单次附带的图片超过 {0} 张',
+	'vision.error.toolUnavailable': 'GLM Vision 服务器未在运行',
+	'vision.error.noKey': '未配置 GLM Vision API Key',
+	'vision.error.timeout': '图片分析超时',
+	'vision.error.disabled': '视觉功能已关闭，可运行“GLM: 切换聊天模型视觉能力”重新开启',
+
+	// GLM Vision MCP 设置
+	'visionMcp.install.alreadyInstalled': 'GLM Vision 已安装。',
+	'visionMcp.install.consent': '要安装第三方 MCP 服务器吗？',
+	'visionMcp.install.consentDetail':
+		'{0} 将从 npm 下载，并作为本地 Node.js 进程运行。它会获得为 GLM Vision 选择的 API Key 和所附图片的路径，再将图片内容发送到 Z.AI 或智谱开放平台进行分析。\n\n扩展会用完整性哈希锁定所有依赖，并禁用 npm 安装脚本，但运行第三方代码仍有风险。你可以随时运行“GLM: 卸载 GLM Vision MCP 服务器”移除该软件包。',
+	'visionMcp.install.confirm': '了解风险并安装',
+	'visionMcp.install.viewPackage': '查看 npm 软件包',
+	'visionMcp.install.progress': '正在安装已验证的 {0}…',
+	'visionMcp.install.failed': '无法安装 GLM Vision，未启用任何 MCP 服务器。',
+	'visionMcp.install.success': 'GLM Vision 已通过完整性锁定的依赖安装到本地。它会在你发送下一条聊天消息时自动启动。',
+	'visionMcp.install.unsupported': 'GLM Vision 需要更新版本的 VS Code。',
+	'visionMcp.showLogs': '显示日志',
+	'visionMcp.auth.title': '设置 GLM Vision',
+	'visionMcp.auth.prompt': '请输入你的 GLM API Key（格式：id.secret）。密钥存储在 VS Code 密钥存储中，本地 GLM Vision 服务器仅会将其发送到所选的 Z.AI 或智谱开放平台端点。',
+	'visionMcp.auth.separatePrompt': '请输入用于 GLM Vision 的独立 Z.AI 或智谱开放平台 API Key（格式：id.secret）。密钥存储在 VS Code 密钥存储中，并会在 Vision 下次启动时替代自定义端点凭据。',
+	'visionMcp.auth.saved': 'GLM Vision API Key 已保存。',
+	'visionMcp.auth.required': 'GLM Vision 需要你的 GLM API Key 才能运行。',
+	'visionMcp.auth.separateRequired': '使用自定义 Base URL 时，GLM Vision 需要独立的 Z.AI 或智谱开放平台 API Key。',
+	'visionMcp.auth.enterKey': '输入 API Key',
+	'visionMcp.auth.enterVisionKey': '输入 Vision API Key',
+	'visionMcp.notNow': '暂不',
+	'visionMcp.runtime.missing': '未在 PATH 中找到 Node.js 18+（推荐 22+）和 npm，无法安全安装 GLM Vision。',
+	'visionMcp.runtime.tooOld': '检测到 Node.js {0}，但 GLM Vision 需要 Node.js {1} 及以上版本（推荐 22+）。',
+	'visionMcp.runtime.requirements': '环境要求',
+	'visionMcp.cancel': '取消',
+	'visionMcp.uninstall.done': 'GLM Vision 及其本地 npm 软件包已移除。聊天模型已恢复为纯文本。',
+	'visionMcp.uninstall.cleanupFailed': 'GLM Vision 已停用，但部分设置、凭据或本地软件包文件无法移除。请查看日志了解详情。',
+	'visionMcp.ready': 'GLM Vision 正在运行。要为聊天模型开启图片输入吗？',
+	'visionMcp.ready.enable': '开启视觉',
+	'visionMcp.approval.guidance':
+		'视觉功能已开启。GLM Vision 运行 analyze_image 前，VS Code 会请求确认。若要停止重复提示，请打开“工具批准”，并仅为 GLM Vision > analyze_image 启用“无需批准”。',
+	'visionMcp.approval.manage': '管理工具批准',
+	'visionMcp.unhealthy': 'GLM Vision 已停止。聊天模型仍接受图片，但在服务器重新启动前，新的图片分析会失败。',
+	'visionMcp.restart.region': '区域已更改——请在 MCP 服务器列表中重启 GLM Vision 以应用。',
+	'visionMcp.restart.endpoint': 'Base URL 已更改——请在 MCP 服务器列表中重启 GLM Vision 以应用凭据变更。',
+	'visionMcp.restart.apiKey': 'API Key 已更改——请在 MCP 服务器列表中重启 GLM Vision 以应用。',
+	'visionMcp.openServers': '打开 MCP 服务器',
+	'visionMcp.editPrompt': '编辑视觉提示词',
+	'visionMcp.resolveKeyRequired': '缺少 API Key，GLM Vision 无法启动。',
+	'visionMcp.resolveSeparateKeyRequired': '使用自定义 Base URL 时，必须先配置独立的 Z.AI 或智谱开放平台 API Key，GLM Vision 才能启动。',
+	'visionMcp.toggle.off': '视觉已关闭——聊天模型已恢复为纯文本。',
+	'visionMcp.toggle.notRunning': 'GLM Vision 尚未运行。请先在 MCP 服务器列表中启动它，然后重试。',
 
 	'error.http.400': '[{0}] 请求无效。请检查请求参数。',
 	'error.http.401': '[{0}] 身份验证失败。请检查你的 GLM API Key，或为所选套餐创建一个。',

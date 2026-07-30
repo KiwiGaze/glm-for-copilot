@@ -13,15 +13,17 @@ Key facts:
 - **What it does:** lets you use GLM models inside GitHub Copilot Chat without replacing Copilot's UI.
 - **How it works:** implements `vscode.LanguageModelChatProvider`; streams OpenAI-compatible SSE from the GLM API.
 - **Dual API:** choose your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`).
-- **BYOK and secure:** your API key is stored in the OS keychain via VS Code `SecretStorage`, never in `settings.json`.
+- **BYOK and secure:** your API key is stored in the OS keychain via VS Code `SecretStorage`; the extension never writes it to `settings.json`.
 - **Thinking mode:** GLM step-by-step reasoning streams live as a Thinking block.
-- **Zero runtime dependencies:** pure VS Code API and Node.js built-ins.
+- **Image input (vision):** explicit-consent install of the official Z.AI vision MCP server (`@z_ai/mcp-server@0.1.4`, GLM-4.6V) from an integrity-locked dependency graph with npm scripts disabled. While the verified local package is installed and image input is enabled, every GLM model can accept pasted/attached images. A temporary server outage produces a visible per-request failure notice instead of changing model capability; the prompt is user-editable and one command removes the registration and local package.
+- **Zero core runtime dependencies:** the core uses only the VS Code API and Node.js built-ins; the optional Vision integration installs the npm package listed above.
 - **License:** MIT.
 
 ## Documentation
 
 - [README](README.md): installation, features, settings, and the model table.
 - [Models and settings](README.md#models): which GLM models are available per API mode, and all configuration options.
+- [Image input (vision)](README.md#image-input-vision): the GLM Vision MCP server and image input for chat models.
 - [Coding Plan vs Standard API](README.md#coding-plan-vs-standard-api): endpoint routing and when to use each.
 - [Changelog](CHANGELOG.md): release history.
 - [Contributing guide](CONTRIBUTING.md): project layout, setup, and development conventions.

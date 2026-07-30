@@ -6,6 +6,11 @@
   "glm-copilot.command.showLogs": "GLM: 显示日志",
   "glm-copilot.command.refreshUsage": "GLM: 刷新用量",
   "glm-copilot.command.openUsageDetail": "GLM: 显示用量详情",
+  "glm-copilot.command.installVisionMcp": "GLM: 安装 GLM Vision MCP 服务器",
+  "glm-copilot.command.uninstallVisionMcp": "GLM: 卸载 GLM Vision MCP 服务器",
+  "glm-copilot.command.setVisionApiKey": "GLM: 设置 Vision API 密钥",
+  "glm-copilot.command.openVisionPromptSettings": "GLM: 编辑 GLM Vision 提示词",
+  "glm-copilot.command.toggleVision": "GLM: 切换聊天模型视觉能力",
 
   "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "在 GitHub Copilot Chat 中使用 GLM 模型。",
@@ -19,6 +24,12 @@
   "glm-copilot.walkthrough.showModels.title": "在选择器中查看 GLM 模型",
   "glm-copilot.walkthrough.showModels.description": "你的 GLM 模型将根据所选的 API 模式出现在 Copilot Chat 的模型选择器中。如果看不到，请打开语言模型管理器以显示它们。\n[打开语言模型](command:workbench.action.chat.manage)",
 
+  "glm-copilot.walkthrough.installVisionMcp.title": "安装 GLM Vision（可选）",
+  "glm-copilot.walkthrough.installVisionMcp.description": "先查看隐私和本地代码执行影响，再安装依赖完整性已锁定的 GLM Vision MCP 服务器。\n[查看并安装 GLM Vision](command:glm-copilot.installVisionMcp)",
+
+  "glm-copilot.walkthrough.enableVision.title": "开启图片输入（可选）",
+  "glm-copilot.walkthrough.enableVision.description": "让纯文本 GLM 模型也能接受粘贴的图片——由 GLM Vision 先行分析。\n[切换视觉能力](command:glm-copilot.toggleVision)",
+
   "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
   "glm-copilot.config.apiMode.description": "选择要使用的 GLM API。\n\n- **编程计划** — 使用您的 GLM 编程计划订阅（[Z.ai](https://z.ai/manage-apikey/subscription) 国际版或 [bigmodel.cn](https://bigmodel.cn/coding-plan/personal/overview) 中国大陆）。实际端点取决于 `region` 设置，适合团队或高频编码场景。\n- **标准 API** — 按量付费，通过 GLM 开放平台访问，实际端点取决于 `region` 设置。",
@@ -27,11 +38,11 @@
   "glm-copilot.config.apiMode.standard.label": "标准 API",
   "glm-copilot.config.apiMode.standard.description": "通过 GLM 开放平台按量付费访问，实际端点由 `region` 设置决定。",
 
-  "glm-copilot.config.region.description": "**编程计划**与**标准 API** 模式下使用的服务器区域（设置 `baseUrl` 时忽略）。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
+  "glm-copilot.config.region.description": "**编程计划**、**标准 API** 和 GLM Vision 使用的服务器区域。自定义 `baseUrl` 仅会覆盖聊天的此设置；GLM Vision 仍使用它选择官方端点。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "覆盖 GLM API 的基础 URL。设置后将直接使用此值，`apiMode` 和 `region` 均被忽略。适用于自托管代理或兼容的第三方端点。",
+  "glm-copilot.config.baseUrl.description": "覆盖聊天所用的 GLM API 基础 URL。设置后，聊天会直接使用此值并忽略 `apiMode` 和 `region`。适用于自托管代理或兼容的第三方端点。GLM Vision 仍使用由 `region` 选择的官方端点。若 Vision 启动时此覆盖处于启用状态，它会要求使用通过 [`GLM: 设置 Vision API 密钥`](command:glm-copilot.setVisionApiKey) 单独存储的密钥，而不会选择此端点的凭据。",
 
   "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
 
@@ -43,6 +54,9 @@
   "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。仅对支持思考的模型生效。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
   "glm-copilot.config.thinking.enabled.label": "开启",
   "glm-copilot.config.thinking.disabled.label": "关闭",
+
+  "glm-copilot.config.visionEnabled.description": "在聊天中接受粘贴或附加的图片。图片由本地 GLM Vision MCP 服务器（通过 [`GLM: 安装 GLM Vision MCP 服务器`](command:glm-copilot.installVisionMcp) 安装）分析后以文本形式注入，使纯文本 GLM 模型也能理解图片内容。安装经过验证的软件包后即可生效。开启后，在通知中选择 **管理工具批准**，在工作区的工具批准管理器中找到 **GLM Vision > analyze_image**，并仅为该工具启用 **无需批准**，即可停止重复确认。扩展绝不会代你更改批准设置，组织策略仍可能要求确认。每次分析图片时会检查服务器是否可用；如果服务器不可用，聊天会显示失败提示，并在不包含图片内容的情况下继续。需要 Node.js 18+（推荐 22+）。",
+  "glm-copilot.config.visionPrompt.description": "分析图片附件时发送给 GLM Vision 的指令。留空则使用内置提示词：逐字转录可见的文本/代码，并描述界面、图示与图表，且不做主观推测。修改后将在下一轮对话中重新分析图片。可运行 [`GLM: 编辑 GLM Vision 提示词`](command:glm-copilot.openVisionPromptSettings) 直接打开。",
 
   "glm-copilot.config.debugLogging.description": "启用详细调试日志，输出到 GLM 输出频道。使用 [`GLM: 显示日志`](command:glm-copilot.showLogs) 查看。日志包含请求元数据，但不包含提示词文本。",
   "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔（分钟），最小值为 1，最大值为 1440（24 小时）。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均可显示。仅在未配置 baseUrl 覆盖时生效。",

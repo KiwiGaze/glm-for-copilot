@@ -3,7 +3,7 @@
 	"displayName": "GLM Models for GitHub Copilot Chat",
 	"description": "Bring GLM-5.2 and the full GLM lineup (Z.ai / Zhipu) into GitHub Copilot Chat with visible thinking. Coding Plan or Standard API.",
 	"icon": "resources/icon.png",
-	"version": "0.2.10",
+	"version": "0.3.0",
 	"publisher": "yijiazhen-qi",
 	"license": "MIT",
 	"repository": {
@@ -15,6 +15,7 @@
 	},
 	"homepage": "https://github.com/KiwiGaze/glm-for-copilot#readme",
 	"qna": "https://github.com/KiwiGaze/glm-for-copilot/issues",
+	"packageManager": "pnpm@11.17.0",
 	"engines": {
 		"vscode": "^1.116.0",
 		"node": ">=20"
@@ -55,6 +56,12 @@
 				"displayName": "GLM"
 			}
 		],
+		"mcpServerDefinitionProviders": [
+			{
+				"id": "glm-copilot.vision",
+				"label": "GLM Vision"
+			}
+		],
 		"commands": [
 			{
 				"command": "glm-copilot.setApiKey",
@@ -83,8 +90,52 @@
 			{
 				"command": "glm-copilot.openUsageDetail",
 				"title": "%glm-copilot.command.openUsageDetail%"
+			},
+			{
+				"command": "glm-copilot.installVisionMcp",
+				"title": "%glm-copilot.command.installVisionMcp%"
+			},
+			{
+				"command": "glm-copilot.uninstallVisionMcp",
+				"title": "%glm-copilot.command.uninstallVisionMcp%"
+			},
+			{
+				"command": "glm-copilot.setVisionApiKey",
+				"title": "%glm-copilot.command.setVisionApiKey%"
+			},
+			{
+				"command": "glm-copilot.openVisionPromptSettings",
+				"title": "%glm-copilot.command.openVisionPromptSettings%"
+			},
+			{
+				"command": "glm-copilot.toggleVision",
+				"title": "%glm-copilot.command.toggleVision%"
 			}
 		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "glm-copilot.installVisionMcp",
+					"when": "!glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.uninstallVisionMcp",
+					"when": "glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.setVisionApiKey",
+					"when": "glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.openVisionPromptSettings",
+					"when": "glmCopilot.visionMcp.installed"
+				},
+				{
+					"command": "glm-copilot.toggleVision",
+					"when": "glmCopilot.visionMcp.installed"
+				}
+			]
+		},
 		"walkthroughs": [
 			{
 				"id": "glmGettingStarted",
@@ -117,6 +168,30 @@
 						"media": {
 							"markdown": "resources/walkthrough/show-models.md"
 						}
+					},
+					{
+						"id": "installVisionMcp",
+						"title": "%glm-copilot.walkthrough.installVisionMcp.title%",
+						"description": "%glm-copilot.walkthrough.installVisionMcp.description%",
+						"when": "!glmCopilot.visionMcp.installed",
+						"media": {
+							"markdown": "resources/walkthrough/install-vision-mcp.md"
+						},
+						"completionEvents": [
+							"onContext:glmCopilot.visionMcp.installed"
+						]
+					},
+					{
+						"id": "enableVision",
+						"title": "%glm-copilot.walkthrough.enableVision.title%",
+						"description": "%glm-copilot.walkthrough.enableVision.description%",
+						"when": "glmCopilot.visionMcp.installed",
+						"media": {
+							"markdown": "resources/walkthrough/enable-vision.md"
+						},
+						"completionEvents": [
+							"onContext:glmCopilot.visionEnabled"
+						]
 					}
 				]
 			}
@@ -217,10 +292,6 @@
 										"type": "boolean",
 										"description": "Whether the model supports tool calling. Defaults to true."
 									},
-									"vision": {
-										"type": "boolean",
-										"description": "Whether the model accepts image input. Defaults to false."
-									},
 									"thinking": {
 										"type": "boolean",
 										"description": "Whether the model supports thinking. Defaults to true."
@@ -242,6 +313,17 @@
 						"%glm-copilot.config.thinking.disabled.label%"
 					],
 					"markdownDescription": "%glm-copilot.config.thinking.description%"
+				},
+				"glm-copilot.visionEnabled": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "%glm-copilot.config.visionEnabled.description%"
+				},
+				"glm-copilot.visionPrompt": {
+					"type": "string",
+					"editPresentation": "multilineText",
+					"default": "",
+					"markdownDescription": "%glm-copilot.config.visionPrompt.description%"
 				},
 				"glm-copilot.debugLogging": {
 					"type": "boolean",

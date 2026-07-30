@@ -12,6 +12,7 @@ tsconfig.json
 .agents/**
 PLAN.md
 pnpm-lock.yaml
+pnpm-workspace.yaml
 dist/**
 .github/**
 CONTRIBUTING.md

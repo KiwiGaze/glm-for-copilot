@@ -24,7 +24,11 @@ type EffortChatInformation = vscode.LanguageModelChatInformation & {
 };
 
 /** Build the Copilot Chat model picker entry for a GLM model. */
-export function toChatInfo(model: GLMModel, hasApiKey: boolean): EffortChatInformation {
+export function toChatInfo(
+	model: GLMModel,
+	hasApiKey: boolean,
+	imageInputEnabled: boolean,
+): EffortChatInformation {
 	const detail = resolveModelText(model, 'detail') ?? model.detail;
 	const tooltip = resolveModelText(model, 'tooltip');
 	const spec = model.capabilities.thinkingEffort;
@@ -39,7 +43,7 @@ export function toChatInfo(model: GLMModel, hasApiKey: boolean): EffortChatInfor
 		maxOutputTokens: model.maxOutputTokens,
 		capabilities: {
 			toolCalling: model.capabilities.toolCalling,
-			imageInput: model.capabilities.imageInput,
+			imageInput: imageInputEnabled,
 		},
 		...(spec ? { configurationSchema: buildEffortSchema(spec) } : {}),
 	};

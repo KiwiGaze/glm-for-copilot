@@ -1,6 +1,6 @@
 # GLM Models for GitHub Copilot Chat
 
-[![Latest Release](https://img.shields.io/github/v/release/KiwiGaze/glm-for-copilot?label=version)](https://github.com/KiwiGaze/glm-for-copilot/releases/latest)
+[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.3.0-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![VS Marketplace Installs](https://vsmarketplacebadges.dev/installs-short/yijiazhen-qi.glm-for-github-copilot-chat.svg)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![Install from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-007ACC)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![CI](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml)
@@ -27,8 +27,9 @@ Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) �
 </p>
 
 - **Keys stay in your OS keychain by default.** **GLM: Set API Key** stores your key via VS Code `SecretStorage` (macOS, Windows, Linux). The extension also honors a settings fallback for CI or automation, so do not put real keys in workspace settings.
-- **Zero runtime dependencies.** Pure VS Code API and Node.js built-ins. No Python, Docker, or local server.
+- **Zero core runtime dependencies.** Pure VS Code API and Node.js built-ins — the core extension needs no Python, Docker, or local server. (The optional [GLM Vision integration](#image-input-vision) installs an integrity-locked local npm package, so it requires Node.js 18+ with npm.)
 - **Add any model.** Newly released, fine-tuned, or proxy-hosted GLM models via [`glm-copilot.customModels`](#settings).
+- **See images, even on text-only models.** Install the official **GLM Vision** MCP server with one click and turn on image input: pasted screenshots are analyzed by GLM Vision (GLM-4.6V) and injected as text — code, logs, errors, and UI included — so any GLM model can reason about them. Agent mode also gets the full vision tool set. See [Image input (vision)](#image-input-vision).
 
 ## Getting Started
 
@@ -78,12 +79,14 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 | Setting | Default | Description |
 |---|---|---|
 | `glm-copilot.apiMode` | `coding-plan` | Which GLM API to use: `coding-plan` or `standard`. See below. |
-| `glm-copilot.region` | `international` | Server region for **both** API modes: `international` (z.ai) or `china` (bigmodel.cn). Ignored only when `baseUrl` is set. |
-| `glm-copilot.baseUrl` | *(empty)* | Override the API base URL. Overrides `apiMode` and `region`. Use for proxies or compatible APIs. |
+| `glm-copilot.region` | `international` | Server region for **both** chat API modes and GLM Vision: `international` (z.ai) or `china` (bigmodel.cn). A custom `baseUrl` overrides it for chat only. |
+| `glm-copilot.baseUrl` | *(empty)* | Override the chat API base URL. Overrides `apiMode` and `region` for chat. GLM Vision still uses the official endpoint selected by `region` and requires a separate Vision key. |
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
 | `glm-copilot.thinking` | `enabled` | Step-by-step reasoning: `enabled` (higher quality) or `disabled` (faster). Applies to thinking-capable models without a per-model Thinking Effort picker; GLM-5.2 uses None / High / Max in the model picker. |
-| `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, vision?, thinking? }`. |
+| `glm-copilot.visionEnabled` | `false` | Accept pasted/attached images in chat when the verified GLM Vision package is installed. GLM Vision analyzes them first so text-only models can reason about them. If the server is unavailable, the reply shows an analysis-failure notice and continues without the image. See [Image input (vision)](#image-input-vision). |
+| `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM Vision when analyzing images. Empty uses the built-in prompt (verbatim text/code transcription, UI/diagram/chart description, no speculation). Changing it re-analyzes images on the next turn. |
+| `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking? }`. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
 | `glm-copilot.debugLogging` | `false` | Write verbose debug logs to the GLM output channel. View with **GLM: Show Logs**. |
 | `glm-copilot.usageRefreshIntervalMinutes` | `5` | How often (in minutes) to refresh the GLM usage status bar. Minimum `1`. Shows Coding Plan quota or Standard API balance for both `z.ai` and `bigmodel.cn` regions. Only when no `baseUrl` override. |
@@ -104,6 +107,30 @@ Full API documentation: [docs.z.ai](https://docs.z.ai).
 
 Usage details rely on regional usage endpoints (`api.z.ai` for International, `open.bigmodel.cn` for Mainland China) that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
 
+## Image input (vision)
+
+Vision is powered by the official **[Z.AI Vision MCP server](https://docs.z.ai/devpack/mcp/vision-mcp-server)** (`@z_ai/mcp-server`, GLM-4.6V). Setup is two steps, and nothing is installed without your say-so:
+
+1. **Install the server** — run **GLM: Install GLM Vision MCP Server** (or the Install button in the Getting Started walkthrough). Before anything is downloaded, a modal confirmation explains that the third-party package runs locally, receives the API key selected for Vision and attached-image paths, and sends image content to Z.AI or BigModel. After consent, the flow checks the required key and Node.js/npm (Node.js 18+, 22+ recommended), then installs `@z_ai/mcp-server@0.1.4` under the extension's global storage with `npm ci`. A bundled lockfile pins the complete dependency graph and its SHA-512 integrity hashes, and npm lifecycle scripts are disabled. VS Code launches the fixed local entry point — never a later package fetched by `npx` — with `Z_AI_MODE` set from your region (`ZAI` for International, `ZHIPU` for Mainland China). A dedicated Vision key in VS Code `SecretStorage` takes priority. Without one, Vision reuses your stored GLM key only when `glm-copilot.baseUrl` is empty. When a custom Base URL is active at server start, Vision requires a separate Z.AI or BigModel key and does not select the proxy credential. You can replace the separate key with **GLM: Set Vision API Key**. Base URL and key changes prompt you to restart the server so the new credential selection takes effect. **GLM: Uninstall GLM Vision MCP Server** disables the registration and image input, removes the dedicated Vision key and temp images, and then removes the local package. Vision stays disabled and reports any cleanup that could not finish.
+2. **Turn on image input** — after installation, **GLM: Toggle Vision for Chat Models** appears in the Command Palette. Turn it on while the server is healthy, or set [`glm-copilot.visionEnabled`](#settings). Every GLM model in the picker then accepts image input. A temporary server outage does not remove image support from the model picker.
+
+Each time image input changes from off to on, the extension waits until VS Code can see `GLM Vision > analyze_image`, then shows approval guidance. To stop the repeated confirmation before each analysis:
+
+- Select **Manage Tool Approval** in the notice.
+- In the workspace Tool Approval manager, find **GLM Vision > analyze_image**.
+- Enable **without approval** only for that tool.
+
+The extension does not change approval settings or approve tools for you. Organization policy can still require confirmation.
+
+With image input on, pasted or attached images just work — even for text-only chat models:
+
+- **Analyzed by GLM Vision** — each image is written to a local temp file and analyzed through the server's `analyze_image` tool on the selected Vision key, and the analysis is injected into the request as text *before* it reaches your selected chat model. The instruction is configurable via **GLM: Edit GLM Vision Prompt** or [`glm-copilot.visionPrompt`](#settings); changing it re-analyzes images on the next turn.
+- **Cached** — analyses are content-addressed and cached in memory for the session (never written to extension storage), so conversation history is not re-analyzed every turn.
+- **Validated** — images larger than 5 MB, or outside `png` / `jpeg`, are skipped with a clear notice *before* any tool call.
+- **Visible progress, graceful failure** — a status line streams into the thinking block while analysis runs. If analysis fails or the server stops, the model keeps image input enabled, but the reply continues without the image and opens with a short "image analysis failed" notice instead of erroring out. Turning vision off or uninstalling the package removes image input from the model picker.
+
+In **agent mode** the server's full tool set is also available directly to the agent — UI-to-code, screenshot OCR, error-screenshot diagnosis, diagram/chart analysis, UI diffing, and video understanding. For images on disk, the agent calls these tools itself with the file path; no extra setup needed.
+
 ## Commands
 
 | Command | Description |
@@ -115,6 +142,11 @@ Usage details rely on regional usage endpoints (`api.z.ai` for International, `o
 | **GLM: Show Logs** | Open the GLM output channel |
 | **GLM: Refresh Usage** | Refresh GLM usage/balance now (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
 | **GLM: Show Usage Details** | Open the GLM usage panel (Coding Plan quota or Standard API balance; both `z.ai` and `bigmodel.cn`) |
+| **GLM: Install GLM Vision MCP Server** | Review the impact, then install the integrity-locked local package. Visible when not installed |
+| **GLM: Uninstall GLM Vision MCP Server** | Remove the GLM Vision MCP server and revert models to text-only. Visible when installed |
+| **GLM: Set Vision API Key** | Store or replace the key used only by the official GLM Vision server. Visible when installed |
+| **GLM: Edit GLM Vision Prompt** | Open the multiline setting for the image-analysis instruction. Visible when installed |
+| **GLM: Toggle Vision for Chat Models** | Turn image input for chat models on/off. Visible while GLM Vision is installed |
 
 ## Frequently asked questions
 
@@ -128,11 +160,11 @@ Yes. This adds GLM models *to* Copilot Chat; it doesn't replace Copilot. You nee
 
 ### Where does my API key go?
 
-**GLM: Set API Key** stores it in VS Code `SecretStorage` (the OS keychain on macOS, Windows, Linux), and requests send it only to your configured GLM endpoint over HTTPS. A settings fallback exists for CI or automation, but avoid putting real keys in `settings.json`, especially workspace settings that could be committed.
+**GLM: Set API Key** stores the chat key in VS Code `SecretStorage` (the OS keychain on macOS, Windows, Linux), and chat requests send it only to your configured GLM endpoint over HTTPS. A settings fallback exists for CI or automation, but avoid putting real keys in `settings.json`, especially workspace settings that could be committed. GLM Vision uses a separate `SecretStorage` key when you run **GLM: Set Vision API Key**. If `glm-copilot.baseUrl` is set when Vision starts, Vision requires the separate key and does not select the proxy credential. Restart Vision after a Base URL or key change.
 
 ### Can I use a proxy or self-hosted endpoint?
 
-Yes. Set `glm-copilot.baseUrl` to any OpenAI-compatible endpoint; it overrides `apiMode` and `region`.
+Yes, for chat. Set `glm-copilot.baseUrl` to any OpenAI-compatible endpoint; it overrides `apiMode` and `region` for chat. GLM Vision still uses the official endpoint selected by `region`. When Vision starts with the custom Base URL active, it requires a separate Vision key and does not select the proxy credential.
 
 ### Is GLM-4.6 still supported?
 
