@@ -70,15 +70,17 @@ model picker: `none` sends `thinking: { type: "disabled" }` with no
 plus the matching `reasoning_effort`.
 
 For GLM-5.3, the official Coding Plan guides define `low` / `high` / `max`, with
-`max` as the default. Thinking cannot be disabled, so every GLM-5.3 request sends
-`thinking: { type: "enabled" }` plus the selected effort. The built-in model is
-available only in Coding Plan mode because the current Standard API catalogs do
-not list GLM-5.3.
+`max` as the default. On the Coding Plan route, a disabled thinking toggle is
+converted to `low`, so the extension exposes only those three effort levels and
+sends `thinking: { type: "enabled" }` plus the selected effort on every request.
+The built-in model is available only in Coding Plan mode. Z.AI's current Standard
+API pricing catalog does not include GLM-5.3; BigModel lists the model, but its
+model page says the model API is not yet available.
 
 Official model guides: [Z.AI Coding Plan](https://docs.z.ai/devpack/latest-model)
 and [BigModel Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md).
 Standard API availability is checked against the [Z.AI pricing catalog](https://docs.z.ai/guides/overview/pricing.md)
-and [BigModel model overview](https://docs.bigmodel.cn/cn/guide/start/model-overview.md).
+and the [BigModel GLM-5.3 model page](https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3).
 
 ## Tools
 
