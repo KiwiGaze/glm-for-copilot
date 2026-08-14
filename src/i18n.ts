@@ -13,6 +13,9 @@ const en: Record<string, string> = {
 	'model.glm-5.2.detail': 'Flagship coding model, 1M context',
 	'model.glm-5.2.tooltip':
 		'GLM-5.2 — flagship GLM coding model, 1M context, selectable thinking effort. Available on Coding Plan and Standard API.',
+	'model.glm-5.3.detail': 'Default frontier coding model, 1M context',
+	'model.glm-5.3.tooltip':
+		'GLM-5.3 — default frontier coding model, 1M context, with mandatory Low, High, or Max thinking effort (Max by default). Coding Plan only.',
 	'model.glm-4.5-air.detail': 'Legacy model',
 	'model.glm-4.5-air.tooltip': 'Legacy model. GLM-4.5 Air — lightweight, fast, and low-cost. Available on both plans.',
 	'model.custom.detail': 'Custom model',
@@ -38,6 +41,8 @@ const en: Record<string, string> = {
 	'effort.title': 'Thinking Effort',
 	'effort.none.label': 'None',
 	'effort.none.desc': 'No reasoning — fastest, lowest quota',
+	'effort.low.label': 'Low',
+	'effort.low.desc': 'Light reasoning — faster responses with lower quota use',
 	'effort.high.label': 'High',
 	'effort.high.desc': 'Balanced reasoning (recommended)',
 	'effort.max.label': 'Max',
@@ -204,6 +209,9 @@ const zh: Record<string, string> = {
 	'model.glm-5.1.tooltip': '旧版模型。GLM-5.1 — 最新 GLM-5 系列，20 万上下文。仅标准 API 可用。',
 	'model.glm-5.2.detail': '旗舰编程模型，100 万上下文',
 	'model.glm-5.2.tooltip': 'GLM-5.2 — 旗舰 GLM 编程模型，100 万上下文，可选思考强度。编程计划和标准 API 均可用。',
+	'model.glm-5.3.detail': '默认前沿编程模型，100 万上下文',
+	'model.glm-5.3.tooltip':
+		'GLM-5.3 — 默认前沿编程模型，100 万上下文，必须启用低、高或最高思考强度（默认为最高）。仅编程计划可用。',
 	'model.glm-4.5-air.detail': '旧版模型',
 	'model.glm-4.5-air.tooltip': '旧版模型。GLM-4.5 Air — 轻量、快速、低成本。两种计划均可用。',
 	'model.custom.detail': '自定义模型',
@@ -225,6 +233,8 @@ const zh: Record<string, string> = {
 	'effort.title': '思考强度',
 	'effort.none.label': '关闭',
 	'effort.none.desc': '不进行推理——最快、消耗最低',
+	'effort.low.label': '低',
+	'effort.low.desc': '轻量推理——响应更快、额度消耗更低',
 	'effort.high.label': '高',
 	'effort.high.desc': '均衡推理（推荐）',
 	'effort.max.label': '最高',

@@ -51,7 +51,7 @@
   "glm-copilot.config.modelIdOverrides.description": "Remap a built-in model's API id. Keys are the model id shown in the picker (e.g. `glm-4.7`); values are the id sent to the API. Use this for proxies or regional endpoints (such as bigmodel.cn) that use different model names. To add brand-new models, use `customModels` instead.",
   "glm-copilot.config.customModels.description": "Add your own GLM models to the picker. Each entry is either a model id string (e.g. `\"glm-4.7\"`) or an object such as `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`. Custom models always appear regardless of API Mode and are sent to the active endpoint.",
 
-  "glm-copilot.config.thinking.description": "Whether GLM uses step-by-step reasoning before answering. Applies to models that support thinking.\n\n- **On** — higher quality on complex coding and agent tasks (slower).\n- **Off** — faster responses for simple edits.",
+  "glm-copilot.config.thinking.description": "Whether GLM uses step-by-step reasoning before answering. Applies to models without a per-model Thinking Effort control. GLM-5.2 uses None / High / Max; GLM-5.3 requires thinking and uses Low / High / Max (Max by default).\n\n- **On** — higher quality on complex coding and agent tasks (slower).\n- **Off** — faster responses for simple edits.",
   "glm-copilot.config.thinking.enabled.label": "On",
   "glm-copilot.config.thinking.disabled.label": "Off",
 

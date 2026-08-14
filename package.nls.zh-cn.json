@@ -51,7 +51,7 @@
   "glm-copilot.config.modelIdOverrides.description": "重映射内置模型的 API ID。键为选择器中显示的模型 ID（如 `glm-4.7`），值为发送给 API 的 ID。适用于使用不同模型名称的代理或区域端点（如 bigmodel.cn）。要添加全新模型，请改用 `customModels`。",
   "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`。自定义模型始终显示（不受 API 模式过滤），并发送到当前生效的端点。",
 
-  "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。仅对支持思考的模型生效。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
+  "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。适用于没有独立思考强度设置的模型。GLM-5.2 使用关闭 / 高 / 最高；GLM-5.3 必须启用思考，并使用低 / 高 / 最高（默认为最高）。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
   "glm-copilot.config.thinking.enabled.label": "开启",
   "glm-copilot.config.thinking.disabled.label": "关闭",
 

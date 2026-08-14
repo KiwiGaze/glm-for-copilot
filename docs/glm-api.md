@@ -1,7 +1,7 @@
 # GLM API Reference
 
 Reference for the GLM (Zhipu / Z.ai) API surface this extension targets. Captured
-from the z.ai docs (June 2026); the API mechanics here are stable.
+from the Z.AI and BigModel docs (August 2026); the API mechanics here are stable.
 
 For the current list of model ids, context windows, and capabilities shown in the
 Copilot Chat model picker, see the [Models table in the README](../README.md#models)
@@ -53,23 +53,32 @@ Top-level request field, binary:
 ```
 
 Enabled by default. In this extension, the `glm-copilot.thinking` setting maps
-directly to `thinking.type` on every request.
+to `thinking.type` for models without a per-model reasoning-effort control.
 
 ### Reasoning effort
 
-GLM-5.2 also accepts a top-level `reasoning_effort` string that tunes how much the
-model reasons. It only takes effect when thinking is enabled and is GLM-5.2 only.
+GLM-5.2 and GLM-5.3 accept a top-level `reasoning_effort` string that tunes how
+much the model reasons. It only takes effect when thinking is enabled.
 
 ```json
 { "reasoning_effort": "max" }
 ```
 
-Accepted values are `max` (the API default), `xhigh`, `high`, `medium`, `low`,
-`minimal`, and `none`. The API folds `low`/`medium` into `high` and `xhigh` into
-`max`; `none` and `minimal` skip thinking entirely. The extension surfaces three of
-these — `none` / `high` / `max` — through the Copilot model picker: `none` sends
-`thinking: { type: "disabled" }` with no `reasoning_effort`, while `high` and `max`
-send `thinking: { type: "enabled" }` plus the matching `reasoning_effort`.
+For GLM-5.2, the extension surfaces `none` / `high` / `max` through the Copilot
+model picker: `none` sends `thinking: { type: "disabled" }` with no
+`reasoning_effort`, while `high` and `max` send `thinking: { type: "enabled" }`
+plus the matching `reasoning_effort`.
+
+For GLM-5.3, the official Coding Plan guides define `low` / `high` / `max`, with
+`max` as the default. Thinking cannot be disabled, so every GLM-5.3 request sends
+`thinking: { type: "enabled" }` plus the selected effort. The built-in model is
+available only in Coding Plan mode because the current Standard API catalogs do
+not list GLM-5.3.
+
+Official model guides: [Z.AI Coding Plan](https://docs.z.ai/devpack/latest-model)
+and [BigModel Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md).
+Standard API availability is checked against the [Z.AI pricing catalog](https://docs.z.ai/guides/overview/pricing.md)
+and [BigModel model overview](https://docs.bigmodel.cn/cn/guide/start/model-overview.md).
 
 ## Tools
 

@@ -10,13 +10,13 @@
   <img src="docs/glm-composer-light.png" alt="GLM-5.2 selected in the Copilot Chat composer in light theme, with Thinking Effort set to Max" width="420">
 </p>
 
-Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) — **GLM-5.2**, the 1M-context flagship built for long-horizon coding, plus a curated lineup (GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). No new sidebar or chat UI: the models appear in the picker you already use, with agent mode, tool calling, and thinking through Copilot's native provider path.
+Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) — **[GLM-5.3](https://z.ai/blog/glm-5.3)**, the default 1M-context Coding Plan model, plus a curated lineup (GLM-5.2, GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). No new sidebar or chat UI: the models appear in the picker you already use, with agent mode, tool calling, and thinking through Copilot's native provider path.
 
 > **Unofficial, community-built extension.** Not affiliated with, endorsed by, or sponsored by Zhipu AI, Z.AI, GitHub, or Microsoft. "GLM", "Copilot", and "Visual Studio Code" are trademarks of their respective owners. You bring your own GLM API key and pay your own usage.
 
 ## Features
 
-- **GLM-5.2 flagship, right in the picker.** A 1M-token context window, step-by-step thinking that streams live into Copilot's native thinking UI, and a per-model **Thinking Effort** control (None / High / Max) — pick None for faster simple edits. Switch models mid-chat without losing history.
+- **GLM-5.3 by default, right in the picker.** The Coding Plan model has a 1M-token context window and step-by-step thinking that streams live into Copilot's native thinking UI. Its per-model **Thinking Effort** control offers Low / High / Max, defaults to Max, and always keeps thinking enabled. Switch models mid-chat without losing history.
 
 - **Powers Copilot up, doesn't replace it.** GLM models appear alongside GPT and Claude. Because the extension uses Copilot's native Language Model Provider API, agent mode and tool calling keep working as usual.
 - **Dual API.** Use your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`). See [Coding Plan vs Standard API](#coding-plan-vs-standard-api).
@@ -35,7 +35,7 @@ Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) �
 
 ### Prerequisites
 
-- VS Code 1.116 or later
+- VS Code 1.127 or later
 - An active GitHub Copilot subscription (Free, Pro, or Enterprise)
 - A GLM API key from [z.ai](https://z.ai/manage-apikey/apikey-list) or [bigmodel.cn](https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys), or a GLM Coding Plan subscription
 
@@ -58,7 +58,7 @@ code --install-extension yijiazhen-qi.glm-for-github-copilot-chat
 
 1. **GLM: Set API Key** (Command Palette, `Cmd/Ctrl + Shift + P`) → paste your key. GLM key format is `{id}.{secret}`.
 2. (Optional) **GLM: Open Settings** to choose your API mode and region.
-3. Open Copilot Chat, pick a GLM model (e.g. **GLM-5.2**, the flagship), and start chatting.
+3. Open Copilot Chat and start with **GLM-5.3**, or pick another available GLM model.
 
 Use **GLM: Set API Key** or **GLM: Clear API Key** to update or remove the key later.
 
@@ -66,13 +66,16 @@ Use **GLM: Set API Key** or **GLM: Clear API Key** to update or remove the key l
 
 | Model | Tier | Context | Max Output | Available on | Tools | Thinking |
 |---|---|---|---|---|---|---|
+| **GLM-5.3** | Default coding model | 1M | 128K | Coding Plan only | Yes | Always on (Low / High / Max) |
 | **GLM-5.2** | Flagship | 1M | 128K | Coding Plan + Standard | Yes | Yes (effort) |
 | **GLM-5.1** | Prior flagship | 200K | 128K | Standard only | Yes | Yes |
 | **GLM-5** | Prior flagship | 200K | 128K | Standard only | Yes | Yes |
 | **GLM-4.7** | Fast coding | 200K | 128K | Coding Plan + Standard | Yes | Yes |
 | **GLM-4.5 Air** | Lightweight | 128K | 96K | Coding Plan + Standard | Yes | Yes |
 
-The picker shows only the models your selected **API Mode** can serve, so you never pick one your plan can't use. GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-only. Need a model not listed — newer (GLM-5-Turbo), older (GLM-4.6), or proxy-hosted? Add it with [`glm-copilot.customModels`](#settings).
+The picker shows only the models your selected **API Mode** can serve, so you never pick one your plan can't use. GLM-5.3 is currently Coding-Plan-only; GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-only. Need a model not listed — newer, older (GLM-4.6), or proxy-hosted? Add it with [`glm-copilot.customModels`](#settings).
+
+For new conversations, the extension contributes GLM-5.3 as VS Code's default when that model is available. An explicit user or organization `chat.defaultModel` setting takes precedence, and Standard API mode falls back to an available model because GLM-5.3 is not offered there.
 
 ## Settings
 
@@ -83,7 +86,7 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 | `glm-copilot.baseUrl` | *(empty)* | Override the chat API base URL. Overrides `apiMode` and `region` for chat. GLM Vision still uses the official endpoint selected by `region` and requires a separate Vision key. |
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
-| `glm-copilot.thinking` | `enabled` | Step-by-step reasoning: `enabled` (higher quality) or `disabled` (faster). Applies to thinking-capable models without a per-model Thinking Effort picker; GLM-5.2 uses None / High / Max in the model picker. |
+| `glm-copilot.thinking` | `enabled` | Step-by-step reasoning for models without a per-model Thinking Effort picker: `enabled` (higher quality) or `disabled` (faster). GLM-5.2 uses None / High / Max; GLM-5.3 requires thinking and uses Low / High / Max, defaulting to Max. |
 | `glm-copilot.visionEnabled` | `false` | Accept pasted/attached images in chat when the verified GLM Vision package is installed. GLM Vision analyzes them first so text-only models can reason about them. If the server is unavailable, the reply shows an analysis-failure notice and continues without the image. See [Image input (vision)](#image-input-vision). |
 | `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM Vision when analyzing images. Empty uses the built-in prompt (verbatim text/code transcription, UI/diagram/chart description, no speculation). Changing it re-analyzes images on the next turn. |
 | `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking? }`. |
@@ -104,6 +107,8 @@ The picker shows only the models your selected **API Mode** can serve, so you ne
 | Standard | Mainland China | `https://open.bigmodel.cn/api/paas/v4` | [open.bigmodel.cn](https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys) |
 
 Full API documentation: [docs.z.ai](https://docs.z.ai).
+
+GLM-5.3 is documented for Coding Plan on both the [Z.AI](https://docs.z.ai/devpack/latest-model) and [BigModel](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md) endpoints. The current [Z.AI Standard API catalog](https://docs.z.ai/guides/overview/pricing.md) and [BigModel Standard API catalog](https://docs.bigmodel.cn/cn/guide/start/model-overview.md) do not list it, so this extension does not expose GLM-5.3 in Standard mode yet.
 
 Usage details rely on regional usage endpoints (`api.z.ai` for International, `open.bigmodel.cn` for Mainland China) that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
 

@@ -4,7 +4,7 @@ export type ThinkingMode = 'enabled' | 'disabled';
 export type ApiMode = 'coding-plan' | 'standard';
 export type Region = 'international' | 'china';
 
-export type ThinkingEffort = 'none' | 'high' | 'max';
+export type ThinkingEffort = 'none' | 'low' | 'high' | 'max';
 
 export interface ThinkingEffortSpec {
 	/** Levels shown in the picker, in order. */

@@ -4,6 +4,10 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## Unreleased
+
+- **GLM-5.3 support** - adds GLM-5.3 as the default Coding Plan model on both Z.AI and BigModel, with a 1M-token context window, 128K maximum output, and mandatory Low / High / Max thinking effort (Max by default). Standard API mode remains unchanged because its current official model catalogs do not list GLM-5.3. The minimum VS Code version is now 1.127, where the stable `chat.defaultModel` setting is available.
+
 ## 0.3.0
 
 - **Usage error reporting** - HTTP 200 responses containing failed GLM business envelopes now report authentication or server errors instead of `no-data`. Business codes and server messages are preserved in the GLM output logs, and authentication failures provide the existing API-key recovery action.
