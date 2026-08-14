@@ -198,9 +198,25 @@ export const URI_PATHS = {
 } as const;
 
 const GLM_5_2_EFFORT: ThinkingEffortSpec = { levels: ['none', 'high', 'max'], default: 'high' };
+const GLM_5_3_EFFORT: ThinkingEffortSpec = { levels: ['low', 'high', 'max'], default: 'max' };
 
 /** Built-in GLM models exposed through the language model provider. */
 export const MODELS: GLMModel[] = [
+	{
+		id: 'glm-5.3',
+		name: 'GLM-5.3',
+		family: 'glm',
+		version: '5.3',
+		detail: 'Default frontier coding model, 1M context',
+		maxInputTokens: 1000000,
+		maxOutputTokens: 128000,
+		capabilities: {
+			toolCalling: DEFAULT_TOOLS_LIMIT,
+			thinking: true,
+			thinkingEffort: GLM_5_3_EFFORT,
+		},
+		availableIn: ['coding-plan'],
+	},
 	{
 		id: 'glm-4.7',
 		name: 'GLM-4.7',

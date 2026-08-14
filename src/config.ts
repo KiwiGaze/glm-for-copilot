@@ -95,8 +95,9 @@ export function getCustomModels(): GLMModel[] {
 }
 
 /**
- * Models to show in the picker: built-ins filtered by the active API mode
- * (unless a custom base URL is set), plus all custom models. Custom ids win.
+ * Models to show in the picker. Built-in availability describes official
+ * endpoints, so API-mode filtering is skipped when a custom base URL is set.
+ * Custom models always appear, and custom ids replace matching built-ins.
  */
 export function listProviderModels(): GLMModel[] {
 	const customModels = getCustomModels();

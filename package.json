@@ -1,9 +1,9 @@
 {
 	"name": "glm-for-github-copilot-chat",
 	"displayName": "GLM Models for GitHub Copilot Chat",
-	"description": "Bring GLM-5.2 and the full GLM lineup (Z.ai / Zhipu) into GitHub Copilot Chat with visible thinking. Coding Plan or Standard API.",
+	"description": "Bring Z.ai / Zhipu GLM models into GitHub Copilot Chat with visible thinking. On official endpoints, GLM-5.3 uses Coding Plan; other built-ins vary by API mode.",
 	"icon": "resources/icon.png",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"publisher": "yijiazhen-qi",
 	"license": "MIT",
 	"repository": {
@@ -17,7 +17,7 @@
 	"qna": "https://github.com/KiwiGaze/glm-for-copilot/issues",
 	"packageManager": "pnpm@11.17.0",
 	"engines": {
-		"vscode": "^1.116.0",
+		"vscode": "^1.127.0",
 		"node": ">=20"
 	},
 	"categories": [
@@ -27,6 +27,7 @@
 	],
 	"keywords": [
 		"glm",
+		"glm-5.3",
 		"glm-5.2",
 		"glm-5",
 		"glm-4.7",
@@ -50,6 +51,9 @@
 	"enabledApiProposals": [],
 	"main": "./out/extension.js",
 	"contributes": {
+		"configurationDefaults": {
+			"chat.defaultModel": "glm-5.3"
+		},
 		"languageModelChatProviders": [
 			{
 				"vendor": "glm",
