@@ -64,7 +64,7 @@ Use **GLM: Set API Key** or **GLM: Clear API Key** to update or remove the key l
 
 ## Models
 
-| Model | Tier | Context | Max Output | Available on | Tools | Thinking |
+| Model | Tier | Context | Max Output | Available on official endpoints | Tools | Thinking |
 |---|---|---|---|---|---|---|
 | **GLM-5.3** | Default coding model | 1M | 128K | Coding Plan only | Yes | Always on (Low / High / Max) |
 | **GLM-5.2** | Flagship | 1M | 128K | Coding Plan + Standard | Yes | Yes (effort) |
@@ -73,9 +73,9 @@ Use **GLM: Set API Key** or **GLM: Clear API Key** to update or remove the key l
 | **GLM-4.7** | Fast coding | 200K | 128K | Coding Plan + Standard | Yes | Yes |
 | **GLM-4.5 Air** | Lightweight | 128K | 96K | Coding Plan + Standard | Yes | Yes |
 
-The picker shows only the models your selected **API Mode** can serve, so you never pick one your plan can't use. GLM-5.3 is currently Coding-Plan-only; GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-only. Need a model not listed — newer, older (GLM-4.6), or proxy-hosted? Add it with [`glm-copilot.customModels`](#settings).
+On official endpoints, the picker shows only the models your selected **API Mode** can serve, so you never pick one your plan can't use. GLM-5.3 is currently Coding-Plan-only; GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5 and GLM-5.1 are Standard-only. A custom `baseUrl` keeps every built-in model visible because the extension cannot infer the capabilities of a compatible endpoint, unless a `customModels` entry with the same id replaces its built-in definition. Need a model not listed — newer, older (GLM-4.6), or proxy-hosted? Add it with [`glm-copilot.customModels`](#settings).
 
-For new conversations, the extension contributes GLM-5.3 as VS Code's default when that model is available. An explicit user or organization `chat.defaultModel` setting takes precedence, and Standard API mode falls back to an available model because GLM-5.3 is not offered there.
+For new conversations, the extension contributes GLM-5.3 as VS Code's default. An explicit user or organization `chat.defaultModel` setting takes precedence. GLM-5.3 is omitted from the official Standard API picker, where you must select another available model.
 
 ## Settings
 
@@ -83,13 +83,13 @@ For new conversations, the extension contributes GLM-5.3 as VS Code's default wh
 |---|---|---|
 | `glm-copilot.apiMode` | `coding-plan` | Which GLM API to use: `coding-plan` or `standard`. See below. |
 | `glm-copilot.region` | `international` | Server region for **both** chat API modes and GLM Vision: `international` (z.ai) or `china` (bigmodel.cn). A custom `baseUrl` overrides it for chat only. |
-| `glm-copilot.baseUrl` | *(empty)* | Override the chat API base URL. Overrides `apiMode` and `region` for chat. GLM Vision still uses the official endpoint selected by `region` and requires a separate Vision key. |
+| `glm-copilot.baseUrl` | *(empty)* | Override the chat API base URL. Overrides `apiMode` and `region` for chat, and keeps all built-in models visible because compatible endpoint capabilities cannot be inferred, unless a custom model with the same id replaces its built-in definition. GLM Vision still uses the official endpoint selected by `region` and requires a separate Vision key. |
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
 | `glm-copilot.thinking` | `enabled` | Step-by-step reasoning for models without a per-model Thinking Effort picker: `enabled` (higher quality) or `disabled` (faster). GLM-5.2 uses None / High / Max; GLM-5.3 requires thinking and uses Low / High / Max, defaulting to Max. |
 | `glm-copilot.visionEnabled` | `false` | Accept pasted/attached images in chat when the verified GLM Vision package is installed. GLM Vision analyzes them first so text-only models can reason about them. If the server is unavailable, the reply shows an analysis-failure notice and continues without the image. See [Image input (vision)](#image-input-vision). |
 | `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM Vision when analyzing images. Empty uses the built-in prompt (verbatim text/code transcription, UI/diagram/chart description, no speculation). Changing it re-analyzes images on the next turn. |
-| `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking? }`. |
+| `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking? }`. A custom model with the same id replaces the built-in definition. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
 | `glm-copilot.debugLogging` | `false` | Write verbose debug logs to the GLM output channel. View with **GLM: Show Logs**. |
 | `glm-copilot.usageRefreshIntervalMinutes` | `5` | How often (in minutes) to refresh the GLM usage status bar. Minimum `1`. Shows Coding Plan quota or Standard API balance for both `z.ai` and `bigmodel.cn` regions. Only when no `baseUrl` override. |
@@ -108,7 +108,7 @@ For new conversations, the extension contributes GLM-5.3 as VS Code's default wh
 
 Full API documentation: [docs.z.ai](https://docs.z.ai).
 
-GLM-5.3 is documented for Coding Plan on both the [Z.AI](https://docs.z.ai/devpack/latest-model) and [BigModel](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md) endpoints. The current [Z.AI Standard API pricing catalog](https://docs.z.ai/guides/overview/pricing.md) does not include it. BigModel's [model overview](https://docs.bigmodel.cn/cn/guide/start/model-overview.md) lists GLM-5.3, but its [model page](https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3) says the model API is not yet available. This extension therefore does not expose GLM-5.3 in Standard mode yet.
+GLM-5.3 is documented for Coding Plan on both the [Z.AI](https://docs.z.ai/devpack/latest-model) and [BigModel](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md) endpoints. The current [Z.AI Standard API pricing catalog](https://docs.z.ai/guides/overview/pricing.md) does not include it. BigModel's [model overview](https://docs.bigmodel.cn/cn/guide/start/model-overview.md) lists GLM-5.3, but its [model page](https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3) says the model API is not yet available. This extension therefore does not expose GLM-5.3 on the official Standard endpoints yet; a compatible custom `baseUrl` may serve it.
 
 Usage details rely on regional usage endpoints (`api.z.ai` for International, `open.bigmodel.cn` for Mainland China) that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
 

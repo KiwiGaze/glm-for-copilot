@@ -31,7 +31,10 @@ Append `/chat/completions` to any base URL below.
 | Standard | Mainland China | `https://open.bigmodel.cn/api/paas/v4` |
 
 The Coding Plan endpoint is restricted to coding scenarios. The `glm-copilot.baseUrl`
-setting overrides all of the above and is used verbatim (useful for proxies).
+setting overrides all of the above and is used verbatim (useful for proxies). Because
+the extension cannot infer a compatible endpoint's capabilities, a custom base URL
+also keeps every built-in model visible instead of applying official API-mode filters,
+unless a custom model with the same id replaces its built-in definition.
 
 ## Streaming
 
@@ -73,9 +76,10 @@ For GLM-5.3, the official Coding Plan guides define `low` / `high` / `max`, with
 `max` as the default. On the Coding Plan route, a disabled thinking toggle is
 converted to `low`, so the extension exposes only those three effort levels and
 sends `thinking: { type: "enabled" }` plus the selected effort on every request.
-The built-in model is available only in Coding Plan mode. Z.AI's current Standard
-API pricing catalog does not include GLM-5.3; BigModel lists the model, but its
-model page says the model API is not yet available.
+The built-in model is available only on the official Coding Plan endpoints. Z.AI's
+current Standard API pricing catalog does not include GLM-5.3; BigModel lists the
+model, but its model page says the model API is not yet available. A compatible
+custom base URL may serve the model and keeps it visible in the picker.
 
 Official model guides: [Z.AI Coding Plan](https://docs.z.ai/devpack/latest-model)
 and [BigModel Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md).

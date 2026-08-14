@@ -42,14 +42,14 @@
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "覆盖聊天所用的 GLM API 基础 URL。设置后，聊天会直接使用此值并忽略 `apiMode` 和 `region`。适用于自托管代理或兼容的第三方端点。GLM Vision 仍使用由 `region` 选择的官方端点。若 Vision 启动时此覆盖处于启用状态，它会要求使用通过 [`GLM: 设置 Vision API 密钥`](command:glm-copilot.setVisionApiKey) 单独存储的密钥，而不会选择此端点的凭据。",
+  "glm-copilot.config.baseUrl.description": "覆盖聊天所用的 GLM API 基础 URL。设置后，聊天会直接使用此值并忽略 `apiMode` 和 `region`。由于扩展无法推断该端点的能力，所有内置模型都会保持可见；但若自定义模型使用相同 id，则会替换对应的内置定义。适用于自托管代理或兼容的第三方端点。GLM Vision 仍使用由 `region` 选择的官方端点。若 Vision 启动时此覆盖处于启用状态，它会要求使用通过 [`GLM: 设置 Vision API 密钥`](command:glm-copilot.setVisionApiKey) 单独存储的密钥，而不会选择此端点的凭据。",
 
   "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
 
   "glm-copilot.config.maxRetries.description": "对瞬时失败（HTTP 429 限流和 5xx 服务器错误）的最大自动重试次数（不含首次请求）。设为 `0` 可关闭自动重试、失败时立即报错。重试采用指数退避，并遵循服务器返回的 `Retry-After`。",
 
   "glm-copilot.config.modelIdOverrides.description": "重映射内置模型的 API ID。键为选择器中显示的模型 ID（如 `glm-4.7`），值为发送给 API 的 ID。适用于使用不同模型名称的代理或区域端点（如 bigmodel.cn）。要添加全新模型，请改用 `customModels`。",
-  "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`。自定义模型始终显示（不受 API 模式过滤），并发送到当前生效的端点。",
+  "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`。自定义模型始终显示（不受 API 模式过滤），并发送到当前生效的端点。若自定义模型使用与内置模型相同的 id，则会替换对应的内置定义。",
 
   "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。适用于没有独立思考强度设置的模型。GLM-5.2 使用关闭 / 高 / 最高；GLM-5.3 必须启用思考，并使用低 / 高 / 最高（默认为最高）。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
   "glm-copilot.config.thinking.enabled.label": "开启",

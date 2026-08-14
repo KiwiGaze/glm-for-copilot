@@ -34,4 +34,11 @@ describe('listProviderModels', () => {
 
 		expect(listProviderModels().map((model) => model.id)).not.toContain('glm-5.3');
 	});
+
+	it('offers GLM-5.3 through a custom endpoint in Standard API mode', () => {
+		settings.set('apiMode', 'standard');
+		settings.set('baseUrl', 'https://proxy.example.com/v4');
+
+		expect(listProviderModels().map((model) => model.id)).toContain('glm-5.3');
+	});
 });
