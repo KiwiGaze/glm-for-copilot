@@ -99,9 +99,8 @@ export function createFlashRequest(
 		messages: [{ role: 'user', content }],
 		stream: true,
 		max_tokens: VISION_DESCRIPTION_MAX_TOKENS,
-		thinking: { type: 'enabled' },
+		thinking: { type: 'enabled', clear_thinking: false },
 		reasoning_effort: 'max',
-		clear_thinking: false,
 		temperature: 1,
 		top_p: 0.95,
 	};

@@ -100,9 +100,8 @@ describe('GLM-5.3-Flash image analysis', () => {
 			],
 			stream: true,
 			max_tokens: 32_768,
-			thinking: { type: 'enabled' },
+			thinking: { type: 'enabled', clear_thinking: false },
 			reasoning_effort: 'max',
-			clear_thinking: false,
 			temperature: 1,
 			top_p: 0.95,
 		});

@@ -162,9 +162,8 @@ export interface GLMChatRequest {
 	max_tokens?: number;
 	temperature?: number;
 	top_p?: number;
-	thinking?: { type: ThinkingMode };
+	thinking?: { type: ThinkingMode; clear_thinking?: boolean };
 	reasoning_effort?: Exclude<ThinkingEffort, 'none'>;
-	clear_thinking?: boolean;
 	stream_options?: { include_usage: boolean };
 }
 
