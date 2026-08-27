@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { getDebugLogging } from './config';
 
+const IMAGE_DATA_URL_PATTERN = /data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/_=-]+/giu;
+const REDACTED_IMAGE_DATA = 'data:image/[redacted]';
+
 class Logger {
 	private channel: vscode.LogOutputChannel | undefined;
 
@@ -42,7 +45,7 @@ class Logger {
 
 function format(message: string, args: unknown[]): string {
 	if (args.length === 0) {
-		return message;
+		return redactImageData(message);
 	}
 	const rendered = args
 		.map((arg) => {
@@ -59,7 +62,11 @@ function format(message: string, args: unknown[]): string {
 			}
 		})
 		.join(' ');
-	return `${message} ${rendered}`;
+	return redactImageData(`${message} ${rendered}`);
+}
+
+function redactImageData(value: string): string {
+	return value.replace(IMAGE_DATA_URL_PATTERN, REDACTED_IMAGE_DATA);
 }
 
 export const logger = new Logger();

@@ -35,7 +35,9 @@ export async function streamChatCompletion({
 			reportToolCall(progress, toolCall);
 		},
 		onUsage: (usage) => {
-			updateCharsPerToken(prepared.totalRequestChars, usage, getCharsPerToken, setCharsPerToken);
+			if (!hasNativeImageContent(prepared.request.messages)) {
+				updateCharsPerToken(prepared.totalRequestChars, usage, getCharsPerToken, setCharsPerToken);
+			}
 			reportUsage(progress, usage);
 		},
 		onRetryBackoff: (info) => {
@@ -49,6 +51,14 @@ export async function streamChatCompletion({
 		},
 	};
 	await prepared.client.streamChatCompletion(prepared.request, callbacks, token);
+}
+
+function hasNativeImageContent(messages: PreparedChatRequest['request']['messages']): boolean {
+	return messages.some(
+		(message) =>
+			Array.isArray(message.content) &&
+			message.content.some((part) => part.type === 'image_url'),
+	);
 }
 
 function reportRetryBackoff(

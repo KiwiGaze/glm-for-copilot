@@ -6,11 +6,7 @@
   "glm-copilot.command.showLogs": "GLM: 显示日志",
   "glm-copilot.command.refreshUsage": "GLM: 刷新用量",
   "glm-copilot.command.openUsageDetail": "GLM: 显示用量详情",
-  "glm-copilot.command.installVisionMcp": "GLM: 安装 GLM Vision MCP 服务器",
-  "glm-copilot.command.uninstallVisionMcp": "GLM: 卸载 GLM Vision MCP 服务器",
-  "glm-copilot.command.setVisionApiKey": "GLM: 设置 Vision API 密钥",
-  "glm-copilot.command.openVisionPromptSettings": "GLM: 编辑 GLM Vision 提示词",
-  "glm-copilot.command.toggleVision": "GLM: 切换聊天模型视觉能力",
+  "glm-copilot.command.openVisionPromptSettings": "GLM: 编辑 Flash 图片分析提示词",
 
   "glm-copilot.walkthrough.title": "GLM Models for GitHub Copilot Chat",
   "glm-copilot.walkthrough.description": "在 GitHub Copilot Chat 中使用 GLM 模型。",
@@ -24,11 +20,8 @@
   "glm-copilot.walkthrough.showModels.title": "在选择器中查看 GLM 模型",
   "glm-copilot.walkthrough.showModels.description": "你的 GLM 模型将根据所选的 API 模式出现在 Copilot Chat 的模型选择器中。如果看不到，请打开语言模型管理器以显示它们。\n[打开语言模型](command:workbench.action.chat.manage)",
 
-  "glm-copilot.walkthrough.installVisionMcp.title": "安装 GLM Vision（可选）",
-  "glm-copilot.walkthrough.installVisionMcp.description": "先查看隐私和本地代码执行影响，再安装依赖完整性已锁定的 GLM Vision MCP 服务器。\n[查看并安装 GLM Vision](command:glm-copilot.installVisionMcp)",
-
-  "glm-copilot.walkthrough.enableVision.title": "开启图片输入（可选）",
-  "glm-copilot.walkthrough.enableVision.description": "让纯文本 GLM 模型也能接受粘贴的图片——由 GLM Vision 先行分析。\n[切换视觉能力](command:glm-copilot.toggleVision)",
+  "glm-copilot.walkthrough.useImages.title": "使用图片输入",
+  "glm-copilot.walkthrough.useImages.description": "直接附加图片。GLM-5.3-Flash 会原生处理图片，并在选择纯文本模型时提供视觉上下文。\n[编辑图片分析提示词](command:glm-copilot.openVisionPromptSettings)",
 
   "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
@@ -38,25 +31,24 @@
   "glm-copilot.config.apiMode.standard.label": "标准 API",
   "glm-copilot.config.apiMode.standard.description": "通过 GLM 开放平台按量付费访问，实际端点由 `region` 设置决定。",
 
-  "glm-copilot.config.region.description": "**编程计划**、**标准 API** 和 GLM Vision 使用的服务器区域。自定义 `baseUrl` 仅会覆盖聊天的此设置；GLM Vision 仍使用它选择官方端点。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
+  "glm-copilot.config.region.description": "**编程计划**和**标准 API** 使用的服务器区域，也适用于 GLM-5.3-Flash 图片分析。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "覆盖聊天所用的 GLM API 基础 URL。设置后，聊天会直接使用此值并忽略 `apiMode` 和 `region`。由于扩展无法推断该端点的能力，所有内置模型都会保持可见；但若自定义模型使用相同 id，则会替换对应的内置定义。适用于自托管代理或兼容的第三方端点。GLM Vision 仍使用由 `region` 选择的官方端点。若 Vision 启动时此覆盖处于启用状态，它会要求使用通过 [`GLM: 设置 Vision API 密钥`](command:glm-copilot.setVisionApiKey) 单独存储的密钥，而不会选择此端点的凭据。",
+  "glm-copilot.config.baseUrl.description": "覆盖 GLM API 基础 URL。设置后会直接使用此值，并忽略 `apiMode` 和 `region`。由于扩展无法推断该端点的能力，所有内置模型都会保持可见；但若自定义模型使用相同 id，则会替换对应的内置定义。图片回退也使用此端点和普通聊天密钥；扩展绝不会把图片改发到其他官方端点。",
 
   "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
 
   "glm-copilot.config.maxRetries.description": "对瞬时失败（HTTP 429 限流和 5xx 服务器错误）的最大自动重试次数（不含首次请求）。设为 `0` 可关闭自动重试、失败时立即报错。重试采用指数退避，并遵循服务器返回的 `Retry-After`。",
 
   "glm-copilot.config.modelIdOverrides.description": "重映射内置模型的 API ID。键为选择器中显示的模型 ID（如 `glm-4.7`），值为发送给 API 的 ID。适用于使用不同模型名称的代理或区域端点（如 bigmodel.cn）。要添加全新模型，请改用 `customModels`。",
-  "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"maxInputTokens\": 200000 }`。自定义模型始终显示（不受 API 模式过滤），并发送到当前生效的端点。若自定义模型使用与内置模型相同的 id，则会替换对应的内置定义。",
+  "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"nativeImageInput\": true }`。仅当端点能直接接收图片内容时才设置 `nativeImageInput`；否则附加图片会使用 GLM-5.3-Flash 回退。",
 
-  "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。适用于没有独立思考强度设置的模型。GLM-5.2 使用关闭 / 高 / 最高；GLM-5.3 必须启用思考，并使用低 / 高 / 最高（默认为最高）。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
+  "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。适用于没有独立思考强度设置的模型。GLM-5.2 使用关闭 / 高 / 最高；GLM-5.3 和 GLM-5.3-Flash 必须启用思考，并使用低 / 高 / 最高（默认为最高）。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
   "glm-copilot.config.thinking.enabled.label": "开启",
   "glm-copilot.config.thinking.disabled.label": "关闭",
 
-  "glm-copilot.config.visionEnabled.description": "在聊天中接受粘贴或附加的图片。图片由本地 GLM Vision MCP 服务器（通过 [`GLM: 安装 GLM Vision MCP 服务器`](command:glm-copilot.installVisionMcp) 安装）分析后以文本形式注入，使纯文本 GLM 模型也能理解图片内容。安装经过验证的软件包后即可生效。开启后，在通知中选择 **管理工具批准**，在工作区的工具批准管理器中找到 **GLM Vision > analyze_image**，并仅为该工具启用 **无需批准**，即可停止重复确认。扩展绝不会代你更改批准设置，组织策略仍可能要求确认。每次分析图片时会检查服务器是否可用；如果服务器不可用，聊天会显示失败提示，并在不包含图片内容的情况下继续。需要 Node.js 18+（推荐 22+）。",
-  "glm-copilot.config.visionPrompt.description": "分析图片附件时发送给 GLM Vision 的指令。留空则使用内置提示词：逐字转录可见的文本/代码，并描述界面、图示与图表，且不做主观推测。修改后将在下一轮对话中重新分析图片。可运行 [`GLM: 编辑 GLM Vision 提示词`](command:glm-copilot.openVisionPromptSettings) 直接打开。",
+  "glm-copilot.config.visionPrompt.description": "当所选模型不能原生接收图片附件时，发送给 GLM-5.3-Flash 的分析指令。留空则使用内置提示词：转录可见的文本/代码，并描述界面、图示与图表，且不做主观推测。分析使用与聊天相同的端点和 API 密钥。修改后将在下一轮对话中重新分析图片。可运行 [`GLM: 编辑 Flash 图片分析提示词`](command:glm-copilot.openVisionPromptSettings) 直接打开。",
 
   "glm-copilot.config.debugLogging.description": "启用详细调试日志，输出到 GLM 输出频道。使用 [`GLM: 显示日志`](command:glm-copilot.showLogs) 查看。日志包含请求元数据，但不包含提示词文本。",
   "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔（分钟），最小值为 1，最大值为 1440（24 小时）。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均可显示。仅在未配置 baseUrl 覆盖时生效。",

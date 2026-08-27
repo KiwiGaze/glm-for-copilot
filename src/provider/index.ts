@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
-import { getVisionPrompt, listProviderModels } from '../config';
+import { findModelDefinition, getVisionPrompt, listProviderModels } from '../config';
 import { API_KEY_SECRET, VENDOR_ID } from '../consts';
 import { t } from '../i18n';
 import { logger } from '../logger';
-import type { IAuthManager, IVisionMcpState } from '../types';
+import type { IAuthManager } from '../types';
 import { toChatInfo } from './models';
 import { prepareChatRequest } from './request';
 import { streamChatCompletion } from './stream';
 import { cachedImageDescriptionChars, estimateTokenCount } from './tokens';
+import { FlashImageAnalyzer } from './vision/analyze';
 import { VisionDescriptionCache } from './vision/cache';
 import { resolveVisionMessages } from './vision/resolve';
 
@@ -34,20 +35,12 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 
 	private readonly visionCache: VisionDescriptionCache;
 
-	private readonly visionStorageDir: string;
+	private readonly imageAnalyzer: FlashImageAnalyzer;
 
-	constructor(
-		context: vscode.ExtensionContext,
-		private readonly authManager: IAuthManager,
-		private readonly visionState: IVisionMcpState,
-	) {
+	constructor(context: vscode.ExtensionContext, private readonly authManager: IAuthManager) {
 		this.extensionVersion = context.extension.packageJSON.version as string;
-		const legacyVisionCacheKey = 'glm-copilot.visionDescriptionCache';
-		if (context.globalState.get(legacyVisionCacheKey) !== undefined) {
-			void context.globalState.update(legacyVisionCacheKey, undefined);
-		}
 		this.visionCache = new VisionDescriptionCache();
-		this.visionStorageDir = context.globalStorageUri.fsPath;
+		this.imageAnalyzer = new FlashImageAnalyzer(authManager, this.extensionVersion);
 		context.subscriptions.push(
 			this.onDidChangeLanguageModelChatInformationEmitter,
 			vscode.workspace.onDidChangeConfiguration((e) => {
@@ -56,8 +49,7 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 					e.affectsConfiguration('glm-copilot.baseUrl') ||
 					e.affectsConfiguration('glm-copilot.apiMode') ||
 					e.affectsConfiguration('glm-copilot.region') ||
-					e.affectsConfiguration('glm-copilot.customModels') ||
-					e.affectsConfiguration('glm-copilot.visionEnabled')
+					e.affectsConfiguration('glm-copilot.customModels')
 				) {
 					this.refreshModelPicker();
 				}
@@ -67,7 +59,6 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 					this.refreshModelPicker();
 				}
 			}),
-			visionState.onDidChangeState(() => this.refreshModelPicker()),
 		);
 	}
 
@@ -79,8 +70,7 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 			return [];
 		}
 		const hasKey = await this.authManager.hasApiKey();
-		const imageInputEnabled = this.visionState.isImageInputEnabled();
-		return listProviderModels().map((model) => toChatInfo(model, hasKey, imageInputEnabled));
+		return listProviderModels().map((model) => toChatInfo(model, hasKey));
 	}
 
 	async provideLanguageModelChatResponse(
@@ -90,16 +80,15 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		progress: vscode.Progress<vscode.LanguageModelResponsePart>,
 		token: vscode.CancellationToken,
 	): Promise<void> {
-		// Always run vision resolution: without images it is a cheap no-op, and
-		// with images it degrades to an explicit marker + notice instead of
-		// silently dropping them when the server is down or vision is off.
+		const nativeImageInput =
+			findModelDefinition(model.id)?.capabilities.nativeImageInput ?? false;
 		let vision;
 		try {
 			vision = await resolveVisionMessages(
 				{
-					hasVisionApiKey: () => this.visionState.hasVisionApiKey(),
+					analyzer: this.imageAnalyzer,
 					cache: this.visionCache,
-					storageDir: this.visionStorageDir,
+					nativeImageInput,
 				},
 				messages,
 				progress,
@@ -137,15 +126,20 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 	}
 
 	async provideTokenCount(
-		_model: vscode.LanguageModelChatInformation,
+		model: vscode.LanguageModelChatInformation,
 		text: string | vscode.LanguageModelChatRequestMessage,
 		_token: vscode.CancellationToken,
 	): Promise<number> {
-		return estimateTokenCount(
-			text,
-			this.charsPerToken,
-			cachedImageDescriptionChars(this.visionCache, getVisionPrompt()),
-		);
+		const nativeImageInput =
+			findModelDefinition(model.id)?.capabilities.nativeImageInput ?? false;
+		const cachedDescriptionChars = nativeImageInput
+			? undefined
+			: cachedImageDescriptionChars(
+					this.visionCache,
+					this.imageAnalyzer.getTarget(),
+					getVisionPrompt(),
+				);
+		return estimateTokenCount(text, this.charsPerToken, cachedDescriptionChars);
 	}
 
 	async hasApiKey(): Promise<boolean> {

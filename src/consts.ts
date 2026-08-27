@@ -14,9 +14,6 @@ export const VENDOR_ID = 'glm';
 /** SecretStorage key for the GLM API key. */
 export const API_KEY_SECRET = 'glm-copilot.apiKey';
 
-/** SecretStorage key for an explicit GLM Vision API key. */
-export const VISION_API_KEY_SECRET = 'glm-copilot.visionApiKey';
-
 /** Memento key tracking whether the welcome walkthrough has been shown. */
 export const WELCOME_SHOWN_KEY = 'glm-copilot.welcomeShown';
 
@@ -44,8 +41,6 @@ export const EXTERNAL_URLS = {
 	standardKeysInternational: 'https://z.ai/manage-apikey/apikey-list',
 	standardKeysChina: 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',
 	docs: 'https://docs.z.ai',
-	visionMcpDocs: 'https://docs.z.ai/devpack/mcp/vision-mcp-server',
-	visionMcpPackage: 'https://www.npmjs.com/package/@z_ai/mcp-server/v/0.1.4',
 } as const;
 
 /**
@@ -84,9 +79,9 @@ export const USAGE_MANUAL_DEBOUNCE_MS = 30 * 1000;
 export const USAGE_REQUEST_TIMEOUT_MS = 10_000;
 
 /**
- * Built-in analysis prompt sent as the `prompt` argument of the vision MCP
- * `analyze_image` tool (one call per image). English and out of i18n so the
- * prompt shape does not change with the VS Code display language.
+ * Built-in analysis prompt sent to GLM-5.3-Flash for text-model image
+ * fallback. English and out of i18n so the prompt shape does not change with
+ * the VS Code display language.
  */
 export const DEFAULT_VISION_PROMPT = [
 	'You are the eyes for a text-only coding assistant. It cannot see the attached image; your description is all it will have, so be precise and complete.',
@@ -95,91 +90,29 @@ export const DEFAULT_VISION_PROMPT = [
 ].join('\n');
 
 /**
- * Image MIME types accepted by the vision pipeline (lowercase), mapped to the
- * file extension used for the temp files handed to the MCP tool. Limited to
- * what `@z_ai/mcp-server` accepts for local paths (`.jpg`/`.jpeg`/`.png`).
+ * Image MIME types accepted by the extension before either native forwarding
+ * or Flash fallback.
  */
 export const VISION_IMAGE_MIME_EXTENSIONS: Record<string, string> = {
 	'image/png': 'png',
 	'image/jpeg': 'jpg',
 };
 
-/** Largest single image (bytes) accepted — the vision MCP server rejects images over 5 MB. */
+/** Largest single image accepted by the documented Chat Completions contract. */
 export const VISION_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Maximum description tokens requested from each pinned Vision MCP analysis call. */
+/** Maximum final-description tokens requested from each Flash fallback call. */
 export const VISION_DESCRIPTION_MAX_TOKENS = 32_768;
 
 /**
- * Largest image count per analyzed container. Images of one container are
- * written to disk and analyzed concurrently, so this also bounds peak temp
- * disk usage and parallel `analyze_image` calls per run.
+ * Largest image count accepted across one extension request.
  */
-export const VISION_MAX_IMAGES_PER_CONTAINER = 16;
+export const VISION_MAX_IMAGES_PER_REQUEST = 16;
 
 /** Session (memory-only) description cache bound (FIFO). */
 export const VISION_CACHE_MAX = 128;
 
-/** Contribution id for the Z.AI Vision MCP server definition provider. */
-export const VISION_MCP_PROVIDER_ID = 'glm-copilot.vision';
-
-/** Display label for the registered MCP server (proper noun — intentionally not localized). */
-export const VISION_MCP_LABEL = 'GLM Vision';
-
-/** Exact official Z.AI Vision MCP package pinned by the bundled npm lockfile. */
-export const VISION_MCP_PACKAGE_NAME = '@z_ai/mcp-server';
-export const VISION_MCP_PACKAGE_VERSION = '0.1.4';
-export const VISION_MCP_PACKAGE = `${VISION_MCP_PACKAGE_NAME}@${VISION_MCP_PACKAGE_VERSION}`;
-
-/** Local, integrity-locked MCP installation under the extension's global storage. */
-export const VISION_MCP_INSTALL_DIR_NAME = 'vision-mcp';
-export const VISION_MCP_ENTRYPOINT_PARTS = [
-	'node_modules',
-	'@z_ai',
-	'mcp-server',
-	'build',
-	'index.js',
-] as const;
-
-/** Env var names + platform-mode values consumed by the Z.AI vision MCP server. */
-export const ZAI_MODE_ENV = 'Z_AI_MODE';
-export const ZAI_API_KEY_ENV = 'Z_AI_API_KEY';
-export const ZAI_MODE_INTERNATIONAL = 'ZAI';
-export const ZAI_MODE_CHINA = 'ZHIPU';
-
-/** globalState key recording that the user explicitly installed GLM Vision. */
-export const VISION_MCP_INSTALLED_KEY = 'glm-copilot.visionMcp.installed';
-
-/** `setContext` keys gating vision commands and walkthrough steps in the UI. */
-export const VISION_MCP_CTX_INSTALLED = 'glmCopilot.visionMcp.installed';
-export const VISION_MCP_CTX_HEALTHY = 'glmCopilot.visionMcp.healthy';
-
-/** `setContext` key mirroring the `visionEnabled` setting, for walkthrough completion. */
-export const VISION_MCP_CTX_VISION_ENABLED = 'glmCopilot.visionEnabled';
-
-/**
- * Known GLM Vision tool names as they appear in VS Code tool names. The
- * official server reports `zai-mcp-serve` or `zai-mcp-server`; the extension
- * definition label is `GLM Vision`. The `analyze_image` suffix is anchored to
- * the server prefix so a look-alike server
- * (`mcp_glm_vision_evil_analyze_image`) is never treated as GLM Vision.
- */
-export const VISION_ANALYZE_TOOL_SERVER_PATTERN =
-	/^(?:(?:mcp[_-])?glm[\s_-]vision|mcp[_-]zai[_-]mcp[_-]serve(?:r)?)[:\s_-]+analyze_image$/;
-
-/** Minimum Node.js major version required by the vision MCP server. */
-export const VISION_NODE_MIN_MAJOR = 18;
-
-/** Interval for re-checking whether the vision analyze tool is available. */
-export const VISION_HEALTH_POLL_MS = 15_000;
-
-/** Directory (under globalStorage) holding temp image files handed to the MCP tool. */
-export const VISION_TEMP_DIR_NAME = 'vision-tmp';
-
-/** Upper bound on leftover vision temp dir entries; analysis runs delete their own files on settle. */
-export const VISION_TEMP_MAX_FILES = 256;
-
-/** Per-analysis timeout when invoking the vision MCP tool. */
+/** Per-request timeout for Flash fallback analysis. */
 export const VISION_INVOKE_TIMEOUT_MS = 120_000;
 
 /** Default automatic retries (after the initial attempt) for transient GLM API failures (429 / 5xx). */
@@ -213,9 +146,26 @@ export const MODELS: GLMModel[] = [
 		capabilities: {
 			toolCalling: DEFAULT_TOOLS_LIMIT,
 			thinking: true,
+			nativeImageInput: false,
 			thinkingEffort: GLM_5_3_EFFORT,
 		},
 		availableIn: ['coding-plan'],
+	},
+	{
+		id: 'glm-5.3-flash',
+		name: 'GLM-5.3-Flash',
+		family: 'glm',
+		version: '5.3',
+		detail: 'Fast multimodal model, 1M context',
+		maxInputTokens: 1000000,
+		maxOutputTokens: 128000,
+		capabilities: {
+			toolCalling: DEFAULT_TOOLS_LIMIT,
+			thinking: true,
+			nativeImageInput: true,
+			thinkingEffort: GLM_5_3_EFFORT,
+		},
+		availableIn: ['coding-plan', 'standard'],
 	},
 	{
 		id: 'glm-4.7',
@@ -225,7 +175,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true, nativeImageInput: false },
 		availableIn: ['coding-plan', 'standard'],
 	},
 	{
@@ -236,7 +186,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true, nativeImageInput: false },
 		availableIn: ['standard'],
 	},
 	{
@@ -247,7 +197,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 200000,
 		maxOutputTokens: 128000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true, nativeImageInput: false },
 		availableIn: ['standard'],
 	},
 	{
@@ -261,6 +211,7 @@ export const MODELS: GLMModel[] = [
 		capabilities: {
 			toolCalling: DEFAULT_TOOLS_LIMIT,
 			thinking: true,
+			nativeImageInput: false,
 			thinkingEffort: GLM_5_2_EFFORT,
 		},
 		availableIn: ['coding-plan', 'standard'],
@@ -273,7 +224,7 @@ export const MODELS: GLMModel[] = [
 		detail: 'Legacy model',
 		maxInputTokens: 128000,
 		maxOutputTokens: 96000,
-		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true },
+		capabilities: { toolCalling: DEFAULT_TOOLS_LIMIT, thinking: true, nativeImageInput: false },
 		availableIn: ['coding-plan', 'standard'],
 	},
 ];

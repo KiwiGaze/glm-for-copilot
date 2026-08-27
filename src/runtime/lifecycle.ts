@@ -4,6 +4,7 @@ import { logger } from '../logger';
 import { GLMChatProvider } from '../provider';
 import { registerActionUrls } from './actions';
 import { registerCommands } from './commands';
+import { cleanupLegacyVisionState } from './legacy-vision-cleanup';
 import { registerProvider } from './provider';
 import { showWelcomeIfNeeded } from './welcome';
 
@@ -12,6 +13,12 @@ let activeProvider: GLMChatProvider | undefined;
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	try {
 		logger.info('Activating GLM Models for GitHub Copilot Chat');
+		try {
+			await cleanupLegacyVisionState(context);
+		} catch (error) {
+			logger.warn('Retired image-integration cleanup failed unexpectedly', error);
+			void vscode.window.showWarningMessage(t('migration.visionCleanupFailed'));
+		}
 		registerCommands(context);
 		registerActionUrls(context);
 		activeProvider = await registerProvider(context);

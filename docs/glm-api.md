@@ -47,6 +47,56 @@ Streaming is OpenAI-compatible server-sent events:
 - Usage: top-level `usage` object, emitted in the final streaming chunk before
   `data: [DONE]`. The extension opts in with `stream_options: { include_usage: true }`.
 
+## GLM-5.3-Flash multimodal input
+
+The International [Z.AI model guide](https://docs.z.ai/guides/vlm/glm-5.3-flash)
+and Mainland China [BigModel model guide](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash/)
+identify `glm-5.3-flash` as a multimodal model with a 1M-token context window.
+Its Chat Completions input accepts text, images, video, and files; this extension
+intentionally implements only VS Code image attachments.
+
+Images are sent in an OpenAI-compatible user-message content array. `image_url.url`
+may contain a public URL or a Base64 data URL; the extension uses data URLs so an
+attachment does not need a separate upload:
+
+```json
+{
+  "role": "user",
+  "content": [
+    { "type": "text", "text": "Explain this screenshot." },
+    { "type": "image_url", "image_url": { "url": "data:image/png;base64,..." } }
+  ]
+}
+```
+
+Multiple images are supported. The extension preserves the order of text and image
+parts, accepts PNG and JPEG, limits each image to 5 MB, and accepts at most 16 images
+per request. It does not log Base64 payloads.
+
+The output uses the same Chat Completion and SSE shapes as text models: final text in
+`content`, optional reasoning in `reasoning_content`, and optional `tool_calls`. The
+model requires `thinking: { "type": "enabled" }`; supported `reasoning_effort` values
+are `low`, `high`, and `max`, with `max` used by default. The model-specific guide
+describes its text limits as matching GLM-5.3, so the extension currently advertises
+a 128K maximum output.
+
+The model is documented for Coding Plan and Standard access in both regions. Access
+remains account-dependent and may return model-not-found (`1211`), plan-permission
+(`1311`), or rate-limit errors.
+
+### Text-model image fallback
+
+When the selected model does not declare native image support, the extension calls
+`glm-5.3-flash` on the same resolved base URL with the same chat API key, then provides
+the description to the selected model as untrusted visual data. A custom base URL is
+never bypassed. Such an endpoint must expose Flash itself or use
+`glm-copilot.modelIdOverrides` to map `glm-5.3-flash` to a compatible model.
+
+Fallback requests contain no tools or conversation history and use `temperature: 1`,
+`top_p: 0.95`, `reasoning_effort: "max"`, and a 32K output limit. Only final `content`
+is forwarded; Flash reasoning is discarded. The configurable analysis instruction is
+`glm-copilot.visionPrompt`.
+
 ## Thinking mode
 
 Top-level request field, binary:
@@ -60,7 +110,7 @@ to `thinking.type` for models without a per-model reasoning-effort control.
 
 ### Reasoning effort
 
-GLM-5.2 and GLM-5.3 accept a top-level `reasoning_effort` string that tunes how
+GLM-5.2, GLM-5.3, and GLM-5.3-Flash accept a top-level `reasoning_effort` string that tunes how
 much the model reasons. It only takes effect when thinking is enabled.
 
 ```json
@@ -73,9 +123,9 @@ model picker: `none` sends `thinking: { type: "disabled" }` with no
 plus the matching `reasoning_effort`.
 
 For GLM-5.3, the official Coding Plan guides define `low` / `high` / `max`, with
-`max` as the default. On the Coding Plan route, a disabled thinking toggle is
-converted to `low`, so the extension exposes only those three effort levels and
-sends `thinking: { type: "enabled" }` plus the selected effort on every request.
+`max` as the default. The extension exposes only those three effort levels and
+sends `thinking: { type: "enabled" }` plus the selected effort on every request;
+an unsupported or stale stored choice falls back to `max`.
 The built-in model is available only on the official Coding Plan endpoints. Z.AI's
 current Standard API pricing catalog does not include GLM-5.3; BigModel lists the
 model, but its model page says the model API is not yet available. A compatible

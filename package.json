@@ -1,9 +1,9 @@
 {
 	"name": "glm-for-github-copilot-chat",
 	"displayName": "GLM Models for GitHub Copilot Chat",
-	"description": "Bring Z.ai / Zhipu GLM models into GitHub Copilot Chat with visible thinking. On official endpoints, GLM-5.3 uses Coding Plan; other built-ins vary by API mode.",
+	"description": "Bring Z.ai / Zhipu GLM models into GitHub Copilot Chat with visible thinking and GLM-5.3-Flash image input.",
 	"icon": "resources/icon.png",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"publisher": "yijiazhen-qi",
 	"license": "MIT",
 	"repository": {
@@ -28,6 +28,7 @@
 	"keywords": [
 		"glm",
 		"glm-5.3",
+		"glm-5.3-flash",
 		"glm-5.2",
 		"glm-5",
 		"glm-4.7",
@@ -39,6 +40,7 @@
 		"byok",
 		"language model",
 		"thinking",
+		"multimodal",
 		"reasoning",
 		"coding plan",
 		"ai",
@@ -58,12 +60,6 @@
 			{
 				"vendor": "glm",
 				"displayName": "GLM"
-			}
-		],
-		"mcpServerDefinitionProviders": [
-			{
-				"id": "glm-copilot.vision",
-				"label": "GLM Vision"
 			}
 		],
 		"commands": [
@@ -96,50 +92,10 @@
 				"title": "%glm-copilot.command.openUsageDetail%"
 			},
 			{
-				"command": "glm-copilot.installVisionMcp",
-				"title": "%glm-copilot.command.installVisionMcp%"
-			},
-			{
-				"command": "glm-copilot.uninstallVisionMcp",
-				"title": "%glm-copilot.command.uninstallVisionMcp%"
-			},
-			{
-				"command": "glm-copilot.setVisionApiKey",
-				"title": "%glm-copilot.command.setVisionApiKey%"
-			},
-			{
 				"command": "glm-copilot.openVisionPromptSettings",
 				"title": "%glm-copilot.command.openVisionPromptSettings%"
-			},
-			{
-				"command": "glm-copilot.toggleVision",
-				"title": "%glm-copilot.command.toggleVision%"
 			}
 		],
-		"menus": {
-			"commandPalette": [
-				{
-					"command": "glm-copilot.installVisionMcp",
-					"when": "!glmCopilot.visionMcp.installed"
-				},
-				{
-					"command": "glm-copilot.uninstallVisionMcp",
-					"when": "glmCopilot.visionMcp.installed"
-				},
-				{
-					"command": "glm-copilot.setVisionApiKey",
-					"when": "glmCopilot.visionMcp.installed"
-				},
-				{
-					"command": "glm-copilot.openVisionPromptSettings",
-					"when": "glmCopilot.visionMcp.installed"
-				},
-				{
-					"command": "glm-copilot.toggleVision",
-					"when": "glmCopilot.visionMcp.installed"
-				}
-			]
-		},
 		"walkthroughs": [
 			{
 				"id": "glmGettingStarted",
@@ -174,28 +130,12 @@
 						}
 					},
 					{
-						"id": "installVisionMcp",
-						"title": "%glm-copilot.walkthrough.installVisionMcp.title%",
-						"description": "%glm-copilot.walkthrough.installVisionMcp.description%",
-						"when": "!glmCopilot.visionMcp.installed",
+						"id": "useImages",
+						"title": "%glm-copilot.walkthrough.useImages.title%",
+						"description": "%glm-copilot.walkthrough.useImages.description%",
 						"media": {
-							"markdown": "resources/walkthrough/install-vision-mcp.md"
-						},
-						"completionEvents": [
-							"onContext:glmCopilot.visionMcp.installed"
-						]
-					},
-					{
-						"id": "enableVision",
-						"title": "%glm-copilot.walkthrough.enableVision.title%",
-						"description": "%glm-copilot.walkthrough.enableVision.description%",
-						"when": "glmCopilot.visionMcp.installed",
-						"media": {
-							"markdown": "resources/walkthrough/enable-vision.md"
-						},
-						"completionEvents": [
-							"onContext:glmCopilot.visionEnabled"
-						]
+							"markdown": "resources/walkthrough/use-images.md"
+						}
 					}
 				]
 			}
@@ -299,6 +239,10 @@
 									"thinking": {
 										"type": "boolean",
 										"description": "Whether the model supports thinking. Defaults to true."
+									},
+									"nativeImageInput": {
+										"type": "boolean",
+										"description": "Whether the model accepts native image content. Defaults to false."
 									}
 								}
 							}
@@ -317,11 +261,6 @@
 						"%glm-copilot.config.thinking.disabled.label%"
 					],
 					"markdownDescription": "%glm-copilot.config.thinking.description%"
-				},
-				"glm-copilot.visionEnabled": {
-					"type": "boolean",
-					"default": false,
-					"markdownDescription": "%glm-copilot.config.visionEnabled.description%"
 				},
 				"glm-copilot.visionPrompt": {
 					"type": "string",

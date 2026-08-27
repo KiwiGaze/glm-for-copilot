@@ -33,12 +33,13 @@ vi.mock('vscode', () => {
 });
 
 import * as vscode from 'vscode';
-import { VISION_DESCRIPTION_MAX_TOKENS, VISION_MAX_IMAGES_PER_CONTAINER } from '../consts';
+import { VISION_DESCRIPTION_MAX_TOKENS, VISION_MAX_IMAGES_PER_REQUEST } from '../consts';
 import { cachedImageDescriptionChars, estimateTokenCount } from './tokens';
 import { computeDescriptionCacheKey, hashImageContent, VisionDescriptionCache } from './vision/cache';
 import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './vision/consts';
 
 const PROMPT = 'PROMPT';
+const TARGET = { baseUrl: 'https://proxy.example/v4', modelId: 'mapped-flash' };
 
 function imageMessage(data: Uint8Array): vscode.LanguageModelChatRequestMessage {
 	return {
@@ -48,9 +49,20 @@ function imageMessage(data: Uint8Array): vscode.LanguageModelChatRequestMessage 
 	} as unknown as vscode.LanguageModelChatRequestMessage;
 }
 
+function cacheKey(images: Array<{ data: Uint8Array; mimeType: string }>): string {
+	return computeDescriptionCacheKey({
+		...TARGET,
+		prompt: PROMPT,
+		images: images.map((image) => ({
+			mimeType: image.mimeType,
+			contentHash: hashImageContent(image.data),
+		})),
+	});
+}
+
 function seededCache(data: Uint8Array, description: string): VisionDescriptionCache {
 	const cache = new VisionDescriptionCache();
-	cache.set(computeDescriptionCacheKey(PROMPT, [hashImageContent(data)]), description);
+	cache.set(cacheKey([{ data, mimeType: 'image/png' }]), description);
 	return cache;
 }
 
@@ -66,7 +78,11 @@ describe('estimateTokenCount', () => {
 		const description = 'x'.repeat(5000);
 		const cache = seededCache(data, description);
 
-		const count = estimateTokenCount(imageMessage(data), 4, cachedImageDescriptionChars(cache, PROMPT));
+		const count = estimateTokenCount(
+			imageMessage(data),
+			4,
+			cachedImageDescriptionChars(cache, TARGET, PROMPT),
+		);
 
 		expect(count).toBe(Math.ceil(describedImageText(1, description).length / 4));
 	});
@@ -76,14 +92,35 @@ describe('estimateTokenCount', () => {
 		const count = estimateTokenCount(
 			imageMessage(new Uint8Array([9])),
 			4,
-			cachedImageDescriptionChars(cache, PROMPT),
+			cachedImageDescriptionChars(cache, TARGET, PROMPT),
 		);
 		expect(count).toBeGreaterThan(VISION_DESCRIPTION_MAX_TOKENS);
 	});
 
+	it('budgets one Flash output limit for an uncached multi-image container', () => {
+		const cache = new VisionDescriptionCache();
+		const message = {
+			role: 1,
+			content: [
+				new vscode.LanguageModelDataPart(new Uint8Array([1]), 'image/png'),
+				new vscode.LanguageModelDataPart(new Uint8Array([2]), 'image/jpeg'),
+			],
+			name: undefined,
+		} as unknown as vscode.LanguageModelChatRequestMessage;
+
+		const count = estimateTokenCount(
+			message,
+			4,
+			cachedImageDescriptionChars(cache, TARGET, PROMPT),
+		);
+
+		expect(count).toBeGreaterThan(VISION_DESCRIPTION_MAX_TOKENS);
+		expect(count).toBeLessThan(VISION_DESCRIPTION_MAX_TOKENS * 2);
+	});
+
 	it('counts a rejected container at the unavailable-marker size', () => {
 		const images = Array.from(
-			{ length: VISION_MAX_IMAGES_PER_CONTAINER + 1 },
+			{ length: VISION_MAX_IMAGES_PER_REQUEST + 1 },
 			(_, index) => new vscode.LanguageModelDataPart(new Uint8Array([index]), 'image/png'),
 		);
 		const message = {
@@ -102,14 +139,24 @@ describe('estimateTokenCount', () => {
 		const b = new Uint8Array([2]);
 		const cache = new VisionDescriptionCache();
 		const description = 'joined description';
-		cache.set(computeDescriptionCacheKey(PROMPT, [hashImageContent(a), hashImageContent(b)]), description);
+		cache.set(
+			cacheKey([
+				{ data: a, mimeType: 'image/png' },
+				{ data: b, mimeType: 'image/jpeg' },
+			]),
+			description,
+		);
 		const message = {
 			role: 1,
 			content: [new vscode.LanguageModelDataPart(a, 'image/png'), new vscode.LanguageModelDataPart(b, 'image/jpeg')],
 			name: undefined,
 		} as unknown as vscode.LanguageModelChatRequestMessage;
 
-		const count = estimateTokenCount(message, 4, cachedImageDescriptionChars(cache, PROMPT));
+		const count = estimateTokenCount(
+			message,
+			4,
+			cachedImageDescriptionChars(cache, TARGET, PROMPT),
+		);
 
 		expect(count).toBe(Math.ceil(describedImageText(2, description).length / 4));
 	});
@@ -124,7 +171,11 @@ describe('estimateTokenCount', () => {
 			name: undefined,
 		} as unknown as vscode.LanguageModelChatRequestMessage;
 
-		const count = estimateTokenCount(message, 4, cachedImageDescriptionChars(cache, PROMPT));
+		const count = estimateTokenCount(
+			message,
+			4,
+			cachedImageDescriptionChars(cache, TARGET, PROMPT),
+		);
 
 		expect(count).toBe(Math.ceil(('call-1'.length + describedImageText(1, description).length) / 4));
 	});
