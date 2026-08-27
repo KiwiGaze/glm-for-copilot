@@ -78,13 +78,11 @@ The output uses the same Chat Completion and SSE shapes as text models: final te
 model requires `thinking: { "type": "enabled" }`; supported `reasoning_effort` values
 are `low`, `high`, and `max`, with `max` used by default. The model-specific guide
 describes its text limits as matching GLM-5.3, so the extension currently advertises
-a 128K maximum output. That limit remains a release-verification item because the
-Flash page does not list a separate maximum-output value.
+a 128K maximum output.
 
-The model is documented for Coding Plan and Standard access in both regions. This
-repository has not made paid live requests to all four endpoint combinations; actual
-availability still depends on the account and may return model-not-found (`1211`),
-plan-permission (`1311`), or rate-limit errors.
+The model is documented for Coding Plan and Standard access in both regions. Access
+remains account-dependent and may return model-not-found (`1211`), plan-permission
+(`1311`), or rate-limit errors.
 
 ### Text-model image fallback
 

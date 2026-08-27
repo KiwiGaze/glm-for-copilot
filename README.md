@@ -110,7 +110,7 @@ Full API documentation: [docs.z.ai](https://docs.z.ai).
 
 GLM-5.3 is documented for Coding Plan on both the [Z.AI](https://docs.z.ai/devpack/latest-model) and [BigModel](https://docs.bigmodel.cn/cn/coding-plan/latest-model.md) endpoints. The current [Z.AI Standard API pricing catalog](https://docs.z.ai/guides/overview/pricing.md) does not include it. BigModel's [model overview](https://docs.bigmodel.cn/cn/guide/start/model-overview.md) lists GLM-5.3, but its [model page](https://docs.bigmodel.cn/cn/guide/models/text/glm-5.3) says the model API is not yet available. This extension therefore does not expose GLM-5.3 on the official Standard endpoints yet; a compatible custom `baseUrl` may serve it.
 
-GLM-5.3-Flash is documented for Coding Plan and Standard use by both [Z.AI](https://docs.z.ai/guides/vlm/glm-5.3-flash) and [BigModel](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash/). Paid live image requests against all four endpoint combinations have not yet been performed for this release; account permissions and availability must still be confirmed at runtime.
+GLM-5.3-Flash is documented for Coding Plan and Standard use by both [Z.AI](https://docs.z.ai/guides/vlm/glm-5.3-flash) and [BigModel](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash/).
 
 Usage details rely on regional usage endpoints (`api.z.ai` for International, `open.bigmodel.cn` for Mainland China) that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
 

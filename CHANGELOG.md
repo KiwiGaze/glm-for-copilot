@@ -8,7 +8,6 @@ All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
 - **GLM-5.3-Flash image input** - adds the 1M-context multimodal model with native PNG/JPEG input. Text-only models automatically use GLM-5.3-Flash to produce untrusted visual context on the same endpoint and API key. Image analysis is validated, cancellable, cached in memory, and configurable through the renamed **GLM: Edit Flash Image Analysis Prompt** command.
 - **Vision MCP removal** - removes the local MCP server, npm package installer, separate Vision key, enable toggle, tool-approval flow, and bundled runtime resources. Upgrades clean only the retired Vision MCP state and files; regular chat credentials remain intact.
-- Automated coverage and packaging checks are included, but paid live image requests against all four Z.AI/BigModel × Coding Plan/Standard endpoint combinations have not been performed yet.
 
 ## 0.4.0
 
