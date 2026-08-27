@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { getSettingsApiKey } from './config';
-import { API_KEY_SECRET, VISION_API_KEY_SECRET } from './consts';
+import { API_KEY_SECRET } from './consts';
 import { t } from './i18n';
-import type { ApiKeyPromptOptions, IAuthManager, IVisionApiKeyManager } from './types';
+import type { ApiKeyPromptOptions, IAuthManager } from './types';
 
 /**
- * Manages the chat and dedicated Vision API keys in VS Code SecretStorage.
- * Only the chat key falls back to the extension setting for CI or automation.
+ * Manages the chat API key in VS Code SecretStorage, with a settings fallback
+ * for CI and automation.
  */
-export class AuthManager implements IAuthManager, IVisionApiKeyManager {
+export class AuthManager implements IAuthManager {
 	constructor(private context: vscode.ExtensionContext) {}
 
 	async getApiKey(): Promise<string | undefined> {
@@ -25,22 +25,6 @@ export class AuthManager implements IAuthManager, IVisionApiKeyManager {
 
 	async deleteApiKey(): Promise<void> {
 		await this.context.secrets.delete(API_KEY_SECRET);
-	}
-
-	async getVisionApiKey(): Promise<string | undefined> {
-		return this.context.secrets.get(VISION_API_KEY_SECRET);
-	}
-
-	async promptForVisionApiKey(options?: ApiKeyPromptOptions): Promise<boolean> {
-		return this.promptAndStoreApiKey(
-			VISION_API_KEY_SECRET,
-			t('visionMcp.auth.saved'),
-			options,
-		);
-	}
-
-	async deleteVisionApiKey(): Promise<void> {
-		await this.context.secrets.delete(VISION_API_KEY_SECRET);
 	}
 
 	private async promptAndStoreApiKey(

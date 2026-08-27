@@ -20,21 +20,16 @@ const MODEL = {
 	capabilities: {
 		toolCalling: true,
 		thinking: true,
+		nativeImageInput: false,
 	},
 	availableIn: ['coding-plan'],
 } satisfies GLMModel;
 
 describe('toChatInfo', () => {
-	it('advertises image input when GLM Vision is installed and enabled', () => {
-		const information = toChatInfo(MODEL, true, true);
+	it('advertises image input for models handled by the provider fallback', () => {
+		const information = toChatInfo(MODEL, true);
 
 		expect(information.capabilities?.imageInput).toBe(true);
-	});
-
-	it('does not advertise image input when GLM Vision is not enabled', () => {
-		const information = toChatInfo(MODEL, true, false);
-
-		expect(information.capabilities?.imageInput).toBe(false);
 	});
 
 	it('advertises GLM-5.3 with its token limits and effort choices', () => {
@@ -45,7 +40,7 @@ describe('toChatInfo', () => {
 			return;
 		}
 
-		const information = toChatInfo(model, true, false);
+		const information = toChatInfo(model, true);
 
 		expect(information).toMatchObject({
 			id: 'glm-5.3',
@@ -55,6 +50,24 @@ describe('toChatInfo', () => {
 		expect(information.configurationSchema?.properties.reasoningEffort).toMatchObject({
 			enum: ['low', 'high', 'max'],
 			default: 'max',
+		});
+	});
+
+	it('advertises GLM-5.3-Flash as a native multimodal model', () => {
+		const model = MODELS.find((candidate) => candidate.id === 'glm-5.3-flash');
+
+		expect(model).toMatchObject({
+			maxInputTokens: 1_000_000,
+			maxOutputTokens: 128_000,
+			availableIn: ['coding-plan', 'standard'],
+			capabilities: {
+				nativeImageInput: true,
+				thinking: true,
+				thinkingEffort: {
+					levels: ['low', 'high', 'max'],
+					default: 'max',
+				},
+			},
 		});
 	});
 });

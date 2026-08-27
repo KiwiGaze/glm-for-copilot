@@ -50,12 +50,7 @@ export function getDebugLogging(): boolean {
 	return cfg().get<boolean>('debugLogging', false);
 }
 
-/** Whether the user turned on image input for chat models. */
-export function getVisionEnabled(): boolean {
-	return cfg().get<boolean>('visionEnabled', false);
-}
-
-/** Analysis prompt passed to the vision MCP tool (empty setting ⇒ the built-in default). */
+/** Analysis prompt sent to Flash for text-model fallback (empty ⇒ built-in default). */
 export function getVisionPrompt(): string {
 	const value = (cfg().get<string>('visionPrompt', '') ?? '').trim();
 	return value || DEFAULT_VISION_PROMPT;
@@ -87,6 +82,7 @@ export function getCustomModels(): GLMModel[] {
 			capabilities: {
 				toolCalling: config.toolCalling === false ? false : DEFAULT_TOOLS_LIMIT,
 				thinking: config.thinking !== false,
+				nativeImageInput: config.nativeImageInput === true,
 			},
 			availableIn: ['coding-plan', 'standard'],
 		});

@@ -16,19 +16,29 @@ export function hashImageContent(data: Uint8Array): string {
 }
 
 /**
- * Content-addressed cache key: prompt + each image's content hash (from
- * `hashImageContent`), in order, each length-prefixed so no prompt content
- * can collide with a hash sequence. Because the prompt is part of the key,
- * changing it invalidates stale descriptions with no config listeners.
+ * Content-addressed cache key for the effective Flash target, prompt, and each
+ * ordered MIME/hash pair. Every field is length-prefixed to avoid boundary
+ * collisions and to make endpoint, model mapping, or prompt changes invalidate
+ * prior descriptions without configuration listeners.
  */
-export function computeDescriptionCacheKey(
-	prompt: string,
-	imageHashes: readonly string[],
-): string {
+export interface VisionDescriptionCacheKeyInput {
+	baseUrl: string;
+	modelId: string;
+	prompt: string;
+	images: readonly {
+		mimeType: string;
+		contentHash: string;
+	}[];
+}
+
+export function computeDescriptionCacheKey(input: VisionDescriptionCacheKeyInput): string {
 	const hash = createHash('sha256');
-	updateLengthPrefixed(hash, prompt);
-	for (const imageHash of imageHashes) {
-		updateLengthPrefixed(hash, imageHash);
+	updateLengthPrefixed(hash, input.baseUrl);
+	updateLengthPrefixed(hash, input.modelId);
+	updateLengthPrefixed(hash, input.prompt);
+	for (const image of input.images) {
+		updateLengthPrefixed(hash, image.mimeType.toLowerCase());
+		updateLengthPrefixed(hash, image.contentHash);
 	}
 	return hash.digest('hex');
 }

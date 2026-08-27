@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
 import { LANGUAGE_MODEL_CHAT_SYSTEM_ROLE } from '../consts';
 import { safeStringify } from '../json';
-import type { GLMMessage, GLMTool, GLMToolCall } from '../types';
+import type {
+	GLMImageUrlContentPart,
+	GLMMessage,
+	GLMTextContentPart,
+	GLMTool,
+	GLMToolCall,
+} from '../types';
 import { isThinkingPart } from './thinking';
 
 interface PendingToolResult {
@@ -13,17 +19,29 @@ interface PendingToolResult {
 export function convertMessages(
 	messages: readonly vscode.LanguageModelChatRequestMessage[],
 	isThinkingModel: boolean,
+	nativeImageInput: boolean,
 ): GLMMessage[] {
 	const result: GLMMessage[] = [];
 	for (const message of messages) {
 		const role = mapRole(message.role);
 		let content = '';
+		const userContent: Array<GLMTextContentPart | GLMImageUrlContentPart> = [];
+		let hasUserImage = false;
 		let thinkingContent = '';
 		const toolCalls: GLMToolCall[] = [];
 		const toolResults: PendingToolResult[] = [];
 		for (const part of message.content) {
 			if (part instanceof vscode.LanguageModelTextPart) {
 				content += part.value;
+				if (role === 'user') {
+					userContent.push({ type: 'text', text: part.value });
+				}
+			} else if (part instanceof vscode.LanguageModelDataPart && isImageMimeType(part.mimeType)) {
+				if (role !== 'user' || !nativeImageInput) {
+					throw new Error('Image input reached the GLM wire converter without a supported native user-image route.');
+				}
+				hasUserImage = true;
+				userContent.push(toImageUrlContentPart(part));
 			} else if (isThinkingPart(part)) {
 				thinkingContent += normalizeThinkingText(part.value);
 			} else if (part instanceof vscode.LanguageModelToolCallPart) {
@@ -40,6 +58,8 @@ export function convertMessages(
 				for (const item of part.content) {
 					if (item instanceof vscode.LanguageModelTextPart) {
 						toolContent += item.value;
+					} else if (item instanceof vscode.LanguageModelDataPart && isImageMimeType(item.mimeType)) {
+						throw new Error('Image input reached the GLM wire converter inside a tool result.');
 					}
 				}
 				toolResults.push({
@@ -62,10 +82,10 @@ export function convertMessages(
 				}
 				result.push(msg);
 			}
-		} else if (content) {
+		} else if (content || hasUserImage) {
 			result.push({
 				role,
-				content,
+				content: hasUserImage ? userContent : content,
 			});
 		}
 		for (const toolResult of toolResults) {
@@ -108,7 +128,7 @@ export function convertTools(tools: readonly vscode.LanguageModelChatTool[]): GL
 export function countMessageChars(messages: GLMMessage[]): number {
 	let total = 0;
 	for (const message of messages) {
-		total += message.content?.length ?? 0;
+		total += countContentChars(message.content);
 		total += message.reasoning_content?.length ?? 0;
 		if (message.tool_calls) {
 			for (const toolCall of message.tool_calls) {
@@ -118,6 +138,32 @@ export function countMessageChars(messages: GLMMessage[]): number {
 		}
 	}
 	return total;
+}
+
+function countContentChars(content: GLMMessage['content']): number {
+	if (typeof content === 'string') {
+		return content.length;
+	}
+	let total = 0;
+	for (const part of content) {
+		if (part.type === 'text') {
+			total += part.text.length;
+		}
+	}
+	return total;
+}
+
+function isImageMimeType(mimeType: string): boolean {
+	return mimeType.toLowerCase().startsWith('image/');
+}
+
+function toImageUrlContentPart(part: vscode.LanguageModelDataPart): GLMImageUrlContentPart {
+	return {
+		type: 'image_url',
+		image_url: {
+			url: `data:${part.mimeType.toLowerCase()};base64,${Buffer.from(part.data).toString('base64')}`,
+		},
+	};
 }
 
 function normalizeThinkingText(value: string | string[]): string {

@@ -49,7 +49,8 @@ export async function prepareChatRequest({
 	const isThinkingModel = modelDef?.capabilities.thinking ?? false;
 	const toolCalling = modelDef?.capabilities.toolCalling ?? false;
 	const toolLimit = typeof toolCalling === 'number' ? toolCalling : DEFAULT_TOOLS_LIMIT;
-	const glmMessages = convertMessages(messages, isThinkingModel);
+	const nativeImageInput = modelDef?.capabilities.nativeImageInput ?? false;
+	const glmMessages = convertMessages(messages, isThinkingModel, nativeImageInput);
 	const tools: GLMTool[] | undefined = toolCalling ? convertTools(options.tools ?? []) : undefined;
 	if (tools && tools.length > toolLimit) {
 		throw new Error(t('request.toolsLimitExceeded', String(toolLimit), String(tools.length)));

@@ -17,6 +17,8 @@ export interface GLMModelCapabilities {
 	/** `true` enables tool calling with the default cap; a number sets a custom cap. */
 	toolCalling: number | boolean;
 	thinking: boolean;
+	/** Whether the model accepts image content blocks directly. */
+	nativeImageInput: boolean;
 	/** Present ⇒ model supports thinking-effort selection. Absent ⇒ binary thinking only. */
 	thinkingEffort?: ThinkingEffortSpec;
 }
@@ -43,6 +45,7 @@ export interface CustomModelConfig {
 	maxOutputTokens?: number;
 	toolCalling?: boolean;
 	thinking?: boolean;
+	nativeImageInput?: boolean;
 }
 
 // ---- Usage tracking (Coding Plan quota + Standard API balance) ----
@@ -128,9 +131,23 @@ export interface GLMToolCall {
 	function: { name: string; arguments: string };
 }
 
+export interface GLMTextContentPart {
+	type: 'text';
+	text: string;
+}
+
+export interface GLMImageUrlContentPart {
+	type: 'image_url';
+	image_url: {
+		url: string;
+	};
+}
+
+export type GLMMessageContent = string | Array<GLMTextContentPart | GLMImageUrlContentPart>;
+
 export interface GLMMessage {
 	role: 'system' | 'user' | 'assistant' | 'tool';
-	content: string;
+	content: GLMMessageContent;
 	tool_calls?: GLMToolCall[];
 	tool_call_id?: string;
 	reasoning_content?: string;
@@ -143,8 +160,11 @@ export interface GLMChatRequest {
 	tools?: GLMTool[];
 	tool_choice?: 'auto' | 'none';
 	max_tokens?: number;
+	temperature?: number;
+	top_p?: number;
 	thinking?: { type: ThinkingMode };
 	reasoning_effort?: Exclude<ThinkingEffort, 'none'>;
+	clear_thinking?: boolean;
 	stream_options?: { include_usage: boolean };
 }
 
@@ -208,7 +228,7 @@ export interface IGLMClient {
 	): Promise<void>;
 }
 
-/** Options for contextualizing the API-key input box (e.g. from the GLM Vision setup flow). */
+/** Options for contextualizing the API-key input box. */
 export interface ApiKeyPromptOptions {
 	title?: string;
 	prompt?: string;
@@ -220,25 +240,4 @@ export interface IAuthManager {
 	hasApiKey(): Promise<boolean>;
 	promptForApiKey(options?: ApiKeyPromptOptions): Promise<boolean>;
 	deleteApiKey(): Promise<void>;
-}
-
-/** Dedicated GLM Vision API-key manager. Implemented by `auth.ts`. */
-export interface IVisionApiKeyManager {
-	getVisionApiKey(): Promise<string | undefined>;
-	promptForVisionApiKey(options?: ApiKeyPromptOptions): Promise<boolean>;
-	deleteVisionApiKey(): Promise<void>;
-}
-
-/**
- * Read-only view of the GLM Vision MCP install/health state. The chat provider
- * uses it to decide model capabilities. Implemented by `runtime/mcp.ts`
- * (`VisionMcpManager`).
- */
-export interface IVisionMcpState {
-	/** True when the verified MCP package is installed and the user enabled image input. */
-	isImageInputEnabled(): boolean;
-	/** True when Vision has an API key that is safe for its official regional endpoint. */
-	hasVisionApiKey(): Promise<boolean>;
-	/** Fired when install or health state changes (the model picker should refresh). */
-	onDidChangeState: vscode.Event<void>;
 }

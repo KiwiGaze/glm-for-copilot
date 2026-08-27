@@ -153,3 +153,39 @@ describe('streamChatCompletion retry backoff progress', () => {
 		expect(textParts).toEqual([]);
 	});
 });
+
+describe('streamChatCompletion token calibration', () => {
+	it('updates text calibration from text-only prompt usage', async () => {
+		const client = clientWith((callbacks) => {
+			callbacks.onUsage?.({ prompt_tokens: 100 });
+		});
+		const invocation = args(client);
+		invocation.prepared.totalRequestChars = 400;
+		invocation.prepared.request.messages = [{ role: 'user', content: 'hello' }];
+
+		await streamChatCompletion(invocation);
+
+		expect(invocation.setCharsPerToken).toHaveBeenCalledWith(4);
+	});
+
+	it('does not calibrate text token estimates from native-image usage', async () => {
+		const client = clientWith((callbacks) => {
+			callbacks.onUsage?.({ prompt_tokens: 10_000 });
+		});
+		const invocation = args(client);
+		invocation.prepared.totalRequestChars = 12;
+		invocation.prepared.request.messages = [
+			{
+				role: 'user',
+				content: [
+					{ type: 'text', text: 'look at this' },
+					{ type: 'image_url', image_url: { url: 'data:image/png;base64,AQID' } },
+				],
+			},
+		];
+
+		await streamChatCompletion(invocation);
+
+		expect(invocation.setCharsPerToken).not.toHaveBeenCalled();
+	});
+});

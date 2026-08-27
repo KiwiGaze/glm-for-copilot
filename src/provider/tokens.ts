@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { VISION_DESCRIPTION_MAX_TOKENS } from '../consts';
-import { computeDescriptionCacheKey, hashImageContent, type VisionDescriptionCache } from './vision/cache';
+import type { FlashAnalysisTarget } from './vision/analyze';
+import type { VisionDescriptionCache } from './vision/cache';
 import { describedImageText, IMAGE_DESCRIPTION_UNAVAILABLE } from './vision/consts';
 import { collectImagePartRun, isImageDataPart } from './vision/parts';
-import { findInvalidImageReason } from './vision/resolve';
+import { descriptionCacheKey, findInvalidImageReason } from './vision/resolve';
 import { isThinkingPart } from './thinking';
 
 const DATA_PART_MAX_CHARS = 10000;
@@ -21,11 +22,11 @@ export type ImageContainerChars = (
  */
 export function cachedImageDescriptionChars(
 	cache: VisionDescriptionCache,
+	target: FlashAnalysisTarget,
 	prompt: string,
 ): ImageContainerChars {
 	return (images) => {
-		const imageHashes = images.map((image) => hashImageContent(image.data));
-		const cached = cache.get(computeDescriptionCacheKey(prompt, imageHashes));
+		const cached = cache.get(descriptionCacheKey(target, prompt, images));
 		return cached === undefined ? undefined : describedImageText(images.length, cached).length;
 	};
 }
@@ -112,7 +113,8 @@ function estimateImageContainerChars(
 	if (cachedChars !== undefined) {
 		return cachedChars;
 	}
-	const descriptionChars = images.length * VISION_DESCRIPTION_MAX_TOKENS * charsPerToken;
+	const descriptionCount = imageChars === undefined ? images.length : 1;
+	const descriptionChars = descriptionCount * VISION_DESCRIPTION_MAX_TOKENS * charsPerToken;
 	const labels = images.length > 1 ? images.length * MULTI_IMAGE_LABEL_ESTIMATED_CHARS : 0;
 	return descriptionChars + labels + describedImageText(images.length, '').length;
 }

@@ -27,7 +27,6 @@ type EffortChatInformation = vscode.LanguageModelChatInformation & {
 export function toChatInfo(
 	model: GLMModel,
 	hasApiKey: boolean,
-	imageInputEnabled: boolean,
 ): EffortChatInformation {
 	const detail = resolveModelText(model, 'detail') ?? model.detail;
 	const tooltip = resolveModelText(model, 'tooltip');
@@ -43,7 +42,7 @@ export function toChatInfo(
 		maxOutputTokens: model.maxOutputTokens,
 		capabilities: {
 			toolCalling: model.capabilities.toolCalling,
-			imageInput: imageInputEnabled,
+			imageInput: true,
 		},
 		...(spec ? { configurationSchema: buildEffortSchema(spec) } : {}),
 	};
