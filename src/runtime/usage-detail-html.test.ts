@@ -11,6 +11,7 @@ const strings: UsagePanelStrings = {
 	title: 'GLM Usage',
 	refresh: 'Refresh',
 	setKey: 'Set API Key',
+	checkStandard: 'Check Standard API',
 	offline: 'Offline · showing last data',
 	unavailable: 'Usage unavailable.',
 	lastUpdated: 'Last updated: {0}',
@@ -24,6 +25,15 @@ const strings: UsagePanelStrings = {
 		'auth-error': 'API key invalid.', 'network-error': 'Usage unavailable (offline).',
 		'server-error': 'Usage request failed.',
 	},
+	balanceSection: 'Standard API balance',
+	balanceAvailable: 'Available',
+	balanceRecharged: 'Recharged',
+	balanceSpent: 'Spent',
+	balanceGifted: 'Gifted',
+	balanceFrozen: 'Frozen',
+	balancePackages: 'Token packages',
+	recoveryUnavailable: 'No usable Coding Plan quota was found.',
+	recoveryExhausted: 'Your Coding Plan token quota is exhausted.',
 };
 
 describe('buildUsageMessage', () => {
@@ -94,6 +104,19 @@ describe('buildUsageMessage', () => {
 		};
 		const msg = buildUsageMessage(snap, false, strings, 'dark', '$');
 		expect(msg?.metrics[0].resetsAt).toBe(9_999_999);
+	});
+
+	it('forwards the recovery reason selected by the controller', () => {
+		const snap: UsageSnapshot = { status: 'no-data', fetchedAt: 1, metrics: [] };
+		const msg = buildUsageMessage(
+			snap,
+			false,
+			strings,
+			'dark',
+			'$',
+			'coding-plan-unavailable',
+		);
+		expect(msg?.recoveryReason).toBe('coding-plan-unavailable');
 	});
 });
 

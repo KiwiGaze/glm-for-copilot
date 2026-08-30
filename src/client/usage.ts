@@ -6,6 +6,7 @@ import {
 	GLMRequestError,
 	isAbortError,
 	isAuthenticationRequestError,
+	isCodingPlanUnavailableRequestError,
 	normalizeRequestError,
 } from './errors';
 import { readBusinessJson } from './response';
@@ -338,7 +339,14 @@ export class UsageClient implements IUsageClient {
 		} else if (normalized instanceof GLMRequestError && normalized.kind === 'network') {
 			status = 'network-error';
 		}
-		return { status, metrics: [], fetchedAt };
+		return {
+			status,
+			metrics: [],
+			fetchedAt,
+			...(isCodingPlanUnavailableRequestError(normalized)
+				? { failureReason: 'coding-plan-unavailable' as const }
+				: {}),
+		};
 	}
 
 	private logRequestError(error: unknown, host: string): void {

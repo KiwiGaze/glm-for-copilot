@@ -6,12 +6,14 @@ const mocks = vi.hoisted(() => ({
 	resolveVisionMessages: vi.fn(),
 	prepareChatRequest: vi.fn(),
 	streamChatCompletion: vi.fn(),
+	emitterFire: vi.fn(),
+	configurationListener: undefined as ((event: { affectsConfiguration(section: string): boolean }) => void) | undefined,
 }));
 
 vi.mock('vscode', () => {
 	class EventEmitter<T> {
 		readonly event = (_listener: (event: T) => unknown) => ({ dispose: () => {} });
-		fire(): void {}
+		fire(): void { mocks.emitterFire(); }
 		dispose(): void {}
 	}
 	class CancellationError extends Error {}
@@ -23,7 +25,10 @@ vi.mock('vscode', () => {
 		CancellationError,
 		LanguageModelTextPart,
 		workspace: {
-			onDidChangeConfiguration: () => ({ dispose: () => {} }),
+			onDidChangeConfiguration: (listener: (event: { affectsConfiguration(section: string): boolean }) => void) => {
+				mocks.configurationListener = listener;
+				return { dispose: () => {} };
+			},
 		},
 		window: { showInformationMessage: vi.fn() },
 		lm: { selectChatModels: vi.fn() },
@@ -152,5 +157,22 @@ describe('GLMChatProvider image routing', () => {
 		expect(mocks.streamChatCompletion).toHaveBeenCalledWith(
 			expect.objectContaining({ prepared }),
 		);
+	});
+});
+
+describe('GLMChatProvider model availability refresh', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.configurationListener = undefined;
+	});
+
+	it('refreshes model information after API Mode changes without selecting a model', () => {
+		new GLMChatProvider(context(), authManager);
+		mocks.configurationListener?.({
+			affectsConfiguration: (section) => section === 'glm-copilot.apiMode',
+		});
+
+		expect(mocks.emitterFire).toHaveBeenCalledTimes(1);
+		expect(vscodeApi.lm.selectChatModels).not.toHaveBeenCalled();
 	});
 });

@@ -40,7 +40,7 @@ export class UsageDetailPanel {
 		this.panel.onDidDispose(() => this.dispose(), undefined, context.subscriptions);
 	}
 
-		/**
+	/**
 	 * Reveal the singleton panel if it exists, otherwise create one bound to `bar`.
 	 * The panel subscribes to `bar.onDidChangeSnapshot` and re-renders on every push.
 	 */
@@ -61,12 +61,14 @@ export class UsageDetailPanel {
 		UsageDetailPanel.currentPanel = new UsageDetailPanel(panel, context, bar);
 	}
 
-	/** Handle a webview post-message: `refresh` triggers a bar refresh, `setKey` opens the key prompt. */
+	/** Handle a user action posted by the usage webview. */
 	private async onMessage(message: { type: string }): Promise<void> {
 		if (message.type === 'refresh') {
 			await this.bar.refresh();
 		} else if (message.type === 'setKey') {
 			await vscode.commands.executeCommand('glm-copilot.setApiKey');
+		} else if (message.type === 'checkStandard') {
+			await this.bar.checkStandardApi();
 		}
 	}
 
@@ -128,6 +130,8 @@ export class UsageDetailPanel {
 		document.getElementById('refresh').addEventListener('click', () => vscode.postMessage({ type: 'refresh' }));
 		const setKeyBtn = document.getElementById('setKey');
 		if (setKeyBtn) setKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'setKey' }));
+		const checkStandardBtn = document.getElementById('checkStandard');
+		if (checkStandardBtn) checkStandardBtn.addEventListener('click', () => vscode.postMessage({ type: 'checkStandard' }));
 		const resetsAtTimes = ${jsonForScript(resetsAtMap(effective))};
 		if (resetsAtTimes && Object.keys(resetsAtTimes).length > 0) {
 			const fmt = (ms) => {
@@ -192,6 +196,9 @@ function renderOkBody(msg: UsagePanelMessage): string {
 	if (msg.offline) {
 		lines.push(`<div class="offline">${escapeHtml(s.offline)}</div>`);
 	}
+	if (msg.recoveryReason) {
+		lines.push(renderRecoveryCard(msg));
+	}
 	return lines.join('');
 }
 
@@ -230,6 +237,9 @@ function renderBalanceBody(msg: UsagePanelMessage): string {
 /** Render the HTML body for non-ok statuses: a centered message, plus a Set-Key button on auth errors. */
 function renderStatusBody(msg: UsagePanelMessage): string {
 	const s = msg.strings;
+	if (msg.recoveryReason === 'coding-plan-unavailable') {
+		return renderRecoveryCard(msg);
+	}
 	if (msg.status === 'auth-error') {
 		return `<div class="status-message">
 			<p>${escapeHtml(s.status['auth-error'])}</p>
@@ -240,6 +250,17 @@ function renderStatusBody(msg: UsagePanelMessage): string {
 		? (s.status['no-data'])
 		: (s.status[msg.status] || s.status['no-data']);
 	return `<div class="status-message"><p>${escapeHtml(text)}</p></div>`;
+}
+
+/** Render the opt-in Standard API balance check for a recoverable Coding Plan state. */
+function renderRecoveryCard(msg: UsagePanelMessage): string {
+	const copy = msg.recoveryReason === 'coding-plan-exhausted'
+		? msg.strings.recoveryExhausted
+		: msg.strings.recoveryUnavailable;
+	return `<div class="recovery-card">
+		<p>${escapeHtml(copy)}</p>
+		<button id="checkStandard" class="btn">${escapeHtml(msg.strings.checkStandard)}</button>
+	</div>`;
 }
 
 /** Collect `{ kind: resetsAt }` for metrics that have a reset time, to hydrate the client-side countdown. */
@@ -280,6 +301,8 @@ function themeCss(theme: 'dark' | 'light'): string {
 		.offline { color: ${muted}; font-size: 0.8rem; font-style: italic; margin-top: 4px; }
 		.status-message { text-align: center; padding: 40px 16px; color: ${muted}; }
 		.status-message p { margin-bottom: 16px; }
+		.recovery-card { margin-top: 20px; padding: 16px; border: 1px solid ${border}; border-radius: 4px; background: var(--vscode-editorWidget-background, transparent); }
+		.recovery-card p { margin: 0 0 12px; color: ${fg}; line-height: 1.5; }
 		.balance-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid ${barBg}; }
 		.balance-section h2 { font-size: 1rem; margin-bottom: 12px; color: ${fg}; }
 		.balance-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }

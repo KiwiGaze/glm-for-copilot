@@ -35,6 +35,8 @@ interface GLMRequestErrorOptions {
 	diagnosticMessage?: string;
 	status?: number;
 	code?: string;
+	operation?: string;
+	serverMessage?: string;
 	cause?: unknown;
 }
 
@@ -155,6 +157,8 @@ export class GLMRequestError extends Error {
 	readonly baseUrl: string;
 	readonly status?: number;
 	readonly code?: string;
+	readonly operation?: string;
+	readonly serverMessage?: string;
 
 	constructor(options: GLMRequestErrorOptions) {
 		super(options.message, { cause: options.cause });
@@ -165,6 +169,8 @@ export class GLMRequestError extends Error {
 		this.baseUrl = options.baseUrl;
 		this.status = options.status;
 		this.code = options.code;
+		this.operation = options.operation;
+		this.serverMessage = options.serverMessage;
 	}
 }
 
@@ -215,6 +221,10 @@ export function createBusinessError(context: {
 		kind: 'business',
 		baseUrl: context.baseUrl,
 		code: context.code,
+		operation: context.operation,
+		serverMessage: context.serverMessage
+			? truncateSingleLine(context.serverMessage)
+			: undefined,
 		diagnosticMessage: joinDiagnosticParts(
 			'kind=business',
 			`operation=${safeStringify(context.operation)}`,
@@ -339,6 +349,14 @@ export function isAuthenticationRequestError(error: unknown): boolean {
 	return error.kind === 'business' &&
 		error.code !== undefined &&
 		AUTHENTICATION_BUSINESS_CODES.has(error.code);
+}
+
+/** Return whether a Coding Plan usage endpoint says the current key has no Coding Plan. */
+export function isCodingPlanUnavailableRequestError(error: unknown): boolean {
+	return error instanceof GLMRequestError &&
+		error.kind === 'business' &&
+		(error.operation === 'subscription' || error.operation === 'quota') &&
+		/coding\s*plan/i.test(error.serverMessage ?? '');
 }
 
 function getHttpErrorMessage(status: number, statusLabel: string, baseUrl: string): string {

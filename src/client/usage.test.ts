@@ -57,6 +57,11 @@ const BUSINESS_SERVER_ERROR = JSON.stringify({
 	msg: 'Internal Error',
 	success: false,
 });
+const BUSINESS_NO_CODING_PLAN = JSON.stringify({
+	code: 500,
+	msg: '当前用户不存在coding plan',
+	success: false,
+});
 const BUSINESS_AUTH_1001 = JSON.stringify({
 	code: 1001,
 	msg: 'Authentication parameter not received in Header, unable to authenticate',
@@ -162,6 +167,20 @@ describe('UsageClient.fetchSnapshot', () => {
 		}));
 		const snap = await client.fetchSnapshot('k');
 		expect(snap.status).toBe('server-error');
+		expect(snap.failureReason).toBeUndefined();
+	});
+
+	it('preserves the Coding Plan unavailable reason from the quota endpoint', async () => {
+		const client = new UsageClient('https://api.z.ai', mockFetch({
+			'subscription/list': { status: 200, body: SUBSCRIPTION_OK },
+			'quota/limit': { status: 200, body: BUSINESS_NO_CODING_PLAN },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap).toMatchObject({
+			status: 'server-error',
+			failureReason: 'coding-plan-unavailable',
+			metrics: [],
+		});
 	});
 
 	it('does not reduce a subscription business authentication failure to no-data', async () => {

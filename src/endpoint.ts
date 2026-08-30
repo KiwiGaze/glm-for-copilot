@@ -31,6 +31,13 @@ export function resolveKeyPageUrl(): string {
 	return china ? EXTERNAL_URLS.standardKeysChina : EXTERNAL_URLS.standardKeysInternational;
 }
 
+/** The Standard API key-management page for the current region. */
+export function resolveStandardKeyPageUrl(): string {
+	return getRegion() === 'china'
+		? EXTERNAL_URLS.standardKeysChina
+		: EXTERNAL_URLS.standardKeysInternational;
+}
+
 /**
  * Host root for the usage + balance APIs. Both stations expose the same `/api/biz` and
  * `/api/monitor` paths and JSON shapes; only the host differs.

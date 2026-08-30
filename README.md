@@ -99,6 +99,8 @@ For new conversations, the extension contributes GLM-5.3 as VS Code's default. A
 
 **Coding Plan** requires a GLM Coding Plan subscription — best for teams or high-volume coding. **Standard API** is pay-as-you-go via the GLM Open Platform. The endpoint follows your `region` either way.
 
+If the Usage panel cannot find usable Coding Plan quota for the current key, or the session/weekly token quota is exhausted, it offers **Check Standard API**. The extension checks the current key's Standard balance only after you click that action. A positive cash or token-package balance opens a pay-as-you-go confirmation; only **Switch to Standard API** changes `glm-copilot.apiMode`. Dismissing the confirmation or receiving an unavailable, unauthorized, empty, or zero balance changes neither the mode nor the stored key. The model picker then refreshes for Standard availability without selecting a replacement model automatically. Monthly web-search exhaustion alone does not offer this recovery, and it is unavailable with a custom `baseUrl`.
+
 | Mode | Region | Endpoint | Get a key |
 |---|---|---|---|
 | Coding Plan | International | `https://api.z.ai/api/coding/paas/v4` | [z.ai/manage-apikey/subscription](https://z.ai/manage-apikey/subscription) |
