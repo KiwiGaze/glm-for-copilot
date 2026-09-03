@@ -6,6 +6,15 @@ import type { UsageSnapshot } from '../types';
 // VS Code API is not available in unit tests; stub only the surface UsageStatusBar touches.
 const statusBar = { text: '', tooltip: '', command: '', name: 'glm', backgroundColor: undefined as unknown, color: undefined as unknown, show: vi.fn(), hide: vi.fn(), dispose: vi.fn() };
 const subscriptions: { dispose(): void }[] = [];
+const vscodeHarness = vi.hoisted(() => ({
+	showWarningMessage: vi.fn(async (..._args: unknown[]): Promise<string | undefined> => undefined),
+	showErrorMessage: vi.fn(async (..._args: unknown[]): Promise<string | undefined> => undefined),
+	inspect: vi.fn((): { workspaceValue?: 'coding-plan' | 'standard'; globalValue?: 'coding-plan' | 'standard' } => ({ globalValue: 'coding-plan' })),
+	update: vi.fn(async (..._args: unknown[]): Promise<void> => undefined),
+	executeCommand: vi.fn(async (..._args: unknown[]): Promise<unknown> => undefined),
+	openExternal: vi.fn(async (..._args: unknown[]): Promise<boolean> => true),
+	configurationListener: undefined as ((event: { affectsConfiguration(section: string): boolean }) => void) | undefined,
+}));
 
 vi.mock('vscode', () => ({
 	StatusBarAlignment: { Right: 2 },
@@ -32,15 +41,38 @@ vi.mock('vscode', () => ({
 	},
 	window: {
 		createStatusBarItem: vi.fn(() => statusBar),
-		createOutputChannel: vi.fn(() => ({ appendLine: vi.fn(), dispose: vi.fn() })),
+		createOutputChannel: vi.fn(() => ({
+			appendLine: vi.fn(),
+			trace: vi.fn(),
+			debug: vi.fn(),
+			info: vi.fn(),
+			warn: vi.fn(),
+			error: vi.fn(),
+			show: vi.fn(),
+			dispose: vi.fn(),
+		})),
 		activeColorTheme: { kind: 1 },
+		showWarningMessage: vscodeHarness.showWarningMessage,
+		showErrorMessage: vscodeHarness.showErrorMessage,
 	},
 	workspace: {
-		onDidChangeConfiguration: vi.fn(() => ({ dispose: () => undefined })),
-		getConfiguration: vi.fn(() => ({ get: () => undefined })),
+		onDidChangeConfiguration: vi.fn((listener: (event: { affectsConfiguration(section: string): boolean }) => void) => {
+			vscodeHarness.configurationListener = listener;
+			return { dispose: () => undefined };
+		}),
+		getConfiguration: vi.fn(() => ({
+			get: () => undefined,
+			inspect: vscodeHarness.inspect,
+			update: vscodeHarness.update,
+		})),
 	},
-	commands: { registerCommand: vi.fn(() => ({ dispose: () => undefined })) },
-	env: { language: 'en' },
+	commands: {
+		registerCommand: vi.fn(() => ({ dispose: () => undefined })),
+		executeCommand: vscodeHarness.executeCommand,
+	},
+	env: { language: 'en', openExternal: vscodeHarness.openExternal },
+	Uri: { parse: (value: string) => ({ value }) },
+	ConfigurationTarget: { Global: 1, Workspace: 2 },
 }));
 
 // config getters must be mocked HOISTED (before usage-bar.ts is imported) so setConfig mutations
@@ -72,6 +104,13 @@ function makeAuth(hasKey: boolean): IAuthManager {
 	};
 }
 
+function makeContext(): Parameters<typeof UsageStatusBar>[0] {
+	return {
+		subscriptions,
+		secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) },
+	} as unknown as Parameters<typeof UsageStatusBar>[0];
+}
+
 function okSnapshot(): UsageSnapshot {
 	return { status: 'ok', fetchedAt: Date.now(), planName: 'GLM Coding Max', metrics: [{ kind: 'session', used: 42, limit: 100 }] };
 }
@@ -83,6 +122,16 @@ function setConfig(mode: 'coding-plan' | 'standard', region: 'international' | '
 	cfg.show = true;
 	cfg.interval = 5;
 }
+
+beforeEach(() => {
+	vscodeHarness.showWarningMessage.mockReset().mockResolvedValue(undefined);
+	vscodeHarness.showErrorMessage.mockReset().mockResolvedValue(undefined);
+	vscodeHarness.inspect.mockReset().mockReturnValue({ globalValue: 'coding-plan' });
+	vscodeHarness.update.mockReset().mockResolvedValue(undefined);
+	vscodeHarness.executeCommand.mockReset().mockResolvedValue(undefined);
+	vscodeHarness.openExternal.mockReset().mockResolvedValue(true);
+	vscodeHarness.configurationListener = undefined;
+});
 
 describe('UsageStatusBar activation gate', () => {
 	beforeEach(() => {
@@ -167,6 +216,7 @@ describe('UsageStatusBar activation gate', () => {
 		);
 		await bar.refresh();
 		expect(client.fetchSnapshot).not.toHaveBeenCalled();
+		expect(bar.getSnapshot()).toBeNull();
 		bar.dispose();
 	});
 
@@ -235,7 +285,61 @@ describe('UsageStatusBar activation gate', () => {
 		);
 		await bar.refresh();
 		expect(statusBar.backgroundColor).toBeDefined();
+		expect(bar.getSnapshot()?.recoveryReason).toBe('coding-plan-exhausted');
 		bar.dispose();
+	});
+
+	it('does not offer Standard recovery for web-search-only exhaustion', async () => {
+		setConfig('coding-plan', 'international');
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({
+				status: 'ok',
+				fetchedAt: Date.now(),
+				metrics: [{ kind: 'web-searches', used: 4000, limit: 4000 }],
+			})),
+			fetchBalance: vi.fn(),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		expect(bar.getSnapshot()?.recoveryReason).toBeUndefined();
+		bar.dispose();
+	});
+
+	it.each([
+		{ status: 'auth-error', metrics: [] },
+		{ status: 'server-error', metrics: [] },
+		{ status: 'ok', metrics: [{ kind: 'weekly', used: 99, limit: 100 }] },
+	] satisfies Array<Pick<UsageSnapshot, 'status' | 'metrics'>>)('does not offer recovery for $status without a recognized unavailable or exhausted state', async ({ status, metrics }) => {
+		setConfig('coding-plan', 'international');
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({ status, fetchedAt: Date.now(), metrics })),
+			fetchBalance: vi.fn(),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		expect(bar.getSnapshot()?.recoveryReason).toBeUndefined();
+		bar.dispose();
+	});
+
+	it('offers unavailable recovery for Coding Plan no-data only', async () => {
+		setConfig('coding-plan', 'international');
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
+			fetchBalance: vi.fn(),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		expect(bar.getSnapshot()?.recoveryReason).toBe('coding-plan-unavailable');
+		bar.dispose();
+
+		setConfig('standard', 'international');
+		const standardBar = new UsageStatusBar(makeContext(), makeAuth(true), {
+			fetchSnapshot: vi.fn(),
+			fetchBalance: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
+		});
+		await standardBar.refresh();
+		expect(standardBar.getSnapshot()?.recoveryReason).toBeUndefined();
+		standardBar.dispose();
 	});
 
 	it('sets error background when balance is 0', async () => {
@@ -386,6 +490,275 @@ describe('UsageStatusBar cache-stale rendering', () => {
 		vi.advanceTimersByTime(31_000);
 		await bar.refresh();
 		expect(statusBar.text).toContain('42');
+		bar.dispose();
+	});
+
+	it('does not hide recognized Coding Plan unavailability behind cached usage', async () => {
+		setConfig('coding-plan', 'international');
+		const ok = okSnapshot();
+		const unavailable: UsageSnapshot = {
+			status: 'server-error',
+			failureReason: 'coding-plan-unavailable',
+			metrics: [],
+			fetchedAt: Date.now(),
+		};
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn().mockResolvedValueOnce(ok).mockResolvedValueOnce(unavailable),
+			fetchBalance: vi.fn(),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		vi.advanceTimersByTime(31_000);
+		await bar.refresh();
+		expect(bar.getSnapshot()).toMatchObject({
+			status: 'server-error',
+			offline: false,
+			recoveryReason: 'coding-plan-unavailable',
+		});
+		bar.dispose();
+	});
+});
+
+describe('UsageStatusBar Standard recovery', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		subscriptions.length = 0;
+		setConfig('coding-plan', 'international');
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	function recoveryClient(balance: UsageSnapshot): IUsageClient {
+		return {
+			fetchSnapshot: vi.fn(async () => ({
+				status: 'no-data',
+				fetchedAt: Date.now(),
+				metrics: [],
+			})),
+			fetchBalance: vi.fn(async () => balance),
+		};
+	}
+
+	it('checks the current key once while a balance probe is pending', async () => {
+		let resolveBalance: ((snapshot: UsageSnapshot) => void) | undefined;
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
+			fetchBalance: vi.fn(() => new Promise<UsageSnapshot>((resolve) => {
+				resolveBalance = resolve;
+			})),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+
+		const first = bar.checkStandardApi();
+		const second = bar.checkStandardApi();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(client.fetchBalance).toHaveBeenCalledTimes(1);
+		expect(client.fetchBalance).toHaveBeenCalledWith('k', expect.any(AbortSignal));
+
+		resolveBalance?.({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: { availableCash: 1, tokenPackages: [] },
+		});
+		await Promise.all([first, second]);
+		bar.dispose();
+	});
+
+	it('cancels a pending balance probe when GLM configuration changes', async () => {
+		let resolveBalance: ((snapshot: UsageSnapshot) => void) | undefined;
+		let balanceSignal: AbortSignal | undefined;
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
+			fetchBalance: vi.fn((_key, signal) => {
+				balanceSignal = signal;
+				return new Promise<UsageSnapshot>((resolve) => {
+					resolveBalance = resolve;
+				});
+			}),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		const recovery = bar.checkStandardApi();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		vscodeHarness.configurationListener?.({ affectsConfiguration: () => true });
+		expect(balanceSignal?.aborted).toBe(true);
+		resolveBalance?.({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: { availableCash: 1, tokenPackages: [] },
+		});
+		await recovery;
+
+		expect(vscodeHarness.showWarningMessage).not.toHaveBeenCalled();
+		expect(vscodeHarness.update).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('switches the user setting only after confirming usable cash credit', async () => {
+		const client = recoveryClient({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: { availableCash: 12.5, tokenPackages: [] },
+		});
+		vscodeHarness.showWarningMessage.mockResolvedValue('Switch to Standard API');
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		vscodeHarness.update.mockImplementation(async () => {
+			cfg.mode = 'standard';
+			vscodeHarness.configurationListener?.({ affectsConfiguration: () => true });
+		});
+
+		await bar.checkStandardApi();
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(vscodeHarness.showWarningMessage).toHaveBeenCalledWith(
+			'Switch to Standard API?',
+			expect.objectContaining({
+				modal: true,
+				detail: expect.stringContaining('Standard API is pay-as-you-go'),
+			}),
+			'Switch to Standard API',
+		);
+		expect(vscodeHarness.showWarningMessage.mock.calls[0]?.[1]).toEqual(expect.objectContaining({
+			detail: expect.stringContaining('$12.5'),
+		}));
+		expect(vscodeHarness.update).toHaveBeenCalledWith('apiMode', 'standard', 1);
+		expect(client.fetchBalance).toHaveBeenCalledTimes(2);
+		expect(bar.getSnapshot()?.balance?.availableCash).toBe('12.5');
+		bar.dispose();
+	});
+
+	it('updates the workspace setting when a workspace override controls API Mode', async () => {
+		const client = recoveryClient({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: {
+				availableCash: 0,
+				tokenPackages: [{
+					name: 'GLM Resource Package',
+					remainingTokens: 500,
+					magnitude: 1000,
+					status: 'EFFECTIVE',
+				}],
+			},
+		});
+		vscodeHarness.inspect.mockReturnValue({ workspaceValue: 'coding-plan', globalValue: 'standard' });
+		vscodeHarness.showWarningMessage.mockResolvedValue('Switch to Standard API');
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+
+		await bar.checkStandardApi();
+
+		expect(vscodeHarness.showWarningMessage.mock.calls[0]?.[1]).toEqual(expect.objectContaining({
+			detail: expect.stringContaining('this workspace'),
+		}));
+		expect(vscodeHarness.update).toHaveBeenCalledWith('apiMode', 'standard', 2);
+		bar.dispose();
+	});
+
+	it.each([
+		{
+			name: 'zero balance',
+			snapshot: { status: 'ok', fetchedAt: 1, metrics: [], balance: { availableCash: 0, tokenPackages: [] } },
+		},
+		{ name: 'missing balance', snapshot: { status: 'no-data', fetchedAt: 1, metrics: [] } },
+		{ name: 'authentication failure', snapshot: { status: 'auth-error', fetchedAt: 1, metrics: [] } },
+		{ name: 'network failure', snapshot: { status: 'network-error', fetchedAt: 1, metrics: [] } },
+		{ name: 'server failure', snapshot: { status: 'server-error', fetchedAt: 1, metrics: [] } },
+	] satisfies Array<{ name: string; snapshot: UsageSnapshot }>)('leaves configuration unchanged after $name', async ({ snapshot }) => {
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), recoveryClient(snapshot));
+		await bar.refresh();
+
+		await bar.checkStandardApi();
+
+		expect(vscodeHarness.update).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('leaves configuration unchanged when the probe is cancelled', async () => {
+		const cancelled = new Error('cancelled');
+		cancelled.name = 'AbortError';
+		const client: IUsageClient = {
+			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
+			fetchBalance: vi.fn(async () => { throw cancelled; }),
+		};
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+
+		await bar.checkStandardApi();
+
+		expect(vscodeHarness.update).not.toHaveBeenCalled();
+		expect(vscodeHarness.showWarningMessage).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('leaves configuration unchanged when confirmation is dismissed', async () => {
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), recoveryClient({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: { availableCash: 2, tokenPackages: [] },
+		}));
+		await bar.refresh();
+
+		await bar.checkStandardApi();
+
+		expect(vscodeHarness.update).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('leaves configuration unchanged if API Mode drifts during confirmation', async () => {
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), recoveryClient({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: { availableCash: 2, tokenPackages: [] },
+		}));
+		vscodeHarness.showWarningMessage.mockImplementation(async (...args: unknown[]) => {
+			if (typeof args[1] === 'object') {
+				cfg.mode = 'standard';
+				return 'Switch to Standard API';
+			}
+			return undefined;
+		});
+		await bar.refresh();
+
+		await bar.checkStandardApi();
+
+		expect(vscodeHarness.update).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('reports a failed configuration write without changing the key', async () => {
+		const auth = makeAuth(true);
+		const bar = new UsageStatusBar(makeContext(), auth, recoveryClient({
+			status: 'ok',
+			fetchedAt: Date.now(),
+			metrics: [],
+			balance: { availableCash: 2, tokenPackages: [] },
+		}));
+		vscodeHarness.showWarningMessage.mockResolvedValue('Switch to Standard API');
+		vscodeHarness.update.mockRejectedValue(new Error('settings unavailable'));
+		await bar.refresh();
+
+		await bar.checkStandardApi();
+
+		expect(vscodeHarness.showErrorMessage).toHaveBeenCalledWith(
+			'GLM could not change API Mode. No change was made.',
+			'Show Logs',
+		);
+		expect(auth.deleteApiKey).not.toHaveBeenCalled();
 		bar.dispose();
 	});
 });

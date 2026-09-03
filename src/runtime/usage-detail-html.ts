@@ -1,6 +1,8 @@
 import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
 import { formatAmount, formatTokens } from './format';
 
+export type UsageRecoveryReason = 'coding-plan-unavailable' | 'coding-plan-exhausted';
+
 /** Render-ready metric row (session / weekly / web-searches) for the detail panel. */
 export interface UsageMetricView {
 	kind: 'session' | 'weekly' | 'web-searches';
@@ -32,6 +34,7 @@ export interface UsageBalanceView {
 
 export interface UsagePanelMessage {
 	status: UsageStatus;
+	recoveryReason?: UsageRecoveryReason;
 	planName?: string;
 	renewsAt?: string;
 	metrics: UsageMetricView[];
@@ -48,6 +51,7 @@ export interface UsagePanelStrings {
 	title: string;
 	refresh: string;
 	setKey: string;
+	checkStandard: string;
 	offline: string;
 	unavailable: string;
 	lastUpdated: string;
@@ -64,6 +68,8 @@ export interface UsagePanelStrings {
 	balanceGifted: string;
 	balanceFrozen: string;
 	balancePackages: string;
+	recoveryUnavailable: string;
+	recoveryExhausted: string;
 }
 
 /**
@@ -77,12 +83,14 @@ export function buildUsageMessage(
 	strings: UsagePanelStrings,
 	theme: 'dark' | 'light',
 	currency: string,
+	recoveryReason?: UsageRecoveryReason,
 ): UsagePanelMessage | null {
 	if (snapshot === null) {
 		return null;
 	}
 	return {
 		status: snapshot.status,
+		recoveryReason,
 		planName: snapshot.planName,
 		renewsAt: snapshot.renewsAt,
 		metrics: snapshot.metrics.map(toMetricView, strings),

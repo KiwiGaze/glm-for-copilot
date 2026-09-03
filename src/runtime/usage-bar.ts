@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
 import { getApiMode, getBaseUrlOverride, getRegion, getShowUsageStatusBar, getUsageRefreshIntervalMinutes } from '../config';
-import { API_KEY_SECRET, USAGE_CACHE_STALE_MS, USAGE_MANUAL_DEBOUNCE_MS } from '../consts';
+import { API_KEY_SECRET, CONFIG_SECTION, USAGE_CACHE_STALE_MS, USAGE_MANUAL_DEBOUNCE_MS } from '../consts';
+import { resolveStandardKeyPageUrl } from '../endpoint';
 import { t } from '../i18n';
 import { logger } from '../logger';
-import type { IAuthManager, UsageSnapshot } from '../types';
+import type { ApiMode, IAuthManager, UsageSnapshot } from '../types';
 import { isAbortError } from '../client/errors';
 import type { IUsageClient } from '../client/usage';
-import { buildUsageMessage, type UsagePanelMessage } from './usage-detail-html';
+import { buildUsageMessage, type UsagePanelMessage, type UsageRecoveryReason } from './usage-detail-html';
 import { UsageDetailPanel } from './usage-detail-panel';
 import { formatAmount, formatTokens } from './format';
 import { usagePanelStrings } from './usage-strings';
@@ -29,6 +30,8 @@ export class UsageStatusBar implements vscode.Disposable {
 	private lastOk: UsageSnapshot | null = null;
 	private intervalHandle: ReturnType<typeof setInterval> | null = null;
 	private controller: AbortController | null = null;
+	private recoveryController: AbortController | null = null;
+	private recoveryPromise: Promise<void> | null = null;
 	private readonly _onDidChange = new vscode.EventEmitter<UsagePanelMessage | null>();
 	readonly onDidChangeSnapshot = this._onDidChange.event;
 	private lastRendered: UsagePanelMessage | null = null;
@@ -87,6 +90,144 @@ export class UsageStatusBar implements vscode.Disposable {
 			});
 		this.refreshPromise = refresh;
 		return this.refreshPromise;
+	}
+
+	/** Check the current key for Standard API credit and switch only after explicit consent. */
+	checkStandardApi(): Promise<void> {
+		if (this.recoveryPromise) {
+			return this.recoveryPromise;
+		}
+		const recovery = this.runStandardApiCheck()
+			.catch(async (error) => {
+				if (isAbortError(error)) {
+					return;
+				}
+				logger.warn('Standard API recovery failed', error);
+				await this.showCheckFailure();
+			})
+			.finally(() => {
+				if (this.recoveryPromise === recovery) {
+					this.recoveryPromise = null;
+				}
+			});
+		this.recoveryPromise = recovery;
+		return recovery;
+	}
+
+	private async runStandardApiCheck(): Promise<void> {
+		if (getApiMode() !== 'coding-plan' || getBaseUrlOverride() !== '') {
+			await vscode.window.showWarningMessage(t('usage.recovery.modeChanged'));
+			return;
+		}
+		const region = getRegion();
+		const gate = await this.evaluateGate();
+		if (!gate.passed) {
+			await this.showNoStandardCredit();
+			return;
+		}
+
+		const controller = new AbortController();
+		this.recoveryController = controller;
+		let snapshot: UsageSnapshot;
+		try {
+			snapshot = await this.client.fetchBalance(gate.apiKey, controller.signal);
+		} finally {
+			if (this.recoveryController === controller) {
+				this.recoveryController = null;
+			}
+		}
+		if (controller.signal.aborted) {
+			return;
+		}
+
+		const credit = summarizeStandardCredit(snapshot);
+		if (!credit) {
+			if (snapshot.status === 'network-error' || snapshot.status === 'server-error') {
+				await this.showCheckFailure();
+			} else {
+				await this.showNoStandardCredit();
+			}
+			return;
+		}
+
+		const configuration = vscode.workspace.getConfiguration(CONFIG_SECTION);
+		const workspaceScoped = configuration.inspect<ApiMode>('apiMode')?.workspaceValue !== undefined;
+		const target = workspaceScoped
+			? vscode.ConfigurationTarget.Workspace
+			: vscode.ConfigurationTarget.Global;
+		const scope = t(workspaceScoped
+			? 'usage.recovery.scope.workspace'
+			: 'usage.recovery.scope.user');
+		const switchAction = t('usage.recovery.switch');
+		const choice = await vscode.window.showWarningMessage(
+			t('usage.recovery.confirm'),
+			{
+				modal: true,
+				detail: t('usage.recovery.confirmDetail', credit, scope),
+			},
+			switchAction,
+		);
+		if (choice !== switchAction) {
+			return;
+		}
+		const currentGate = await this.evaluateGate();
+		const currentWorkspaceScoped = vscode.workspace
+			.getConfiguration(CONFIG_SECTION)
+			.inspect<ApiMode>('apiMode')?.workspaceValue !== undefined;
+		if (
+			getApiMode() !== 'coding-plan' ||
+			getBaseUrlOverride() !== '' ||
+			getRegion() !== region ||
+			!currentGate.passed ||
+			currentGate.apiKey !== gate.apiKey ||
+			currentWorkspaceScoped !== workspaceScoped
+		) {
+			await vscode.window.showWarningMessage(t('usage.recovery.modeChanged'));
+			return;
+		}
+		try {
+			await configuration.update('apiMode', 'standard', target);
+		} catch (error) {
+			logger.warn('Failed to switch GLM API Mode to Standard', error);
+			const showLogs = t('error.action.viewDetails');
+			const failureChoice = await vscode.window.showErrorMessage(
+				t('usage.recovery.switchFailed'),
+				showLogs,
+			);
+			if (failureChoice === showLogs) {
+				logger.show();
+			}
+		}
+	}
+
+	private async showNoStandardCredit(): Promise<void> {
+		const getKey = t('usage.recovery.getStandardKey');
+		const openSettings = t('usage.recovery.openSettings');
+		const choice = await vscode.window.showWarningMessage(
+			t('usage.recovery.noCredit'),
+			getKey,
+			openSettings,
+		);
+		if (choice === getKey) {
+			await vscode.env.openExternal(vscode.Uri.parse(resolveStandardKeyPageUrl()));
+		} else if (choice === openSettings) {
+			await vscode.commands.executeCommand('workbench.action.openSettings', `${CONFIG_SECTION}.apiMode`);
+		}
+	}
+
+	private async showCheckFailure(): Promise<void> {
+		const showLogs = t('error.action.viewDetails');
+		const openSettings = t('usage.recovery.openSettings');
+		const choice = await vscode.window.showWarningMessage(
+			t('usage.recovery.checkFailed'),
+			showLogs,
+			openSettings,
+		);
+		if (choice === showLogs) {
+			logger.show();
+		} else if (choice === openSettings) {
+			await vscode.commands.executeCommand('workbench.action.openSettings', `${CONFIG_SECTION}.apiMode`);
+		}
 	}
 
 	/**
@@ -162,15 +303,21 @@ export class UsageStatusBar implements vscode.Disposable {
 		const now = Date.now();
 		const cacheUsable = this.lastOk && now - this.lastOk.fetchedAt < USAGE_CACHE_STALE_MS;
 		let offline = false;
+		const sourceRecovery = standardRecoveryReason(snapshot);
 
 		// Reset warning background by default; ok-state renderers may set it for critical values.
 		this.item.backgroundColor = undefined;
 
 		let effective: UsageSnapshot = snapshot;
-		if ((snapshot.status === 'network-error' || snapshot.status === 'server-error') && cacheUsable) {
+		if (
+			(snapshot.status === 'network-error' || snapshot.status === 'server-error') &&
+			cacheUsable &&
+			sourceRecovery !== 'coding-plan-unavailable'
+		) {
 			effective = { ...this.lastOk! };
 			offline = true;
 		}
+		const recoveryReason = sourceRecovery ?? (offline ? undefined : standardRecoveryReason(effective));
 
 		switch (effective.status) {
 			case 'loading':
@@ -179,11 +326,13 @@ export class UsageStatusBar implements vscode.Disposable {
 				this.item.show();
 				break;
 			case 'ok':
-				this.renderOkBar(effective, offline);
+				this.renderOkBar(effective, offline, recoveryReason);
 				break;
 			case 'no-data':
 				this.item.text = '$(dash) GLM';
-				this.item.tooltip = t('usage.status.no-data');
+				this.item.tooltip = recoveryReason === 'coding-plan-unavailable'
+					? t('usage.recovery.tooltip.unavailable')
+					: t('usage.status.no-data');
 				this.item.show();
 				break;
 			case 'auth-error':
@@ -194,17 +343,20 @@ export class UsageStatusBar implements vscode.Disposable {
 			case 'network-error':
 			case 'server-error':
 				this.item.text = snapshot.status === 'network-error' ? '$(plug) GLM' : '$(warning) GLM';
-				this.item.tooltip =
-					snapshot.status === 'network-error' ? t('usage.status.network-error') : t('usage.status.server-error');
+				this.item.tooltip = recoveryReason === 'coding-plan-unavailable'
+					? t('usage.recovery.tooltip.unavailable')
+					: snapshot.status === 'network-error'
+						? t('usage.status.network-error')
+						: t('usage.status.server-error');
 				this.item.show();
 				break;
 		}
 
-		this.fireEffective(effective, offline);
+		this.fireEffective(effective, offline, recoveryReason);
 	}
 
 	/** Status-bar rendering for the ok state (text + tooltip). Pane gets the structured message via fireEffective. */
-	private renderOkBar(snapshot: UsageSnapshot, offline: boolean): void {
+	private renderOkBar(snapshot: UsageSnapshot, offline: boolean, recoveryReason?: UsageRecoveryReason): void {
 		if (snapshot.balance) {
 			this.renderOkBarBalance(snapshot, offline);
 			return;
@@ -240,6 +392,9 @@ export class UsageStatusBar implements vscode.Disposable {
 		lines.push(t('usage.tooltip.lastUpdated', new Date(snapshot.fetchedAt).toLocaleTimeString()));
 		if (offline) {
 			lines.push(t('usage.tooltip.offline'));
+		}
+		if (recoveryReason === 'coding-plan-exhausted') {
+			lines.push(t('usage.recovery.tooltip.exhausted'));
 		}
 		this.item.tooltip = lines.join('\n');
 		// Critical: any percentage metric at 100% → error background.
@@ -308,6 +463,7 @@ export class UsageStatusBar implements vscode.Disposable {
 	 */
 	private async onConfigOrKeyChange(): Promise<void> {
 		this.controller?.abort();
+		this.recoveryController?.abort();
 		this.refreshPromise = null;
 		this.lastOk = null;
 		const gate = await this.evaluateGate();
@@ -344,6 +500,7 @@ export class UsageStatusBar implements vscode.Disposable {
 	dispose(): void {
 		this.stopInterval();
 		this.controller?.abort();
+		this.recoveryController?.abort();
 		this.item.dispose();
 		this._onDidChange.dispose();
 	}
@@ -354,12 +511,58 @@ export class UsageStatusBar implements vscode.Disposable {
 	}
 
 	/** Build a UsagePanelMessage from the effective state and fire the emitter + cache it. */
-	private fireEffective(snapshot: UsageSnapshot, offline: boolean): void {
+	private fireEffective(snapshot: UsageSnapshot, offline: boolean, recoveryReason?: UsageRecoveryReason): void {
 		const currency = getRegion() === 'china' ? '¥' : '$';
-		const message = buildUsageMessage(snapshot, offline, usagePanelStrings(), currentThemeKind(), currency);
+		const message = buildUsageMessage(
+			snapshot,
+			offline,
+			usagePanelStrings(),
+			currentThemeKind(),
+			currency,
+			recoveryReason,
+		);
 		this.lastRendered = message;
 		this._onDidChange.fire(message);
 	}
+}
+
+function standardRecoveryReason(snapshot: UsageSnapshot): UsageRecoveryReason | undefined {
+	if (getApiMode() !== 'coding-plan' || getBaseUrlOverride() !== '') {
+		return undefined;
+	}
+	if (snapshot.failureReason === 'coding-plan-unavailable' || snapshot.status === 'no-data') {
+		return 'coding-plan-unavailable';
+	}
+	if (
+		snapshot.status === 'ok' &&
+		snapshot.metrics.some((metric) =>
+			(metric.kind === 'session' || metric.kind === 'weekly') &&
+			metric.limit > 0 &&
+			metric.used >= metric.limit
+		)
+	) {
+		return 'coding-plan-exhausted';
+	}
+	return undefined;
+}
+
+function summarizeStandardCredit(snapshot: UsageSnapshot): string | undefined {
+	if (snapshot.status !== 'ok' || !snapshot.balance) {
+		return undefined;
+	}
+	const parts: string[] = [];
+	if (snapshot.balance.availableCash !== undefined && snapshot.balance.availableCash > 0) {
+		const currency = getRegion() === 'china' ? '¥' : '$';
+		parts.push(`${currency}${formatAmount(snapshot.balance.availableCash)}`);
+	}
+	const totalTokens = snapshot.balance.tokenPackages.reduce(
+		(sum, pkg) => sum + Math.max(0, pkg.remainingTokens * pkg.magnitude),
+		0,
+	);
+	if (totalTokens > 0) {
+		parts.push(formatTokens(totalTokens));
+	}
+	return parts.length > 0 ? parts.join(' · ') : undefined;
 }
 
 /** Map the active VS Code color theme to a light/dark token for the detail panel. */

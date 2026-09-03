@@ -4,6 +4,10 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## Unreleased
+
+- **Opt-in Standard API recovery** - when the current key exposes no usable Coding Plan quota, or its session/weekly token quota is exhausted, the GLM Usage panel can check that key's Standard API balance on demand. A switch is offered only when positive cash or token-package credit is found, and a modal discloses pay-as-you-go billing, the configuration scope, and model-availability changes before updating API Mode. No balance probe or mode change happens automatically; dismissal, failures, zero credit, monthly web-search exhaustion, and custom Base URLs leave the mode and key unchanged.
+
 ## 0.4.1
 
 - **GLM-5.3-Flash image input** - adds the 1M-context multimodal model with native PNG/JPEG input. Text-only models automatically use GLM-5.3-Flash to produce untrusted visual context on the same endpoint and API key. Image analysis is validated, cancellable, cached in memory, and configurable through the renamed **GLM: Edit Flash Image Analysis Prompt** command.

@@ -10,6 +10,7 @@ export function usagePanelStrings(): UsagePanelStrings {
 		title: t('usage.panel.title'),
 		refresh: t('usage.panel.refresh'),
 		setKey: t('usage.panel.setKey'),
+		checkStandard: t('usage.recovery.checkStandard'),
 		offline: t('usage.panel.offline'),
 		unavailable: t('usage.panel.unavailable'),
 		lastUpdated: t('usage.panel.lastUpdated'),
@@ -41,5 +42,7 @@ export function usagePanelStrings(): UsagePanelStrings {
 		balanceGifted: t('usage.balance.gifted'),
 		balanceFrozen: t('usage.balance.frozen'),
 		balancePackages: t('usage.balance.packages'),
+		recoveryUnavailable: t('usage.recovery.unavailable'),
+		recoveryExhausted: t('usage.recovery.exhausted'),
 	};
 }

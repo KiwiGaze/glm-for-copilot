@@ -99,8 +99,12 @@ export type UsageStatus =
 	| 'server-error'
 	| 'loading';
 
+export type UsageFailureReason = 'coding-plan-unavailable';
+
 export interface UsageSnapshot {
 	status: UsageStatus;
+	/** Machine-readable cause for a recognized usage failure. */
+	failureReason?: UsageFailureReason;
 	planName?: string;
 	/** ISO date string from the subscription response. */
 	renewsAt?: string;
