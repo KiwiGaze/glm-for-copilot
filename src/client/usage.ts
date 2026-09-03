@@ -414,12 +414,12 @@ function nextUtcFirstOfMonthMs(now: Date = new Date()): number {
 }
 
 /**
- * Map raw `TOKENS_LIMIT` / `TIME_LIMIT` entries to the ordered metric list
+ * Map raw `TOKENS_LIMIT` / `CREDIT_LIMIT` / `TIME_LIMIT` entries to the ordered metric list
  * (`session` → `weekly` → `web-searches`), skipping any window that is absent.
  */
 function buildMetrics(limits: ZaiLimit[]): UsageMetric[] {
 	const metrics: UsageMetric[] = [];
-	const session = findLimit(limits, 'TOKENS_LIMIT', 3);
+	const session = findLimit(limits, 'TOKENS_LIMIT', 3) ?? findLimit(limits, 'CREDIT_LIMIT', 3);
 	if (session) {
 		metrics.push({
 			kind: 'session',
@@ -428,7 +428,7 @@ function buildMetrics(limits: ZaiLimit[]): UsageMetric[] {
 			resetsAt: session.nextResetTime,
 		});
 	}
-	const weekly = findLimit(limits, 'TOKENS_LIMIT', 6);
+	const weekly = findLimit(limits, 'TOKENS_LIMIT', 6) ?? findLimit(limits, 'CREDIT_LIMIT', 6);
 	if (weekly) {
 		metrics.push({
 			kind: 'weekly',
