@@ -35,6 +35,18 @@ const QUOTA_FULL = JSON.stringify({
 		],
 	},
 });
+const QUOTA_CREDIT_LIMIT = JSON.stringify({
+	code: 200,
+	msg: 'Operation successful',
+	data: {
+		limits: [
+			{ type: 'CREDIT_LIMIT', unit: 3, number: 5, usage: 28000, currentValue: 5184, remaining: 22815, percentage: 18, nextResetTime: 1788371521831 },
+			{ type: 'CREDIT_LIMIT', unit: 6, number: 1, usage: 140000, currentValue: 36192, remaining: 103807, percentage: 25, nextResetTime: 1788875329996 },
+		],
+		level: 'max',
+	},
+	success: true,
+});
 const QUOTA_SESSION_ONLY = JSON.stringify({
 	code: 200,
 	data: { limits: [{ type: 'TOKENS_LIMIT', percentage: 10, nextResetTime: 1738368000000, unit: 3 }] },
@@ -95,6 +107,44 @@ describe('UsageClient.fetchSnapshot', () => {
 		expect(snap.metrics[1]).toMatchObject({ used: 10, limit: 100, resetsAt: 1738972800000 });
 		expect(snap.metrics[2]).toMatchObject({ used: 1095, limit: 4000, resetsAt: 1738368000000 });
 		expect(snap.fetchedAt).toBeGreaterThan(0);
+	});
+
+	it('maps CREDIT_LIMIT quota to session and weekly metrics', async () => {
+		const client = new UsageClient('https://api.z.ai', mockFetch({
+			'subscription/list': { status: 200, body: SUBSCRIPTION_OK },
+			'quota/limit': { status: 200, body: QUOTA_CREDIT_LIMIT },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.status).toBe('ok');
+		expect(snap.planName).toBe('GLM Coding Max');
+		expect(snap.metrics).toEqual([
+			{ kind: 'session', used: 18, limit: 100, resetsAt: 1788371521831 },
+			{ kind: 'weekly', used: 25, limit: 100, resetsAt: 1788875329996 },
+		]);
+	});
+
+	it('prefers TOKENS_LIMIT when both quota formats are present', async () => {
+		const quota = JSON.stringify({
+			code: 200,
+			data: {
+				limits: [
+					{ type: 'CREDIT_LIMIT', unit: 3, percentage: 18, nextResetTime: 1788371521831 },
+					{ type: 'TOKENS_LIMIT', unit: 3, percentage: 11, nextResetTime: 1788371521000 },
+					{ type: 'CREDIT_LIMIT', unit: 6, percentage: 25, nextResetTime: 1788875329996 },
+					{ type: 'TOKENS_LIMIT', unit: 6, percentage: 22, nextResetTime: 1788875329000 },
+				],
+			},
+			success: true,
+		});
+		const client = new UsageClient('https://api.z.ai', mockFetch({
+			'subscription/list': { status: 200, body: SUBSCRIPTION_OK },
+			'quota/limit': { status: 200, body: quota },
+		}));
+		const snap = await client.fetchSnapshot('k');
+		expect(snap.metrics).toEqual([
+			{ kind: 'session', used: 11, limit: 100, resetsAt: 1788371521000 },
+			{ kind: 'weekly', used: 22, limit: 100, resetsAt: 1788875329000 },
+		]);
 	});
 
 	it('coerces non-numeric fields to 0', async () => {
