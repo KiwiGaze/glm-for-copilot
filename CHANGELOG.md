@@ -4,7 +4,7 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
-## Unreleased
+## 0.4.2
 
 - **Coding Plan credit-limit parsing** - accept the `CREDIT_LIMIT` quota entries now returned by Z.AI for 5-hour and weekly usage while retaining support for endpoints that still return `TOKENS_LIMIT`.
 - **Opt-in Standard API recovery** - when the current key exposes no usable Coding Plan quota, or its session/weekly token quota is exhausted, the GLM Usage panel can check that key's Standard API balance on demand. A switch is offered only when positive cash or token-package credit is found, and a modal discloses pay-as-you-go billing, the configuration scope, and model-availability changes before updating API Mode. No balance probe or mode change happens automatically; dismissal, failures, zero credit, monthly web-search exhaustion, and custom Base URLs leave the mode and key unchanged.
