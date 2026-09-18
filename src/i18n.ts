@@ -19,6 +19,9 @@ const en: Record<string, string> = {
 	'model.glm-5.3-flash.detail': 'Fast multimodal model, 1M context',
 	'model.glm-5.3-flash.tooltip':
 		'GLM-5.3-Flash — fast multimodal model, 1M context, native image input, and mandatory Low, High, or Max thinking effort (Max by default). Available on Coding Plan and Standard API.',
+	'model.glm-5.3-flashx.detail': 'Faster multimodal model, 1M context',
+	'model.glm-5.3-flashx.tooltip':
+		'GLM-5.3-FlashX — faster multimodal model, 1M context, native image input, and mandatory Low, High, or Max thinking effort (Max by default). Standard API only.',
 	'model.glm-4.5-air.detail': 'Legacy model',
 	'model.glm-4.5-air.tooltip': 'Legacy model. GLM-4.5 Air — lightweight, fast, and low-cost. Available on both plans.',
 	'model.custom.detail': 'Custom model',
@@ -180,6 +183,9 @@ const zh: Record<string, string> = {
 	'model.glm-5.3-flash.detail': '快速多模态模型，100 万上下文',
 	'model.glm-5.3-flash.tooltip':
 		'GLM-5.3-Flash — 快速多模态模型，100 万上下文，原生图片输入，必须启用低、高或最高思考强度（默认为最高）。编程计划和标准 API 均可用。',
+	'model.glm-5.3-flashx.detail': '更快的多模态模型，100 万上下文',
+	'model.glm-5.3-flashx.tooltip':
+		'GLM-5.3-FlashX — 更快的多模态模型，100 万上下文，原生图片输入，必须启用低、高或最高思考强度（默认为最高）。仅标准 API 可用。',
 	'model.glm-4.5-air.detail': '旧版模型',
 	'model.glm-4.5-air.tooltip': '旧版模型。GLM-4.5 Air — 轻量、快速、低成本。两种计划均可用。',
 	'model.custom.detail': '自定义模型',

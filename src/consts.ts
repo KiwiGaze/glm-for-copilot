@@ -168,6 +168,22 @@ export const MODELS: GLMModel[] = [
 		availableIn: ['coding-plan', 'standard'],
 	},
 	{
+		id: 'glm-5.3-flashx',
+		name: 'GLM-5.3-FlashX',
+		family: 'glm',
+		version: '5.3',
+		detail: 'Faster multimodal model, 1M context',
+		maxInputTokens: 1000000,
+		maxOutputTokens: 128000,
+		capabilities: {
+			toolCalling: DEFAULT_TOOLS_LIMIT,
+			thinking: true,
+			nativeImageInput: true,
+			thinkingEffort: GLM_5_3_EFFORT,
+		},
+		availableIn: ['standard'],
+	},
+	{
 		id: 'glm-4.7',
 		name: 'GLM-4.7',
 		family: 'glm',
