@@ -4,7 +4,7 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
-## Unreleased
+## 0.4.3
 
 - **GLM-5.3-FlashX support** - adds the faster native multimodal model to the Standard API picker with 1M context, 128K maximum output, tool calling, and mandatory Low / High / Max thinking effort. Coding Plan does not currently offer FlashX.
 

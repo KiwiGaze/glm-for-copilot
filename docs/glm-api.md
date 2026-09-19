@@ -47,13 +47,15 @@ Streaming is OpenAI-compatible server-sent events:
 - Usage: top-level `usage` object, emitted in the final streaming chunk before
   `data: [DONE]`. The extension opts in with `stream_options: { include_usage: true }`.
 
-## GLM-5.3-Flash multimodal input
+## GLM-5.3-Flash and FlashX multimodal input
 
 The International [Z.AI model guide](https://docs.z.ai/guides/vlm/glm-5.3-flash)
 and Mainland China [BigModel model guide](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash/)
-identify `glm-5.3-flash` as a multimodal model with a 1M-token context window.
-Its Chat Completions input accepts text, images, video, and files; this extension
-intentionally implements only VS Code image attachments.
+identify `glm-5.3-flash` and `glm-5.3-flashx` as multimodal models with 1M-token
+context windows. Flash is available on Coding Plan and Standard API, while FlashX
+is available only on Standard API. Their Chat Completions input accepts text,
+images, video, and files; this extension intentionally implements only VS Code
+image attachments.
 
 Images are sent in an OpenAI-compatible user-message content array. `image_url.url`
 may contain a public URL or a Base64 data URL; the extension uses data URLs so an
@@ -75,14 +77,13 @@ per request. It does not log Base64 payloads.
 
 The output uses the same Chat Completion and SSE shapes as text models: final text in
 `content`, optional reasoning in `reasoning_content`, and optional `tool_calls`. The
-model requires `thinking: { "type": "enabled" }`; supported `reasoning_effort` values
-are `low`, `high`, and `max`, with `max` used by default. The model-specific guide
-describes its text limits as matching GLM-5.3, so the extension currently advertises
-a 128K maximum output.
+models require `thinking: { "type": "enabled" }`; supported `reasoning_effort`
+values are `low`, `high`, and `max`, with `max` used by default. The model-specific
+guide describes their text limits as matching GLM-5.3, so the extension currently
+advertises a 128K maximum output for each.
 
-The model is documented for Coding Plan and Standard access in both regions. Access
-remains account-dependent and may return model-not-found (`1211`), plan-permission
-(`1311`), or rate-limit errors.
+Access remains account-dependent and may return model-not-found (`1211`),
+plan-permission (`1311`), or rate-limit errors.
 
 ### Text-model image fallback
 
@@ -110,8 +111,9 @@ to `thinking.type` for models without a per-model reasoning-effort control.
 
 ### Reasoning effort
 
-GLM-5.2, GLM-5.3, and GLM-5.3-Flash accept a top-level `reasoning_effort` string that tunes how
-much the model reasons. It only takes effect when thinking is enabled.
+GLM-5.2, GLM-5.3, GLM-5.3-Flash, and GLM-5.3-FlashX accept a top-level
+`reasoning_effort` string that tunes how much the model reasons. It only takes
+effect when thinking is enabled.
 
 ```json
 { "reasoning_effort": "max" }
@@ -122,12 +124,12 @@ model picker: `none` sends `thinking: { type: "disabled" }` with no
 `reasoning_effort`, while `high` and `max` send `thinking: { type: "enabled" }`
 plus the matching `reasoning_effort`.
 
-For GLM-5.3, the official Coding Plan guides define `low` / `high` / `max`, with
-`max` as the default. The extension exposes only those three effort levels and
-sends `thinking: { type: "enabled" }` plus the selected effort on every request;
-an unsupported or stale stored choice falls back to `max`.
-The built-in model is available only on the official Coding Plan endpoints. Z.AI's
-current Standard API pricing catalog does not include GLM-5.3; BigModel lists the
+For GLM-5.3 and both Flash variants, the official guides define `low` / `high` /
+`max`, with `max` as the default. The extension exposes only those three effort
+levels and sends `thinking: { type: "enabled" }` plus the selected effort on every
+request; an unsupported or stale stored choice falls back to `max`.
+The built-in GLM-5.3 model is available only on the official Coding Plan endpoints.
+Z.AI's current Standard API pricing catalog does not include GLM-5.3; BigModel lists the
 model, but its model page says the model API is not yet available. A compatible
 custom base URL may serve the model and keeps it visible in the picker.
 

@@ -1,9 +1,9 @@
 {
 	"name": "glm-for-github-copilot-chat",
 	"displayName": "GLM Models for GitHub Copilot Chat",
-	"description": "Bring Z.ai / Zhipu GLM models into GitHub Copilot Chat with visible thinking and GLM-5.3-Flash image input.",
+	"description": "Bring Z.ai / Zhipu GLM models into GitHub Copilot Chat with visible thinking and GLM-5.3-Flash/FlashX image input.",
 	"icon": "resources/icon.png",
-	"version": "0.4.2",
+	"version": "0.4.3",
 	"publisher": "yijiazhen-qi",
 	"license": "MIT",
 	"repository": {
