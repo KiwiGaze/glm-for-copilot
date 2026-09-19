@@ -4,6 +4,10 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## 0.4.3
+
+- **GLM-5.3-FlashX support** - adds the faster native multimodal model to the Standard API picker with 1M context, 128K maximum output, tool calling, and mandatory Low / High / Max thinking effort. Coding Plan does not currently offer FlashX.
+
 ## 0.4.2
 
 - **Coding Plan credit-limit parsing** - accept the `CREDIT_LIMIT` quota entries now returned by Z.AI for 5-hour and weekly usage while retaining support for endpoints that still return `TOKENS_LIMIT`.
