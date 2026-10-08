@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, DEFAULT_VISION_PROMPT, MODELS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
+import { CONFIG_SECTION, DEFAULT_TOOLS_LIMIT, DEFAULT_VISION_PROMPT, MODELS, RECOMMENDED_MODEL_IDS, RETRY_DEFAULT_MAX_RETRIES, RETRY_MAX_RETRIES_CEILING, USAGE_DEFAULT_REFRESH_MINUTES, USAGE_MAX_REFRESH_MINUTES, USAGE_MIN_REFRESH_MINUTES } from './consts';
 import { t } from './i18n';
 import type { ApiMode, CustomModelConfig, GLMModel, Region, ThinkingMode } from './types';
 
@@ -100,10 +100,25 @@ export function listProviderModels(): GLMModel[] {
 	const customIds = new Set(customModels.map((model) => model.id));
 	const useFilter = !getBaseUrlOverride();
 	const apiMode = getApiMode();
+	const showLegacy = cfg().get<boolean>('showLegacyModels', false);
 	const builtins = MODELS.filter(
-		(model) => !customIds.has(model.id) && (!useFilter || model.availableIn.includes(apiMode)),
+		(model) => !customIds.has(model.id)
+			&& (!model.legacy || showLegacy)
+			&& (!useFilter || model.availableIn.includes(apiMode)),
 	);
 	return [...builtins, ...customModels];
+}
+
+/** Official recommendation; custom endpoints and replacement definitions need an explicit choice. */
+export function getRecommendedModel(): GLMModel | undefined {
+	if (getBaseUrlOverride()) {
+		return undefined;
+	}
+	const id = RECOMMENDED_MODEL_IDS[getApiMode()];
+	if (getCustomModels().some((model) => model.id === id)) {
+		return undefined;
+	}
+	return listProviderModels().find((model) => model.id === id);
 }
 
 /** Find a model definition by id, searching custom models then built-ins. */

@@ -1,7 +1,12 @@
-Your GLM models appear in the Copilot Chat model picker as soon as the extension is active. Without a custom `baseUrl`, **API Mode** filters the built-in models: GLM-5.3, GLM-5.2, GLM-4.7, and GLM-4.5 Air on the Coding Plan; or GLM-5.2, GLM-5.1, GLM-5, GLM-4.7, and GLM-4.5 Air on the Standard API. A custom `baseUrl` skips this official availability filter because the extension cannot infer that endpoint's capabilities. Custom models are always included and replace built-in definitions with the same id.
+Your models appear in the native Chat and Copilot CLI model pickers when the extension is active. New installations show the current models for the selected API Mode:
 
-On VS Code 1.127+, the extension contributes GLM-5.3 as the default for new chats when neither the user nor organization sets `chat.defaultModel`.
+- **Coding Plan:** GLM-5.3 (recommended) and GLM-5.3-Flash.
+- **Standard API:** GLM-5.3-Flash (recommended) and GLM-5.3-FlashX.
 
-Until you run `GLM: Set API Key`, the models appear with a reminder to set your key. If you do not see them right away, the model list may be long — scroll down and look for the GLM models.
+Run **GLM: Use Recommended Default Model** to use the recommendation in new conversations. User and organization defaults take precedence over automatic setup. Existing conversations keep their selected model; start a new conversation to use the new default.
 
-To turn step-by-step reasoning on or off for models without an effort picker, use the `glm-copilot.thinking` setting. GLM-5.3 always uses thinking and lets you choose Low, High, or Max effort in the model picker. To add your own model ids, use `glm-copilot.customModels`.
+GLM-5.2 and earlier are hidden on new installations. Existing installations keep them available on upgrade. Manage them with `glm-copilot.showLegacyModels`; hiding them may make the model in a saved conversation unavailable. Explicit custom models are always included.
+
+With a custom `baseUrl`, API-mode filtering is skipped because the extension cannot infer the endpoint's capabilities. Choose the model manually. Custom definitions replace matching built-ins.
+
+Run **GLM: Set API Key** to add your credentials. Until then, models show a reminder to set the key. GLM-5.3 and Flash models offer Low, High, and Max thinking effort. Add other model ids through `glm-copilot.customModels`.

@@ -10,7 +10,7 @@
   <img src="docs/glm-composer-light.png" alt="GLM-5.2 selected in the Copilot Chat composer in light theme, with Thinking Effort set to Max" width="420">
 </p>
 
-Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) — **[GLM-5.3](https://z.ai/blog/glm-5.3)**, the default 1M-context Coding Plan model, multimodal **GLM-5.3-Flash** and faster **GLM-5.3-FlashX**, plus a curated lineup (GLM-5.2, GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). FlashX is available through the Standard API; Coding Plan does not currently offer it. The models appear in Copilot's existing picker with image input, agent mode, tool calling, and thinking.
+Bring Z.AI's GLM models into GitHub Copilot Chat with your own API key (BYOK) — **[GLM-5.3](https://z.ai/blog/glm-5.3)**, the default 1M-context Coding Plan model, multimodal **GLM-5.3-Flash** and faster **GLM-5.3-FlashX**, plus optional legacy models (GLM-5.2, GLM-5.1, GLM-5, GLM-4.7, GLM-4.5 Air). FlashX is available through the Standard API; Coding Plan does not currently offer it. The models appear in Copilot's existing picker with image input, agent mode, tool calling, and thinking.
 
 > **Unofficial, community-built extension.** Not affiliated with, endorsed by, or sponsored by Zhipu AI, Z.AI, GitHub, or Microsoft. "GLM", "Copilot", and "Visual Studio Code" are trademarks of their respective owners. You bring your own GLM API key and pay your own usage.
 
@@ -76,9 +76,13 @@ Use **GLM: Set API Key** or **GLM: Clear API Key** to update or remove the key l
 | **GLM-4.7** | Fast coding | 200K | 128K | Coding Plan + Standard | Via Flash | Yes | Yes |
 | **GLM-4.5 Air** | Lightweight | 128K | 96K | Coding Plan + Standard | Via Flash | Yes | Yes |
 
-Without a custom `baseUrl`, the picker filters built-in models by **API Mode**, so you never pick one the official endpoint can't serve. GLM-5.3 is currently Coding-Plan-only; GLM-5.3-Flash, GLM-5.2, GLM-4.7, and GLM-4.5 Air work on both; GLM-5.3-FlashX, GLM-5, and GLM-5.1 are Standard-only. A custom `baseUrl` skips this official availability filter because the extension cannot infer the capabilities of a compatible endpoint. Custom models are always included and replace built-in definitions with the same id. Need a model not listed — newer, older (GLM-4.6), or proxy-hosted? Add it with [`glm-copilot.customModels`](#settings).
+New installations show the current models: GLM-5.3 and GLM-5.3-Flash on Coding Plan, or GLM-5.3-Flash and GLM-5.3-FlashX on Standard API. GLM-5.2 and earlier are available through `glm-copilot.showLegacyModels`. Existing installations retain legacy access on upgrade so saved conversations can still use those models. Turning the setting off can make an old conversation's model unavailable. Explicit `customModels` remain visible, including older models.
 
-For new conversations, the extension contributes GLM-5.3 as VS Code's default. An explicit user or organization `chat.defaultModel` setting takes precedence. GLM-5.3 is omitted from the official Standard API picker, where you must select another available model.
+The recommended default is GLM-5.3 for Coding Plan and GLM-5.3-Flash for Standard API. The extension uses a vendor-qualified default that resolves in both native Chat and Copilot CLI model metadata. An explicit user or organization `chat.defaultModel` setting takes precedence. When no explicit default exists, GLM seeds the recommendation in workspace settings, or user settings in an empty window, if the contributed default does not match the current API mode. GLM updates only defaults it owns when API mode changes; editing the setting yourself stops those updates. Existing conversations keep their own model selection.
+
+Run **GLM: Use Recommended Default Model** to replace an old default and follow recommendations for the current API mode. It writes to workspace settings when a workspace is open, otherwise user settings. Start a new conversation to use the default. The host controls the picker layout, recent models, and saved selections.
+
+A custom `baseUrl` skips the official API-mode availability filter, but still respects the legacy-model setting. Custom models replace built-ins with the same id. For custom endpoints or custom definitions replacing the recommended model, choose a model manually; the extension cannot infer availability and does not update the default.
 
 ## Settings
 
@@ -91,6 +95,7 @@ For new conversations, the extension contributes GLM-5.3 as VS Code's default. A
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
 | `glm-copilot.thinking` | `enabled` | Step-by-step reasoning for models without a per-model Thinking Effort picker: `enabled` (higher quality) or `disabled` (faster). GLM-5.2 uses None / High / Max; GLM-5.3, Flash, and FlashX require thinking and use Low / High / Max, defaulting to Max. |
 | `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM-5.3-Flash when a text-only model needs image analysis. Empty uses the built-in neutral description prompt. Changing it invalidates the in-memory analysis cache. |
+| `glm-copilot.showLegacyModels` | `false` | Show GLM-5.2 and earlier. Existing installations retain access on upgrade. |
 | `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking?, nativeImageInput? }`. `nativeImageInput` defaults to `false`. |
 | `glm-copilot.modelIdOverrides` | `{}` | Remap a built-in model's API id (keys = picker id, values = id sent to the API). Use for regional endpoints or proxies with different names. |
 | `glm-copilot.debugLogging` | `false` | Write verbose debug logs to the GLM output channel. View with **GLM: Show Logs**. |

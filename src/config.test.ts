@@ -16,11 +16,41 @@ vi.mock('./i18n', () => ({
 	t: (key: string) => key,
 }));
 
-import { getCustomModels, listProviderModels } from './config';
+import { getCustomModels, getRecommendedModel, listProviderModels } from './config';
 
 describe('listProviderModels', () => {
 	beforeEach(() => {
 		settings.clear();
+	});
+
+	it.each(['coding-plan', 'standard'])('hides legacy models by default in %s but allows opting in', (apiMode) => {
+		settings.set('apiMode', apiMode);
+		expect(listProviderModels().some((model) => model.legacy)).toBe(false);
+		settings.set('showLegacyModels', true);
+		expect(listProviderModels().map((model) => model.id)).toContain('glm-4.5-air');
+		expect(listProviderModels().map((model) => model.id)).toContain('glm-5.2');
+	});
+
+	it('keeps an explicitly added legacy model visible without exposing the other old models', () => {
+		settings.set('customModels', [{ id: 'glm-4.5-air', name: 'My Air' }]);
+		expect(listProviderModels().filter((model) => model.id === 'glm-4.5-air')).toMatchObject([{ name: 'My Air' }]);
+		expect(listProviderModels().map((model) => model.id)).not.toContain('glm-4.7');
+	});
+
+	it.each([['coding-plan', 'glm-5.3'], ['standard', 'glm-5.3-flash']])(
+		'recommends an available current model for %s', (apiMode, id) => {
+			settings.set('apiMode', apiMode);
+			expect(getRecommendedModel()?.id).toBe(id);
+			expect(listProviderModels()).toContainEqual(getRecommendedModel());
+		},
+	);
+
+	it('does not infer a recommendation for a custom endpoint or replaced model', () => {
+		settings.set('baseUrl', 'https://proxy.example/v4');
+		expect(getRecommendedModel()).toBeUndefined();
+		settings.delete('baseUrl');
+		settings.set('customModels', ['glm-5.3']);
+		expect(getRecommendedModel()).toBeUndefined();
 	});
 
 	it('offers GLM-5.3 on the Coding Plan', () => {

@@ -25,6 +25,7 @@ export interface GLMModelCapabilities {
 
 /** A GLM model exposed in the Copilot Chat picker. */
 export interface GLMModel {
+	legacy?: true;
 	id: string;
 	name: string;
 	family: string;

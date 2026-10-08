@@ -1,4 +1,4 @@
-import type { GLMModel, ThinkingEffortSpec } from './types';
+import type { ApiMode, GLMModel, ThinkingEffortSpec } from './types';
 
 /**
  * Compile-time constants shared across the extension. These do not depend on
@@ -10,6 +10,11 @@ export const CONFIG_SECTION = 'glm-copilot';
 
 /** Provider vendor id, must match `contributes.languageModelChatProviders`. */
 export const VENDOR_ID = 'glm';
+
+export const RECOMMENDED_MODEL_IDS: Record<ApiMode, string> = {
+	'coding-plan': 'glm-5.3',
+	standard: 'glm-5.3-flash',
+};
 
 /** SecretStorage key for the GLM API key. */
 export const API_KEY_SECRET = 'glm-copilot.apiKey';
@@ -185,6 +190,7 @@ export const MODELS: GLMModel[] = [
 	},
 	{
 		id: 'glm-4.7',
+		legacy: true,
 		name: 'GLM-4.7',
 		family: 'glm',
 		version: '4.7',
@@ -196,6 +202,7 @@ export const MODELS: GLMModel[] = [
 	},
 	{
 		id: 'glm-5',
+		legacy: true,
 		name: 'GLM-5',
 		family: 'glm',
 		version: '5',
@@ -207,6 +214,7 @@ export const MODELS: GLMModel[] = [
 	},
 	{
 		id: 'glm-5.1',
+		legacy: true,
 		name: 'GLM-5.1',
 		family: 'glm',
 		version: '5.1',
@@ -218,10 +226,11 @@ export const MODELS: GLMModel[] = [
 	},
 	{
 		id: 'glm-5.2',
+		legacy: true,
 		name: 'GLM-5.2',
 		family: 'glm',
 		version: '5.2',
-		detail: 'Flagship coding model, 1M context',
+		detail: 'Legacy model, 1M context',
 		maxInputTokens: 1000000,
 		maxOutputTokens: 128000,
 		capabilities: {
@@ -234,6 +243,7 @@ export const MODELS: GLMModel[] = [
 	},
 	{
 		id: 'glm-4.5-air',
+		legacy: true,
 		name: 'GLM-4.5 Air',
 		family: 'glm',
 		version: '4.5',
