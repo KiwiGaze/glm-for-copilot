@@ -2,6 +2,13 @@ import * as vscode from 'vscode';
 
 /** Runtime UI strings (toasts, prompts, errors, picker labels). */
 const en: Record<string, string> = {
+	'models.recommendation': 'Recommended for your API mode: {0}. Use it for new Chat and Copilot CLI conversations. Existing conversations keep their selection. Legacy models can be managed in settings.',
+	'models.useRecommended': 'Use recommended default',
+	'models.settings': 'Legacy model settings',
+	'models.customEndpoint': 'Choose a model in the Chat or Copilot CLI picker. GLM cannot recommend a default for a custom endpoint or a replacement model definition.',
+	'models.defaultFailed': 'Could not update chat.defaultModel. Check your organization policy and whether the settings file is writable.',
+	'models.defaultSaved': 'New conversations will default to {0} in Chat and Copilot CLI where available. Existing conversations keep their selection. GLM will update this default when you change API mode; an explicit edit to chat.defaultModel takes precedence.',
+	'models.defaultOverridden': 'Saved the recommendation for {0}, but a higher-priority setting controls the default. Check chat.defaultModel in settings.',
 	// Model picker
 	'model.glm-4.7.detail': 'Legacy model',
 	'model.glm-4.7.tooltip':
@@ -10,9 +17,9 @@ const en: Record<string, string> = {
 	'model.glm-5.tooltip': 'Legacy model. GLM-5 — 200K context, advanced reasoning and coding. Standard API only.',
 	'model.glm-5.1.detail': 'Legacy model',
 	'model.glm-5.1.tooltip': 'Legacy model. GLM-5.1 — latest GLM-5 series, 200K context. Standard API only.',
-	'model.glm-5.2.detail': 'Flagship coding model, 1M context',
+	'model.glm-5.2.detail': 'Legacy model, 1M context',
 	'model.glm-5.2.tooltip':
-		'GLM-5.2 — flagship GLM coding model, 1M context, selectable thinking effort. Available on Coding Plan and Standard API.',
+		'Legacy model. GLM-5.2 — coding model, 1M context, selectable thinking effort. Available on Coding Plan and Standard API.',
 	'model.glm-5.3.detail': 'Default frontier coding model, 1M context',
 	'model.glm-5.3.tooltip':
 		'GLM-5.3 — default frontier coding model, 1M context, with mandatory Low, High, or Max thinking effort (Max by default). Coding Plan only.',
@@ -169,14 +176,21 @@ const en: Record<string, string> = {
 };
 
 const zh: Record<string, string> = {
+	'models.recommendation': '当前 API 模式推荐使用 {0}。可将其设为 Chat 和 Copilot CLI 新对话的默认模型。已有对话保留原选择，旧版模型可在设置中管理。',
+	'models.useRecommended': '使用推荐默认模型',
+	'models.settings': '旧版模型设置',
+	'models.customEndpoint': '请在 Chat 或 Copilot CLI 中选择模型。自定义端点或替换的模型定义需要手动选择默认模型。',
+	'models.defaultFailed': '无法更新 chat.defaultModel。请检查组织策略，以及设置文件是否可写。',
+	'models.defaultSaved': 'Chat 和 Copilot CLI 的新对话将默认使用 {0}（入口支持时）。已有对话保留原选择。更改 API 模式时 GLM 会更新此默认值；手动修改 chat.defaultModel 后将尊重你的设置。',
+	'models.defaultOverridden': '已保存 {0} 的推荐设置，但默认模型受更高优先级设置控制。请检查 chat.defaultModel。',
 	'model.glm-4.7.detail': '旧版模型',
 	'model.glm-4.7.tooltip': '旧版模型。GLM-4.7 — 20 万上下文，强大的智能体编程与推理。编程计划和标准 API 均可用。',
 	'model.glm-5.detail': '旧版模型',
 	'model.glm-5.tooltip': '旧版模型。GLM-5 — 20 万上下文，先进的推理与编程。仅标准 API 可用。',
 	'model.glm-5.1.detail': '旧版模型',
 	'model.glm-5.1.tooltip': '旧版模型。GLM-5.1 — 最新 GLM-5 系列，20 万上下文。仅标准 API 可用。',
-	'model.glm-5.2.detail': '旗舰编程模型，100 万上下文',
-	'model.glm-5.2.tooltip': 'GLM-5.2 — 旗舰 GLM 编程模型，100 万上下文，可选思考强度。编程计划和标准 API 均可用。',
+	'model.glm-5.2.detail': '旧版模型，100 万上下文',
+	'model.glm-5.2.tooltip': '旧版模型。GLM-5.2 — GLM 编程模型，100 万上下文，可选思考强度。编程计划和标准 API 均可用。',
 	'model.glm-5.3.detail': '默认前沿编程模型，100 万上下文',
 	'model.glm-5.3.tooltip':
 		'GLM-5.3 — 默认前沿编程模型，100 万上下文，必须启用低、高或最高思考强度（默认为最高）。仅编程计划可用。',

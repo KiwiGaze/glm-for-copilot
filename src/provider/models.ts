@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { t } from '../i18n';
+import { VENDOR_ID } from '../consts';
 import type { GLMModel, ThinkingEffortSpec } from '../types';
 
 function buildEffortSchema(spec: ThinkingEffortSpec) {
@@ -34,7 +35,7 @@ export function toChatInfo(
 	return {
 		id: model.id,
 		name: model.name,
-		family: model.family,
+		family: `${VENDOR_ID}/${model.id}`,
 		version: model.version,
 		detail: hasApiKey ? detail : t('auth.apiKeyRequiredDetail'),
 		tooltip: hasApiKey ? tooltip : t('auth.apiKeyRequiredDetail'),

@@ -1,4 +1,7 @@
 {
+  "glm-copilot.command.useRecommendedModel": "GLM: 使用推荐默认模型",
+  "glm-copilot.config.showLegacyModels.description": "显示旧版内置模型（GLM-5.2 及更早版本）。新安装默认关闭；已有安装升级时保留访问。关闭后，已有对话保存的模型可能不可用。显式添加的自定义模型仍会显示。",
+
   "glm-copilot.command.setApiKey": "GLM: 设置 API 密钥",
   "glm-copilot.command.getApiKey": "GLM: 获取 API 密钥",
   "glm-copilot.command.clearApiKey": "GLM: 清除 API 密钥",
@@ -18,7 +21,7 @@
   "glm-copilot.walkthrough.chooseApi.description": "在 GLM 编程计划和标准 API 之间选择，并选择您的区域。\n[打开设置](command:glm-copilot.openSettings)",
 
   "glm-copilot.walkthrough.showModels.title": "在选择器中查看 GLM 模型",
-  "glm-copilot.walkthrough.showModels.description": "你的 GLM 模型将根据所选的 API 模式出现在 Copilot Chat 的模型选择器中。如果看不到，请打开语言模型管理器以显示它们。\n[打开语言模型](command:workbench.action.chat.manage)",
+  "glm-copilot.walkthrough.showModels.description": "为 Chat 和 Copilot CLI 的新对话选择推荐模型。已有对话保留原选择。\n[使用推荐默认模型](command:glm-copilot.useRecommendedModel)\n[打开语言模型](command:workbench.action.chat.manage)",
 
   "glm-copilot.walkthrough.useImages.title": "使用图片输入",
   "glm-copilot.walkthrough.useImages.description": "直接附加图片。GLM-5.3-Flash 会原生处理图片，并在选择纯文本模型时提供视觉上下文。\n[编辑图片分析提示词](command:glm-copilot.openVisionPromptSettings)",
@@ -35,7 +38,7 @@
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "覆盖 GLM API 基础 URL。设置后会直接使用此值，并忽略 `apiMode` 和 `region`。由于扩展无法推断该端点的能力，所有内置模型都会保持可见；但若自定义模型使用相同 id，则会替换对应的内置定义。图片回退也使用此端点和普通聊天密钥；扩展绝不会把图片改发到其他官方端点。",
+  "glm-copilot.config.baseUrl.description": "覆盖 GLM API 基础 URL。设置后会直接使用此值，并忽略 `apiMode` 和 `region`。当前内置模型保持可见，旧版模型需要开启 showLegacyModels。自定义模型会替换相同 id 的内置定义。自定义端点不会自动更新推荐默认模型。图片回退也使用此端点和普通聊天密钥；扩展绝不会把图片改发到其他官方端点。",
 
   "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
 

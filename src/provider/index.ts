@@ -49,7 +49,8 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 					e.affectsConfiguration('glm-copilot.baseUrl') ||
 					e.affectsConfiguration('glm-copilot.apiMode') ||
 					e.affectsConfiguration('glm-copilot.region') ||
-					e.affectsConfiguration('glm-copilot.customModels')
+					e.affectsConfiguration('glm-copilot.customModels') ||
+					e.affectsConfiguration('glm-copilot.showLegacyModels')
 				) {
 					this.refreshModelPicker();
 				}
@@ -146,11 +147,12 @@ export class GLMChatProvider implements vscode.LanguageModelChatProvider {
 		return this.authManager.hasApiKey();
 	}
 
-	async configureApiKey(): Promise<void> {
+	async configureApiKey(): Promise<boolean> {
 		const saved = await this.authManager.promptForApiKey();
 		if (saved) {
 			this.refreshModelPicker();
 		}
+		return saved;
 	}
 
 	async clearApiKey(): Promise<void> {

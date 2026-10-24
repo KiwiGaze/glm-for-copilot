@@ -1,4 +1,7 @@
 {
+  "glm-copilot.command.useRecommendedModel": "GLM: Use Recommended Default Model",
+  "glm-copilot.config.showLegacyModels.description": "Show older built-in models (GLM-5.2 and earlier). Off for new installations; existing installations keep access on upgrade. Turning this off can make a saved conversation’s model unavailable. Explicit custom models remain visible.",
+
   "glm-copilot.command.setApiKey": "GLM: Set API Key",
   "glm-copilot.command.getApiKey": "GLM: Get API Key",
   "glm-copilot.command.clearApiKey": "GLM: Clear API Key",
@@ -18,7 +21,7 @@
   "glm-copilot.walkthrough.chooseApi.description": "Select between the GLM Coding Plan and the Standard API, and choose your region.\n[Open settings](command:glm-copilot.openSettings)",
 
   "glm-copilot.walkthrough.showModels.title": "Show GLM models in the picker",
-  "glm-copilot.walkthrough.showModels.description": "Your GLM models appear in the Copilot Chat model picker, filtered by your selected API Mode. If they are hidden, open the Language Models manager to show them.\n[Open Language Models](command:workbench.action.chat.manage)",
+  "glm-copilot.walkthrough.showModels.description": "Use the recommended model for new Chat and Copilot CLI conversations. Existing conversations keep their selection.\n[Use Recommended Default Model](command:glm-copilot.useRecommendedModel)\n[Open Language Models](command:workbench.action.chat.manage)",
 
   "glm-copilot.walkthrough.useImages.title": "Use image input",
   "glm-copilot.walkthrough.useImages.description": "Attach images directly. GLM-5.3-Flash handles them natively and provides visual context when a text-only model is selected.\n[Edit image analysis prompt](command:glm-copilot.openVisionPromptSettings)",
@@ -35,7 +38,7 @@
   "glm-copilot.config.region.international.label": "International (z.ai)",
   "glm-copilot.config.region.china.label": "Mainland China (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "Override the GLM API base URL. When set, this value is used verbatim and both `apiMode` and `region` are ignored. All built-in models remain visible because the extension cannot infer this endpoint's capabilities, unless a custom model with the same id replaces its built-in definition. Image fallback also uses this endpoint and the normal chat key; the extension never sends images to a different official endpoint.",
+  "glm-copilot.config.baseUrl.description": "Override the GLM API base URL. When set, this value is used verbatim and both `apiMode` and `region` are ignored. Current built-in models remain visible; older models require showLegacyModels. Custom definitions replace matching built-ins. The extension does not update the recommended default for custom endpoints. Image fallback also uses this endpoint and the normal chat key; the extension never sends images to a different official endpoint.",
 
   "glm-copilot.config.maxTokens.description": "Maximum number of output tokens per request. Set to `0` to use the API default (no explicit limit). Useful for controlling costs.",
 

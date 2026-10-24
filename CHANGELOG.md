@@ -4,6 +4,12 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
+## Unreleased
+
+- Fix default-model matching across native Chat and Copilot CLI. Recommend GLM-5.3 for Coding Plan and GLM-5.3-Flash for Standard API while preserving explicit user and organization defaults.
+- Hide GLM-5.2 and earlier on new installations. Existing installations retain legacy access on upgrade; manage it with `glm-copilot.showLegacyModels`.
+- Add **GLM: Use Recommended Default Model** and a setup/upgrade recommendation. Existing conversations keep their selected model; new defaults apply to new conversations.
+
 ## 0.4.3
 
 - **GLM-5.3-FlashX support** - adds the faster native multimodal model to the Standard API picker with 1M context, 128K maximum output, tool calling, and mandatory Low / High / Max thinking effort. Coding Plan does not currently offer FlashX.
