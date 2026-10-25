@@ -4,11 +4,12 @@
 
 All notable changes to GLM Models for GitHub Copilot Chat are documented here.
 
-## Unreleased
+## 0.4.4
 
-- Fix default-model matching across native Chat and Copilot CLI. Recommend GLM-5.3 for Coding Plan and GLM-5.3-Flash for Standard API while preserving explicit user and organization defaults.
-- Hide GLM-5.2 and earlier on new installations. Existing installations retain legacy access on upgrade; manage it with `glm-copilot.showLegacyModels`.
-- Add **GLM: Use Recommended Default Model** and a setup/upgrade recommendation. Existing conversations keep their selected model; new defaults apply to new conversations.
+- **Default-model matching** - fix matching across native Chat and Copilot CLI. Recommend GLM-5.3 for Coding Plan and GLM-5.3-Flash for Standard API while preserving explicit user and organization defaults.
+- **Legacy-model visibility** - hide GLM-5.2 and earlier on new installations. Existing installations retain legacy access on upgrade; manage it with `glm-copilot.showLegacyModels`.
+- **Recommended default command** - add **GLM: Use Recommended Default Model** and a setup/upgrade recommendation. Existing conversations keep their selected model; new defaults apply to new conversations.
+- **Coding Plan reset cards** - show available 5-hour and weekly reset cards with expiry dates in the GLM Usage panel for both regions. Use a card after confirmation, then refresh card inventory and quota.
 
 ## 0.4.3
 

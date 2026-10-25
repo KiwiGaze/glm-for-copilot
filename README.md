@@ -1,6 +1,6 @@
 # GLM Models for GitHub Copilot Chat
 
-[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.4.3-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
+[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.4.4-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![VS Marketplace Installs](https://vsmarketplacebadges.dev/installs-short/yijiazhen-qi.glm-for-github-copilot-chat.svg)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![Install from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-007ACC)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![CI](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml)
@@ -143,6 +143,7 @@ Customize fallback analysis with **GLM: Edit Flash Image Analysis Prompt** or [`
 
 | Command | Description |
 |---|---|
+| **GLM: Use Recommended Default Model** | Set the recommended default for the current API mode for new conversations |
 | **GLM: Set API Key** | Set or update your GLM API key |
 | **GLM: Get API Key** | Open the key management page for your selected API mode |
 | **GLM: Clear API Key** | Remove your stored API key |
