@@ -15,6 +15,7 @@ export function usagePanelStrings(): UsagePanelStrings {
 		unavailable: t('usage.panel.unavailable'),
 		lastUpdated: t('usage.panel.lastUpdated'),
 		resetsIn: t('usage.metric.resetsIn'),
+		used: t('usage.panel.used'),
 		plan: t('usage.plan.label'),
 		renewsAt: t('usage.plan.renewsAt'),
 		window: {
@@ -23,8 +24,8 @@ export function usagePanelStrings(): UsagePanelStrings {
 			'web-searches': t('usage.metric.window.webSearches'),
 		},
 		label: {
-			session: t('usage.metric.session'),
-			weekly: t('usage.metric.weekly'),
+			session: t('usage.panel.session'),
+			weekly: t('usage.panel.weekly'),
 			'web-searches': t('usage.metric.webSearches'),
 		},
 		status: {
@@ -44,5 +45,16 @@ export function usagePanelStrings(): UsagePanelStrings {
 		balancePackages: t('usage.balance.packages'),
 		recoveryUnavailable: t('usage.recovery.unavailable'),
 		recoveryExhausted: t('usage.recovery.exhausted'),
+		resetTitle: t('usage.reset.title'),
+		resetLabels: {
+			FIVE_HOUR: t('usage.reset.group', t('usage.reset.type.fiveHour')),
+			WEEK: t('usage.reset.group', t('usage.reset.type.week')),
+		},
+		resetAvailable: t('usage.reset.available'),
+		resetExpires: t('usage.reset.expires'),
+		resetUse: t('usage.reset.use'),
+		resetProcessing: t('usage.reset.processing'),
+		resetUnavailable: t('usage.reset.unavailable'),
+		localTime: t('usage.panel.localTime'),
 	};
 }

@@ -1,10 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 import { getApiMode, getBaseUrlOverride, getRegion, getShowUsageStatusBar, getUsageRefreshIntervalMinutes } from '../config';
 import { API_KEY_SECRET, CONFIG_SECTION, USAGE_CACHE_STALE_MS, USAGE_MANUAL_DEBOUNCE_MS } from '../consts';
 import { resolveStandardKeyPageUrl } from '../endpoint';
 import { t } from '../i18n';
 import { logger } from '../logger';
-import type { ApiMode, IAuthManager, UsageSnapshot } from '../types';
+import type { ApiMode, IAuthManager, Region, ResetType, UsageSnapshot } from '../types';
 import { isAbortError } from '../client/errors';
 import type { IUsageClient } from '../client/usage';
 import { buildUsageMessage, type UsagePanelMessage, type UsageRecoveryReason } from './usage-detail-html';
@@ -32,6 +33,11 @@ export class UsageStatusBar implements vscode.Disposable {
 	private controller: AbortController | null = null;
 	private recoveryController: AbortController | null = null;
 	private recoveryPromise: Promise<void> | null = null;
+	private resetPromise: Promise<void> | null = null;
+	private resetController: AbortController | null = null;
+	private readonly resetRequestIds = new Map<string, string>();
+	private scopeVersion = 0;
+	private disposed = false;
 	private readonly _onDidChange = new vscode.EventEmitter<UsagePanelMessage | null>();
 	readonly onDidChangeSnapshot = this._onDidChange.event;
 	private lastRendered: UsagePanelMessage | null = null;
@@ -90,6 +96,110 @@ export class UsageStatusBar implements vscode.Disposable {
 			});
 		this.refreshPromise = refresh;
 		return this.refreshPromise;
+	}
+
+	/** Confirm and consume a card of the requested type, serializing both types together. */
+	useResetCard(resetType: ResetType): Promise<void> {
+		if (this.disposed || (resetType !== 'FIVE_HOUR' && resetType !== 'WEEK')) {
+			return Promise.resolve();
+		}
+		if (this.resetPromise) {
+			return this.resetPromise;
+		}
+		const reset = this.runResetCard(resetType)
+			.catch((error) => {
+				if (isAbortError(error) || this.disposed) {
+					return;
+				}
+				logger.warn('Reset card use failed', error);
+				void vscode.window.showWarningMessage(t('usage.reset.failed'));
+			})
+			.finally(() => {
+				this.resetPromise = null;
+				this.publishResetBusy();
+			});
+		this.resetPromise = reset;
+		this.publishResetBusy();
+		return reset;
+	}
+
+	private async runResetCard(resetType: ResetType): Promise<void> {
+		const version = this.scopeVersion;
+		const region = getRegion();
+		const controller = new AbortController();
+		this.resetController = controller;
+		try {
+			const gate = await this.evaluateGate();
+			if (!gate.passed || !await this.resetScopeMatches(version, region, gate.apiKey, controller.signal)) {
+				void vscode.window.showWarningMessage(t('usage.reset.changed'));
+				return;
+			}
+			const inventory = await this.client.fetchResetCards(gate.apiKey, controller.signal);
+			if (!await this.resetScopeMatches(version, region, gate.apiKey, controller.signal)) {
+				return;
+			}
+			const card = inventory[resetType].find((candidate) => candidate.expiresAt > Date.now());
+			if (!card) {
+				void vscode.window.showWarningMessage(t('usage.reset.none'));
+				return;
+			}
+			const typeLabel = t(resetType === 'FIVE_HOUR' ? 'usage.reset.type.fiveHour' : 'usage.reset.type.week');
+			const provider = region === 'china' ? 'BigModel (open.bigmodel.cn)' : 'Z.ai (api.z.ai)';
+			const useAction = t('usage.reset.confirmUse');
+			const choice = await vscode.window.showWarningMessage(
+				t('usage.reset.confirm', typeLabel),
+				{ modal: true, detail: t('usage.reset.confirmDetail', typeLabel, provider, new Date(card.expiresAt).toLocaleString()) },
+				useAction,
+			);
+			if (choice !== useAction) {
+				return;
+			}
+			if (!await this.resetScopeMatches(version, region, gate.apiKey, controller.signal)) {
+				void vscode.window.showWarningMessage(t('usage.reset.changed'));
+				return;
+			}
+			const latest = await this.client.fetchResetCards(gate.apiKey, controller.signal);
+			if (!await this.resetScopeMatches(version, region, gate.apiKey, controller.signal)) {
+				return;
+			}
+			if (!latest[resetType].some((candidate) => candidate.recordId === card.recordId && candidate.expiresAt > Date.now())) {
+				void vscode.window.showWarningMessage(t('usage.reset.changed'));
+				return;
+			}
+			const attemptKey = `${resetType}:${card.recordId}`;
+			const requestId = this.resetRequestIds.get(attemptKey) ?? randomUUID();
+			this.resetRequestIds.set(attemptKey, requestId);
+			await this.client.useResetCard(gate.apiKey, resetType, card, requestId, controller.signal);
+			if (await this.resetScopeMatches(version, region, gate.apiKey, controller.signal)) {
+				this.resetRequestIds.delete(attemptKey);
+				void vscode.window.showInformationMessage(t('usage.reset.success'));
+			}
+		} finally {
+			if (this.resetController === controller) {
+				this.resetController = null;
+			}
+			if (!this.disposed && version === this.scopeVersion && !controller.signal.aborted) {
+				this.controller?.abort();
+				this.refreshPromise = null;
+				this.lastOk = null;
+				this.lastFetchAt = 0;
+				await this.refresh();
+			}
+		}
+	}
+
+	private async resetScopeMatches(version: number, region: Region, apiKey: string, signal: AbortSignal): Promise<boolean> {
+		const gate = await this.evaluateGate();
+		return !this.disposed && !signal.aborted && version === this.scopeVersion &&
+			getApiMode() === 'coding-plan' && getRegion() === region && getBaseUrlOverride() === '' &&
+			gate.passed && gate.apiKey === apiKey;
+	}
+
+	private publishResetBusy(): void {
+		if (this.lastRendered && !this.disposed) {
+			this.lastRendered = { ...this.lastRendered, resetBusy: this.resetPromise !== null };
+			this._onDidChange.fire(this.lastRendered);
+		}
 	}
 
 	/** Check the current key for Standard API credit and switch only after explicit consent. */
@@ -236,7 +346,11 @@ export class UsageStatusBar implements vscode.Disposable {
 	 * snapshot (unless the error is an abort, which is expected during cancellation).
 	 */
 	private async runRefresh(): Promise<void> {
+		const version = this.scopeVersion;
 		const gate = await this.evaluateGate();
+		if (version !== this.scopeVersion || this.disposed) {
+			return;
+		}
 		if (!gate.passed) {
 			this.item.hide();
 			this.stopInterval();
@@ -251,12 +365,15 @@ export class UsageStatusBar implements vscode.Disposable {
 		this.controller = controller;
 		try {
 			const snapshot = await this.fetchUsage(gate.apiKey, controller.signal);
+			if (controller.signal.aborted || this.controller !== controller || this.disposed) {
+				return;
+			}
 			if (snapshot.status === 'ok') {
 				this.lastOk = snapshot;
 			}
 			this.render(snapshot);
 		} catch (error) {
-			if (isAbortError(error)) {
+			if (isAbortError(error) || controller.signal.aborted || this.controller !== controller || this.disposed) {
 				logger.warn('Usage fetch aborted');
 				return;
 			}
@@ -462,8 +579,11 @@ export class UsageStatusBar implements vscode.Disposable {
 	 * the next render reflects the new configuration immediately.
 	 */
 	private async onConfigOrKeyChange(): Promise<void> {
+		this.scopeVersion++;
 		this.controller?.abort();
 		this.recoveryController?.abort();
+		this.resetController?.abort();
+		this.resetRequestIds.clear();
 		this.refreshPromise = null;
 		this.lastOk = null;
 		const gate = await this.evaluateGate();
@@ -498,9 +618,11 @@ export class UsageStatusBar implements vscode.Disposable {
 
 	/** Dispose the status bar item, abort any in-flight fetch, and stop auto-refresh. */
 	dispose(): void {
+		this.disposed = true;
 		this.stopInterval();
 		this.controller?.abort();
 		this.recoveryController?.abort();
+		this.resetController?.abort();
 		this.item.dispose();
 		this._onDidChange.dispose();
 	}
@@ -520,6 +642,7 @@ export class UsageStatusBar implements vscode.Disposable {
 			currentThemeKind(),
 			currency,
 			recoveryReason,
+			this.resetPromise !== null,
 		);
 		this.lastRendered = message;
 		this._onDidChange.fire(message);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { IAuthManager } from '../types';
 import type { IUsageClient } from '../client/usage';
-import type { UsageSnapshot } from '../types';
+import type { ResetCardInventory, ResetType, UsageSnapshot } from '../types';
 
 // VS Code API is not available in unit tests; stub only the surface UsageStatusBar touches.
 const statusBar = { text: '', tooltip: '', command: '', name: 'glm', backgroundColor: undefined as unknown, color: undefined as unknown, show: vi.fn(), hide: vi.fn(), dispose: vi.fn() };
@@ -9,6 +9,7 @@ const subscriptions: { dispose(): void }[] = [];
 const vscodeHarness = vi.hoisted(() => ({
 	showWarningMessage: vi.fn(async (..._args: unknown[]): Promise<string | undefined> => undefined),
 	showErrorMessage: vi.fn(async (..._args: unknown[]): Promise<string | undefined> => undefined),
+	showInformationMessage: vi.fn(async (..._args: unknown[]): Promise<string | undefined> => undefined),
 	inspect: vi.fn((): { workspaceValue?: 'coding-plan' | 'standard'; globalValue?: 'coding-plan' | 'standard' } => ({ globalValue: 'coding-plan' })),
 	update: vi.fn(async (..._args: unknown[]): Promise<void> => undefined),
 	executeCommand: vi.fn(async (..._args: unknown[]): Promise<unknown> => undefined),
@@ -54,6 +55,7 @@ vi.mock('vscode', () => ({
 		activeColorTheme: { kind: 1 },
 		showWarningMessage: vscodeHarness.showWarningMessage,
 		showErrorMessage: vscodeHarness.showErrorMessage,
+		showInformationMessage: vscodeHarness.showInformationMessage,
 	},
 	workspace: {
 		onDidChangeConfiguration: vi.fn((listener: (event: { affectsConfiguration(section: string): boolean }) => void) => {
@@ -95,6 +97,10 @@ vi.mock('../config', () => ({
 
 import { UsageStatusBar } from './usage-bar';
 
+function resetMethods() {
+	return { fetchResetCards: vi.fn(), useResetCard: vi.fn() };
+}
+
 function makeAuth(hasKey: boolean): IAuthManager {
 	return {
 		getApiKey: vi.fn(async () => (hasKey ? 'k' : undefined)),
@@ -126,6 +132,7 @@ function setConfig(mode: 'coding-plan' | 'standard', region: 'international' | '
 beforeEach(() => {
 	vscodeHarness.showWarningMessage.mockReset().mockResolvedValue(undefined);
 	vscodeHarness.showErrorMessage.mockReset().mockResolvedValue(undefined);
+	vscodeHarness.showInformationMessage.mockReset().mockResolvedValue(undefined);
 	vscodeHarness.inspect.mockReset().mockReturnValue({ globalValue: 'coding-plan' });
 	vscodeHarness.update.mockReset().mockResolvedValue(undefined);
 	vscodeHarness.executeCommand.mockReset().mockResolvedValue(undefined);
@@ -142,7 +149,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('fetches and shows when region is china (open.bigmodel.cn coding plan)', async () => {
 		setConfig('coding-plan', 'china');
-		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -156,7 +163,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('fetches balance and shows when standard + international (z.ai balance endpoint)', async () => {
 		setConfig('standard', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(),
 			fetchBalance: vi.fn(async () => ({
 				status: 'ok',
@@ -181,7 +188,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('fetches balance and shows when standard + china', async () => {
 		setConfig('standard', 'china');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(),
 			fetchBalance: vi.fn(async () => ({
 				status: 'ok',
@@ -208,7 +215,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('hides and does not fetch when baseUrl is overridden', async () => {
 		setConfig('coding-plan', 'international', 'https://proxy.example');
-		const client: IUsageClient = { fetchSnapshot: vi.fn() , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn() , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -222,7 +229,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('hides and does not fetch when there is no API key', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = { fetchSnapshot: vi.fn() , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn() , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(false),
@@ -235,7 +242,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('fetches and shows when gate passes', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -249,7 +256,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('renders web-search-only quota as a count', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({
 				status: 'ok',
 				fetchedAt: Date.now(),
@@ -270,7 +277,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('sets error background when a metric hits 100%', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({
 				status: 'ok',
 				fetchedAt: Date.now(),
@@ -291,7 +298,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('does not offer Standard recovery for web-search-only exhaustion', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({
 				status: 'ok',
 				fetchedAt: Date.now(),
@@ -311,7 +318,7 @@ describe('UsageStatusBar activation gate', () => {
 		{ status: 'ok', metrics: [{ kind: 'weekly', used: 99, limit: 100 }] },
 	] satisfies Array<Pick<UsageSnapshot, 'status' | 'metrics'>>)('does not offer recovery for $status without a recognized unavailable or exhausted state', async ({ status, metrics }) => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({ status, fetchedAt: Date.now(), metrics })),
 			fetchBalance: vi.fn(),
 		};
@@ -323,7 +330,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('offers unavailable recovery for Coding Plan no-data only', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
 			fetchBalance: vi.fn(),
 		};
@@ -344,7 +351,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('sets error background when balance is 0', async () => {
 		setConfig('standard', 'china');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(),
 			fetchBalance: vi.fn(async () => ({
 				status: 'ok',
@@ -365,7 +372,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('keeps normal status when cash is 0 but a token package has credit', async () => {
 		setConfig('standard', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(),
 			fetchBalance: vi.fn(async () => ({
 				status: 'ok',
@@ -389,7 +396,7 @@ describe('UsageStatusBar activation gate', () => {
 
 	it('clears error background when usage is below 100%', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({
 				status: 'ok',
 				fetchedAt: Date.now(),
@@ -418,7 +425,7 @@ describe('UsageStatusBar debounce', () => {
 
 	it('second refresh within 30s does not fetch again', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -436,7 +443,7 @@ describe('UsageStatusBar debounce', () => {
 	it('starts a fresh fetch after config changes while a refresh is pending', async () => {
 		setConfig('standard', 'international');
 		const pendingFetches: Array<{ signal?: AbortSignal; resolve: (snapshot: UsageSnapshot) => void }> = [];
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn((_apiKey, signal) => new Promise<UsageSnapshot>((resolve) => {
 				pendingFetches.push({ signal, resolve });
 			})),
@@ -480,7 +487,7 @@ describe('UsageStatusBar cache-stale rendering', () => {
 		setConfig('coding-plan', 'international');
 		const ok = okSnapshot();
 		const networkError: UsageSnapshot = { status: 'network-error', metrics: [], fetchedAt: Date.now() };
-		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => ok).mockResolvedValueOnce(ok).mockResolvedValueOnce(networkError) , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn(async () => ok).mockResolvedValueOnce(ok).mockResolvedValueOnce(networkError) , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -502,7 +509,7 @@ describe('UsageStatusBar cache-stale rendering', () => {
 			metrics: [],
 			fetchedAt: Date.now(),
 		};
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn().mockResolvedValueOnce(ok).mockResolvedValueOnce(unavailable),
 			fetchBalance: vi.fn(),
 		};
@@ -531,7 +538,7 @@ describe('UsageStatusBar Standard recovery', () => {
 	});
 
 	function recoveryClient(balance: UsageSnapshot): IUsageClient {
-		return {
+		return { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({
 				status: 'no-data',
 				fetchedAt: Date.now(),
@@ -543,7 +550,7 @@ describe('UsageStatusBar Standard recovery', () => {
 
 	it('checks the current key once while a balance probe is pending', async () => {
 		let resolveBalance: ((snapshot: UsageSnapshot) => void) | undefined;
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
 			fetchBalance: vi.fn(() => new Promise<UsageSnapshot>((resolve) => {
 				resolveBalance = resolve;
@@ -572,7 +579,7 @@ describe('UsageStatusBar Standard recovery', () => {
 	it('cancels a pending balance probe when GLM configuration changes', async () => {
 		let resolveBalance: ((snapshot: UsageSnapshot) => void) | undefined;
 		let balanceSignal: AbortSignal | undefined;
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
 			fetchBalance: vi.fn((_key, signal) => {
 				balanceSignal = signal;
@@ -689,7 +696,7 @@ describe('UsageStatusBar Standard recovery', () => {
 	it('leaves configuration unchanged when the probe is cancelled', async () => {
 		const cancelled = new Error('cancelled');
 		cancelled.name = 'AbortError';
-		const client: IUsageClient = {
+		const client: IUsageClient = { ...resetMethods(),
 			fetchSnapshot: vi.fn(async () => ({ status: 'no-data', fetchedAt: Date.now(), metrics: [] })),
 			fetchBalance: vi.fn(async () => { throw cancelled; }),
 		};
@@ -777,7 +784,7 @@ describe('UsageStatusBar snapshot emitter', () => {
 
 	it('fires a message on ok render and getSnapshot returns it', async () => {
 		setConfig('coding-plan', 'international');
-		const client: IUsageClient = { fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn(async () => okSnapshot()) , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -795,7 +802,7 @@ describe('UsageStatusBar snapshot emitter', () => {
 
 	it('fires null when gate fails', async () => {
 		setConfig('standard', 'international', 'https://proxy.example');
-		const client: IUsageClient = { fetchSnapshot: vi.fn() , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn() , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -813,7 +820,7 @@ describe('UsageStatusBar snapshot emitter', () => {
 		setConfig('coding-plan', 'international');
 		const ok = okSnapshot();
 		const networkError: UsageSnapshot = { status: 'network-error', metrics: [], fetchedAt: Date.now() };
-		const client: IUsageClient = { fetchSnapshot: vi.fn().mockResolvedValueOnce(ok).mockResolvedValueOnce(networkError) , fetchBalance: vi.fn() };
+		const client: IUsageClient = { ...resetMethods(), fetchSnapshot: vi.fn().mockResolvedValueOnce(ok).mockResolvedValueOnce(networkError) , fetchBalance: vi.fn() };
 		const bar = new UsageStatusBar(
 			{ subscriptions, secrets: { onDidChange: vi.fn(() => ({ dispose: () => undefined })) } } as unknown as Parameters<typeof UsageStatusBar>[0],
 			makeAuth(true),
@@ -829,6 +836,199 @@ describe('UsageStatusBar snapshot emitter', () => {
 		expect(last?.status).toBe('ok');
 		expect(last?.offline).toBe(true);
 		sub.dispose();
+		bar.dispose();
+	});
+});
+
+describe('UsageStatusBar confirmed reset-card use', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-10-24T15:00:00Z'));
+		setConfig('coding-plan', 'international');
+		vscodeHarness.showWarningMessage.mockResolvedValue('Use reset card');
+	});
+	afterEach(() => vi.useRealTimers());
+
+	function inventory(): ResetCardInventory {
+		return {
+			FIVE_HOUR: [{ recordId: 11, expiresAt: Date.parse('2026-10-28T06:58:28Z') }],
+			WEEK: [{ recordId: 22, expiresAt: Date.parse('2026-12-22T15:59:59Z') }],
+		};
+	}
+
+	function resetClient(cards = inventory()): IUsageClient {
+		return {
+			fetchSnapshot: vi.fn(async () => ({ ...okSnapshot(), resetCards: cards })),
+			fetchBalance: vi.fn(),
+			fetchResetCards: vi.fn(async () => cards),
+			useResetCard: vi.fn(async () => undefined),
+		};
+	}
+
+	it.each([
+		['international', 'FIVE_HOUR', 11, 'api.z.ai', '5-hour'],
+		['international', 'WEEK', 22, 'api.z.ai', 'weekly'],
+		['china', 'FIVE_HOUR', 11, 'open.bigmodel.cn', '5-hour'],
+		['china', 'WEEK', 22, 'open.bigmodel.cn', 'weekly'],
+	] as const)('confirms %s %s, uses only that type, and bypasses refresh debounce', async (region, type, recordId, host, label) => {
+		setConfig('coding-plan', region);
+		const cards = inventory();
+		const client = resetClient(cards);
+		vi.mocked(client.useResetCard).mockImplementation(async () => { cards[type] = []; });
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard(type);
+
+		expect(vscodeHarness.showWarningMessage).toHaveBeenCalledWith(`Use one ${label} reset card?`, expect.objectContaining({
+			modal: true, detail: expect.stringContaining(host),
+		}), 'Use reset card');
+		expect(client.useResetCard).toHaveBeenCalledTimes(1);
+		expect(client.useResetCard).toHaveBeenCalledWith('k', type, expect.objectContaining({ recordId }), expect.stringMatching(/^[0-9a-f-]{36}$/), expect.any(AbortSignal));
+		expect(client.fetchSnapshot).toHaveBeenCalledTimes(2);
+		expect(bar.getSnapshot()?.resetCards?.[type]).toEqual([]);
+		expect(bar.getSnapshot()?.resetCards?.[type === 'WEEK' ? 'FIVE_HOUR' : 'WEEK']).toHaveLength(1);
+		expect(bar.getSnapshot()?.resetBusy).toBe(false);
+		bar.dispose();
+	});
+
+	it.each(['FIVE_HOUR', 'WEEK'] as const)('does not redeem %s when confirmation is dismissed', async (type) => {
+		vscodeHarness.showWarningMessage.mockResolvedValue(undefined);
+		const client = resetClient();
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard(type);
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it.each(['region', 'mode', 'baseUrl', 'key', 'scopeEpoch'] as const)('blocks redemption if %s changes during confirmation', async (change) => {
+		const client = resetClient();
+		const auth = makeAuth(true);
+		const bar = new UsageStatusBar(makeContext(), auth, client);
+		await bar.refresh();
+		vscodeHarness.showWarningMessage.mockImplementationOnce(async () => {
+			if (change === 'region') cfg.region = 'china';
+			if (change === 'mode') cfg.mode = 'standard';
+			if (change === 'baseUrl') cfg.baseUrl = 'https://custom.example';
+			if (change === 'key') vi.mocked(auth.getApiKey).mockResolvedValue('different-key');
+			if (change === 'scopeEpoch') vscodeHarness.configurationListener?.({ affectsConfiguration: () => true });
+			return 'Use reset card';
+		});
+		await bar.useResetCard('WEEK');
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it.each(['standard', 'custom', 'missingKey'] as const)('does not query or redeem cards for %s', async (mode) => {
+		if (mode === 'standard') cfg.mode = 'standard';
+		if (mode === 'custom') cfg.baseUrl = 'https://custom.example';
+		const client = resetClient();
+		const bar = new UsageStatusBar(makeContext(), makeAuth(mode !== 'missingKey'), client);
+		await bar.refresh();
+		await bar.useResetCard('FIVE_HOUR');
+		expect(client.fetchResetCards).not.toHaveBeenCalled();
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('does not substitute another available card if the confirmed card disappears', async () => {
+		const client = resetClient();
+		vi.mocked(client.fetchResetCards)
+			.mockResolvedValueOnce(inventory())
+			.mockResolvedValueOnce({ ...inventory(), WEEK: [{ ...inventory().WEEK[0], recordId: 33 }] });
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard('WEEK');
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('refuses a card that expires while the confirmation dialog is open', async () => {
+		const client = resetClient();
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		vscodeHarness.showWarningMessage.mockImplementationOnce(async () => {
+			vi.setSystemTime(new Date('2026-10-29T00:00:00Z'));
+			return 'Use reset card';
+		});
+		await bar.useResetCard('FIVE_HOUR');
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		bar.dispose();
+	});
+
+	it('does not fall back to the other card type when the selected type has none', async () => {
+		const client = resetClient({ ...inventory(), WEEK: [] });
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard('WEEK');
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		expect(vscodeHarness.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('No unexpired reset card'));
+		bar.dispose();
+	});
+
+	it('serializes repeated clicks across both types while confirmation is pending', async () => {
+		let confirm: ((choice: string) => void) | undefined;
+		vscodeHarness.showWarningMessage.mockImplementationOnce(() => new Promise((resolve) => { confirm = resolve; }));
+		const client = resetClient();
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		const first = bar.useResetCard('FIVE_HOUR');
+		const second = bar.useResetCard('WEEK');
+		expect(first).toBe(second);
+		await vi.waitFor(() => expect(confirm).toBeDefined());
+		expect(bar.getSnapshot()?.resetBusy).toBe(true);
+		confirm?.('Use reset card');
+		await first;
+		expect(client.useResetCard).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(client.useResetCard).mock.calls[0][1]).toBe('FIVE_HOUR');
+		bar.dispose();
+	});
+
+	it('refreshes an uncertain result without automatic redemption and reuses its request ID on explicit retry', async () => {
+		const client = resetClient();
+		vi.mocked(client.useResetCard).mockRejectedValueOnce(new TypeError('connection lost'));
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard('WEEK');
+		expect(client.useResetCard).toHaveBeenCalledTimes(1);
+		expect(client.fetchSnapshot).toHaveBeenCalledTimes(2);
+		expect(vscodeHarness.showInformationMessage).not.toHaveBeenCalled();
+		await bar.useResetCard('WEEK');
+		expect(client.useResetCard).toHaveBeenCalledTimes(2);
+		const calls = vi.mocked(client.useResetCard).mock.calls;
+		expect(calls[0][3]).toBe(calls[1][3]);
+		bar.dispose();
+	});
+
+	it('handles inventory failure without making any redemption request', async () => {
+		const client = resetClient();
+		vi.mocked(client.fetchResetCards).mockRejectedValue(new TypeError('offline'));
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard('FIVE_HOUR');
+		expect(client.useResetCard).not.toHaveBeenCalled();
+		expect(vscodeHarness.showWarningMessage).toHaveBeenCalledWith(expect.stringContaining('could not be confirmed'));
+		bar.dispose();
+	});
+
+	it('refreshes counts immediately without waiting for the success notification to be dismissed', async () => {
+		vscodeHarness.showInformationMessage.mockImplementation(() => new Promise(() => undefined));
+		const client = resetClient();
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard('FIVE_HOUR');
+		expect(client.fetchSnapshot).toHaveBeenCalledTimes(2);
+		expect(bar.getSnapshot()?.resetBusy).toBe(false);
+		bar.dispose();
+	});
+
+	it('ignores unknown card types', async () => {
+		const client = resetClient();
+		const bar = new UsageStatusBar(makeContext(), makeAuth(true), client);
+		await bar.refresh();
+		await bar.useResetCard('MONTH' as ResetType);
+		expect(client.fetchResetCards).not.toHaveBeenCalled();
+		expect(client.useResetCard).not.toHaveBeenCalled();
 		bar.dispose();
 	});
 });

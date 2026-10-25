@@ -16,6 +16,7 @@ const strings: UsagePanelStrings = {
 	unavailable: 'Usage unavailable.',
 	lastUpdated: 'Last updated: {0}',
 	resetsIn: 'Resets in {0}',
+	used: 'used',
 	plan: 'Plan: {0}',
 	renewsAt: 'Renews: {0}',
 	window: { session: '5h rolling', weekly: '7-day rolling', 'web-searches': 'Monthly' },
@@ -34,9 +35,39 @@ const strings: UsagePanelStrings = {
 	balancePackages: 'Token packages',
 	recoveryUnavailable: 'No usable Coding Plan quota was found.',
 	recoveryExhausted: 'Your Coding Plan token quota is exhausted.',
+	resetTitle: 'Reset cards',
+	resetLabels: { FIVE_HOUR: '5-hour reset cards', WEEK: 'weekly reset cards' },
+	resetAvailable: '{0} available',
+	resetExpires: 'Expires {0}',
+	resetUse: 'Use one reset card',
+	resetProcessing: 'Checking reset card…',
+	resetUnavailable: 'Reset cards could not be loaded.',
+	localTime: 'Expiry dates are shown in your local time.',
 };
 
 describe('buildUsageMessage', () => {
+	it('keeps both reset types separate and sends only expiry timestamps to the webview', () => {
+		const snapshot: UsageSnapshot = {
+			status: 'ok', metrics: [], fetchedAt: 1,
+			resetCards: {
+				FIVE_HOUR: [{ recordId: 12345, expiresAt: 2_000 }],
+				WEEK: [{ recordId: '987654321', expiresAt: 3_000 }],
+			},
+		};
+		const message = buildUsageMessage(snapshot, false, strings, 'dark', '$', undefined, true);
+		expect(message?.resetCards).toEqual({ FIVE_HOUR: [2_000], WEEK: [3_000] });
+		expect(message?.resetBusy).toBe(true);
+		expect(JSON.stringify(message)).not.toContain('12345');
+		expect(JSON.stringify(message)).not.toContain('987654321');
+	});
+
+	it('preserves the distinction between unavailable reset inventory and Standard API snapshots', () => {
+		const snapshot: UsageSnapshot = { status: 'ok', metrics: [], fetchedAt: 1, resetCards: null };
+		expect(buildUsageMessage(snapshot, false, strings, 'dark', '$')?.resetCards).toBeNull();
+		delete snapshot.resetCards;
+		expect(buildUsageMessage(snapshot, false, strings, 'dark', '$')?.resetCards).toBeUndefined();
+	});
+
 	it('returns null for gate-failed (no snapshot)', () => {
 		expect(buildUsageMessage(null, false, strings, 'dark', '$')).toBeNull();
 	});

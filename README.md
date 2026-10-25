@@ -125,6 +125,8 @@ The same [Z.AI model documentation](https://docs.z.ai/guides/vlm/glm-5.3-flash) 
 
 Usage details rely on regional usage endpoints (`api.z.ai` for International, `open.bigmodel.cn` for Mainland China) that are not part of the public chat-completions API. If those endpoints are unavailable or change, the extension degrades to a status message instead of blocking chat.
 
+For a personal Coding Plan, **GLM: Show Usage Details** also shows **5-hour reset cards** and **weekly reset cards** separately, with their available counts and expiry dates in your local time. It uses your existing API key and the selected region (`api.z.ai` or `open.bigmodel.cn`). **Use one reset card** selects the earliest-expiring available card of that type and asks for confirmation before consuming it. Dismissing the confirmation spends nothing. After an attempt, the panel refreshes both inventory and quota; an uncertain result is not retried automatically. Unavailable inventory is shown as unavailable rather than as zero cards.
+
 ## Image input
 
 Paste or attach PNG and JPEG images directly in Copilot Chat. No MCP server, local package, toggle, or separate Vision key is required.

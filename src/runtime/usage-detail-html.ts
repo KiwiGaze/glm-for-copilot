@@ -1,4 +1,4 @@
-import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
+import type { ResetType, TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
 import { formatAmount, formatTokens } from './format';
 
 export type UsageRecoveryReason = 'coding-plan-unavailable' | 'coding-plan-exhausted';
@@ -39,6 +39,9 @@ export interface UsagePanelMessage {
 	renewsAt?: string;
 	metrics: UsageMetricView[];
 	balance?: UsageBalanceView;
+	/** Expiry timestamps only; card identifiers and credentials stay in the extension host. */
+	resetCards?: Record<ResetType, number[]> | null;
+	resetBusy?: boolean;
 	/** Currency symbol for balance amounts: `$` (international) or `¥` (china). */
 	currency: string;
 	lastUpdated?: number;
@@ -56,6 +59,7 @@ export interface UsagePanelStrings {
 	unavailable: string;
 	lastUpdated: string;
 	resetsIn: string;
+	used: string;
 	plan: string;
 	renewsAt: string;
 	window: Record<UsageMetric['kind'], string>;
@@ -70,6 +74,14 @@ export interface UsagePanelStrings {
 	balancePackages: string;
 	recoveryUnavailable: string;
 	recoveryExhausted: string;
+	resetTitle: string;
+	resetLabels: Record<ResetType, string>;
+	resetAvailable: string;
+	resetExpires: string;
+	resetUse: string;
+	resetProcessing: string;
+	resetUnavailable: string;
+	localTime: string;
 }
 
 /**
@@ -84,6 +96,7 @@ export function buildUsageMessage(
 	theme: 'dark' | 'light',
 	currency: string,
 	recoveryReason?: UsageRecoveryReason,
+	resetBusy = false,
 ): UsagePanelMessage | null {
 	if (snapshot === null) {
 		return null;
@@ -95,6 +108,11 @@ export function buildUsageMessage(
 		renewsAt: snapshot.renewsAt,
 		metrics: snapshot.metrics.map(toMetricView, strings),
 		balance: snapshot.balance ? toBalanceView(snapshot.balance) : undefined,
+		resetCards: snapshot.resetCards == null ? snapshot.resetCards : {
+			FIVE_HOUR: snapshot.resetCards.FIVE_HOUR.map((card) => card.expiresAt),
+			WEEK: snapshot.resetCards.WEEK.map((card) => card.expiresAt),
+		},
+		resetBusy,
 		currency,
 		lastUpdated: snapshot.status === 'ok' ? snapshot.fetchedAt : undefined,
 		offline,
