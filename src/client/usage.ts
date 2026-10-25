@@ -1,7 +1,8 @@
 import { BALANCE_PATHS, USAGE_PATHS, USAGE_REQUEST_TIMEOUT_MS } from '../consts';
 import { logger } from '../logger';
-import type { TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
+import type { ResetCard, ResetCardInventory, ResetType, TokenPackage, UsageBalance, UsageMetric, UsageSnapshot, UsageStatus } from '../types';
 import {
+	createResponseParseError,
 	formatRequestError,
 	GLMRequestError,
 	isAbortError,
@@ -62,22 +63,26 @@ export interface IUsageClient {
 	fetchSnapshot(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot>;
 	/** Fetch Standard API balance (cash + token packages) as a snapshot with `balance` populated. */
 	fetchBalance(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot>;
+	/** Read personal reset-card inventory from the currently resolved regional host. */
+	fetchResetCards(apiKey: string, signal?: AbortSignal): Promise<ResetCardInventory>;
+	/** Consume one specific card once. Callers retain requestId when the outcome is uncertain. */
+	useResetCard(apiKey: string, resetType: ResetType, card: ResetCard, requestId: string, signal?: AbortSignal): Promise<void>;
 }
 
 /**
- * GLM usage + balance client. `fetchSnapshot` fetches Coding Plan quota (subscription + quota GETs);
+ * GLM usage + balance client. `fetchSnapshot` fetches subscription, quota and reset-card inventory;
  * `fetchBalance` fetches Standard API cash balance + token packages (two parallel GETs).
  * Supplementary request failures preserve usable primary data and otherwise set the error status.
  *
  * Both stations (z.ai international + open.bigmodel.cn china) share the same paths and JSON
- * shapes; only the host and Authorization header differ. The China (open.bigmodel.cn) monitor
- * endpoint authenticates with the RAW API key (no `Bearer` prefix), while z.ai uses `Bearer {key}`. The scheme is detected
- * from the request URL (which carries the region host).
+ * shapes; only the host and Authorization header differ. Existing China (open.bigmodel.cn)
+ * usage requests use the raw API key; z.ai uses `Bearer {key}`. Reset-card business requests
+ * use `Bearer {key}` on both hosts.
  *
  * The host is resolved on EVERY `fetchSnapshot` call (via `resolveHost`) rather than captured at
  * construction, so the bar follows `glm-copilot.region` changes without recreating the client. A
  * static string is still accepted (normalized to a constant resolver) for convenience in tests. The
- * region is resolved once per snapshot so the subscription + quota sub-requests always hit one host.
+ * region is resolved once per snapshot so all three sub-requests always hit one host.
  */
 export class UsageClient implements IUsageClient {
 	private readonly resolveHost: () => string;
@@ -91,20 +96,31 @@ export class UsageClient implements IUsageClient {
 
 	/**
 	 * Fetch Coding Plan usage quota. Resolves the host, then fires subscription + quota requests in
-	 * parallel; the subscription result (plan name + renewal) is merged into the quota snapshot.
+	 * parallel alongside reset-card inventory; the subscription result (plan name + renewal) is
+	 * merged into the quota snapshot. Reset inventory failure does not hide usable quota.
 	 * Subscription failure is best-effort when quota data is usable and otherwise determines the
 	 * error status instead of being reduced to `no-data`.
 	 */
 	async fetchSnapshot(apiKey: string, signal?: AbortSignal): Promise<UsageSnapshot> {
 		const host = this.resolveHost();
-		const [subscriptionResult, quotaResult] = await Promise.allSettled([
+		const [subscriptionResult, quotaResult, resetResult] = await Promise.allSettled([
 			this.fetchSubscription(host, apiKey, signal),
 			this.fetchQuota(host, apiKey, signal),
+			this.fetchResetCardsFromHost(host, apiKey, signal),
 		]);
 		if (quotaResult.status === 'rejected') {
 			throw quotaResult.reason;
 		}
-		const snapshot = quotaResult.value;
+		if (resetResult.status === 'rejected' && isAbortError(resetResult.reason)) {
+			throw resetResult.reason;
+		}
+		if (resetResult.status === 'rejected') {
+			this.logRequestError(resetResult.reason, host);
+		}
+		const snapshot: UsageSnapshot = {
+			...quotaResult.value,
+			resetCards: resetResult.status === 'fulfilled' ? resetResult.value : null,
+		};
 		if (subscriptionResult.status === 'fulfilled') {
 			return { ...snapshot, ...subscriptionResult.value };
 		}
@@ -115,10 +131,53 @@ export class UsageClient implements IUsageClient {
 			isAuthenticationRequestError(subscriptionResult.reason) ||
 			snapshot.status === 'no-data'
 		) {
-			return this.toErrorSnapshot(subscriptionResult.reason, host, snapshot.fetchedAt);
+			return { ...this.toErrorSnapshot(subscriptionResult.reason, host, snapshot.fetchedAt), resetCards: snapshot.resetCards };
 		}
 		this.logRequestError(subscriptionResult.reason, host);
 		return snapshot;
+	}
+
+	/** Fetch reset cards without requiring the quota endpoint to be available. */
+	fetchResetCards(apiKey: string, signal?: AbortSignal): Promise<ResetCardInventory> {
+		return this.fetchResetCardsFromHost(this.resolveHost(), apiKey, signal);
+	}
+
+	private async fetchResetCardsFromHost(host: string, apiKey: string, signal?: AbortSignal): Promise<ResetCardInventory> {
+		const parsed = await this.request(`${host}${USAGE_PATHS.resetCards}`, apiKey, signal,
+			(response) => this.readResetResponse(response, host));
+		const data = asRecord(parsed.data);
+		if (!data || !Array.isArray(data.fiveHourResets) || !Array.isArray(data.weekResets)) {
+			throw createResponseParseError({ baseUrl: host, operation: 'reset cards' }, 'Missing reset-card arrays');
+		}
+		return {
+			FIVE_HOUR: parseResetCards(data.fiveHourResets),
+			WEEK: parseResetCards(data.weekResets),
+		};
+	}
+
+	/** Send a single, non-retried redemption to the matching regional business endpoint. */
+	async useResetCard(apiKey: string, resetType: ResetType, card: ResetCard, requestId: string, signal?: AbortSignal): Promise<void> {
+		if ((resetType !== 'FIVE_HOUR' && resetType !== 'WEEK') || !validRecordId(card.recordId) ||
+			!Number.isFinite(card.expiresAt) || card.expiresAt <= Date.now() ||
+			!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId)) {
+			throw new Error('Invalid or expired reset card');
+		}
+		const host = this.resolveHost();
+		await this.request(`${host}${USAGE_PATHS.useResetCard}`, apiKey, signal,
+			(response) => this.readResetResponse(response, host), JSON.stringify({
+			targetType: 'PERSONAL',
+			resetType,
+			recordId: card.recordId,
+			requestId,
+		}));
+	}
+
+	private async readResetResponse(response: Response, host: string): Promise<Record<string, unknown>> {
+		const parsed = asRecord(await readBusinessJson<unknown>(response, { baseUrl: host, operation: 'reset cards' }));
+		if (!parsed || parsed.code !== 200 || parsed.success !== true) {
+			throw createResponseParseError({ baseUrl: host, operation: 'reset cards' }, 'Missing success envelope');
+		}
+		return parsed;
 	}
 
 	/**
@@ -283,7 +342,12 @@ export class UsageClient implements IUsageClient {
 	 * GET a URL with the host-appropriate Authorization header, a {@link USAGE_REQUEST_TIMEOUT_MS}
 	 * timeout, and caller-signal forwarding. Re-throws aborts; converts timeout aborts to a TypeError.
 	 */
-	private async get(url: string, apiKey: string, signal?: AbortSignal): Promise<Response> {
+	private get(url: string, apiKey: string, signal?: AbortSignal): Promise<Response> {
+		return this.request(url, apiKey, signal, async (response) => response);
+	}
+
+	private async request<T>(url: string, apiKey: string, signal: AbortSignal | undefined,
+		read: (response: Response) => Promise<T>, body?: string): Promise<T> {
 		const controller = new AbortController();
 		let didTimeout = false;
 		if (signal?.aborted) {
@@ -297,14 +361,18 @@ export class UsageClient implements IUsageClient {
 		const onCallerAbort = () => controller.abort();
 		signal?.addEventListener('abort', onCallerAbort, { once: true });
 		try {
-			return await this.fetchImpl(url, {
-				method: 'GET',
+			const response = await this.fetchImpl(url, {
+				method: body === undefined ? 'GET' : 'POST',
 				headers: {
-					Authorization: this.authHeader(url, apiKey),
+					Authorization: url.includes('/api/biz/customer-package-reset/') ? `Bearer ${apiKey}` : this.authHeader(url, apiKey),
 					Accept: 'application/json',
+					...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
 				},
+				body,
+				...(url.includes('/api/biz/customer-package-reset/') ? { redirect: 'error' as const } : {}),
 				signal: controller.signal,
 			});
+			return await read(response);
 		} catch (error) {
 			if (didTimeout && isAbortError(error)) {
 				throw Object.assign(new TypeError('fetch timed out'), {
@@ -353,6 +421,41 @@ export class UsageClient implements IUsageClient {
 		const normalized = normalizeRequestError(error, { baseUrl: host });
 		logger.warn('GLM supplementary usage request failed:', formatRequestError(normalized));
 	}
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+	return typeof value === 'object' && value !== null ? value as Record<string, unknown> : undefined;
+}
+
+function validRecordId(value: unknown): value is ResetCard['recordId'] {
+	return typeof value === 'number'
+		? Number.isSafeInteger(value) && value > 0
+		: typeof value === 'string' && /^[1-9]\d*$/.test(value);
+}
+
+function parseResetCards(rows: unknown[]): ResetCard[] {
+	const cards: ResetCard[] = [];
+	const seen = new Set<string>();
+	const now = Date.now();
+	for (const row of rows) {
+		const card = asRecord(row);
+		if (!card || card.available !== true || !validRecordId(card.recordId) || typeof card.expireTime !== 'string') {
+			continue;
+		}
+		const date = card.expireTime.replace(' ', 'T');
+		if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(date)) {
+			continue;
+		}
+		const expiresAt = Date.parse(`${date}+08:00`);
+		const id = String(card.recordId);
+		if (!Number.isFinite(expiresAt) || expiresAt <= now || seen.has(id) ||
+			new Date(expiresAt + 8 * 60 * 60 * 1000).toISOString().slice(0, 19) !== date) {
+			continue;
+		}
+		seen.add(id);
+		cards.push({ recordId: card.recordId, expiresAt });
+	}
+	return cards.sort((left, right) => left.expiresAt - right.expiresAt);
 }
 
 /** Extract the `limits` array from a quota response, tolerating both `data.limits` and top-level array shapes. */

@@ -53,6 +53,17 @@ export interface CustomModelConfig {
 
 export type UsageMetricKind = 'session' | 'weekly' | 'web-searches';
 
+export type ResetType = 'FIVE_HOUR' | 'WEEK';
+
+export interface ResetCard {
+	recordId: number | string;
+	/** Epoch-ms; platform date strings are in UTC+8. */
+	expiresAt: number;
+}
+
+/** Available cards, ordered by expiry within each independent quota type. */
+export type ResetCardInventory = Record<ResetType, ResetCard[]>;
+
 export interface UsageMetric {
 	kind: UsageMetricKind;
 	/** Percentage (0-100) for session/weekly; count used for web-searches. */
@@ -113,6 +124,8 @@ export interface UsageSnapshot {
 	metrics: UsageMetric[];
 	/** Cash + token-package balance. Standard API only. */
 	balance?: UsageBalance;
+	/** Coding Plan only. Null means inventory could not be read, rather than zero cards. */
+	resetCards?: ResetCardInventory | null;
 	/** Epoch-ms of the fetch that produced this snapshot. */
 	fetchedAt: number;
 }

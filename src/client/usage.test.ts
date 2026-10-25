@@ -345,7 +345,7 @@ describe('UsageClient auth scheme by station', () => {
 		}) as unknown as typeof fetch;
 		const client = new UsageClient('https://api.z.ai', fetchImpl);
 		await client.fetchSnapshot('my.key');
-		expect(calls.length).toBe(2);
+		expect(calls.length).toBe(3);
 		for (const call of calls) {
 			expect(call.authorization).toBe('Bearer my.key');
 		}
@@ -359,8 +359,9 @@ describe('UsageClient auth scheme by station', () => {
 		}) as unknown as typeof fetch;
 		const client = new UsageClient('https://open.bigmodel.cn', fetchImpl);
 		await client.fetchSnapshot('my.key');
-		expect(calls.length).toBe(2);
-		for (const call of calls) {
+		expect(calls.length).toBe(3);
+		expect(calls[2].authorization).toBe('Bearer my.key');
+		for (const call of calls.slice(0, 2)) {
 			expect(call.authorization).toBe('my.key');
 			expect(call.authorization).not.toContain('Bearer');
 		}
@@ -410,8 +411,8 @@ describe('UsageClient region resolution', () => {
 		}) as unknown as typeof fetch;
 		const client = new UsageClient(() => 'https://open.bigmodel.cn', fetchImpl);
 		await client.fetchSnapshot('raw-key');
-		expect(authHeaders.length).toBe(2);
-		for (const header of authHeaders) {
+		expect(authHeaders).toEqual(['raw-key', 'raw-key', 'Bearer raw-key']);
+		for (const header of authHeaders.slice(0, 2)) {
 			expect(header).toBe('raw-key');
 		}
 	});
