@@ -262,7 +262,7 @@ function renderFooter(msg: UsagePanelMessage): string {
 
 /** Show reset inventories separately when their quota card is absent, or a shared load failure. */
 function renderResetCards(msg: UsagePanelMessage): string {
-	if (msg.resetCards === undefined) {
+	if (msg.resetCards === undefined || (msg.resetCards === null && msg.status !== 'ok')) {
 		return '';
 	}
 	const s = msg.strings;

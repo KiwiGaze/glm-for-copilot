@@ -295,6 +295,15 @@ describe('UsageDetailPanel', () => {
 		expect(panel.webview.html).not.toContain('data-reset-type=');
 	});
 
+	it.each(['auth-error', 'network-error', 'server-error', 'no-data', 'loading'] as const)(
+		'keeps the primary %s message without a duplicate inventory failure', (status) => {
+			const message = { ...resetMessage(), status, resetCards: null };
+			show(message);
+			expect(panel.webview.html).toContain(message.strings.status[status]);
+			expect(panel.webview.html).not.toContain('Reset cards could not be loaded.');
+		},
+	);
+
 	it('does not add reset actions to snapshots without reset inventory', () => {
 		show(recoveryMessage('coding-plan-exhausted'));
 		expect(panel.webview.html).not.toContain('class="reset-section"');
