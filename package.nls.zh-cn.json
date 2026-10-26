@@ -1,6 +1,6 @@
 {
   "glm-copilot.command.useRecommendedModel": "GLM: 使用推荐默认模型",
-  "glm-copilot.config.showLegacyModels.description": "显示旧版内置模型（GLM-5.2 及更早版本）。新安装默认关闭；已有安装升级时保留访问。关闭后，已有对话保存的模型可能不可用。显式添加的自定义模型仍会显示。",
+  "glm-copilot.config.showLegacyModels.description": "显示 GLM-5.2 及更早版本。新安装默认关闭，升级时保留旧版模型。关闭后，已有对话保存的模型可能不可用。自定义模型仍会显示。",
 
   "glm-copilot.command.setApiKey": "GLM: 设置 API 密钥",
   "glm-copilot.command.getApiKey": "GLM: 获取 API 密钥",
@@ -18,42 +18,42 @@
   "glm-copilot.walkthrough.setApiKey.description": "[获取 API 密钥](command:glm-copilot.getApiKey)（来自 z.ai 或 bigmodel.cn）。\n[设置 API 密钥](command:glm-copilot.setApiKey)",
 
   "glm-copilot.walkthrough.chooseApi.title": "选择 GLM API 模式",
-  "glm-copilot.walkthrough.chooseApi.description": "在 GLM 编程计划和标准 API 之间选择，并选择您的区域。\n[打开设置](command:glm-copilot.openSettings)",
+  "glm-copilot.walkthrough.chooseApi.description": "选择编程计划或标准 API，以及账号所在区域。\n[打开设置](command:glm-copilot.openSettings)",
 
   "glm-copilot.walkthrough.showModels.title": "在选择器中查看 GLM 模型",
   "glm-copilot.walkthrough.showModels.description": "为 Chat 和 Copilot CLI 的新对话选择推荐模型。已有对话保留原选择。\n[使用推荐默认模型](command:glm-copilot.useRecommendedModel)\n[打开语言模型](command:workbench.action.chat.manage)",
 
   "glm-copilot.walkthrough.useImages.title": "使用图片输入",
-  "glm-copilot.walkthrough.useImages.description": "直接附加图片。GLM-5.3-Flash 会原生处理图片，并在选择纯文本模型时提供视觉上下文。\n[编辑图片分析提示词](command:glm-copilot.openVisionPromptSettings)",
+  "glm-copilot.walkthrough.useImages.description": "在聊天中附加图片。Flash 和 FlashX 直接接收图片，纯文本模型通过 Flash 获取图片描述。\n[编辑图片分析提示词](command:glm-copilot.openVisionPromptSettings)",
 
   "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
-  "glm-copilot.config.apiMode.description": "选择要使用的 GLM API。\n\n- **编程计划** — 使用您的 GLM 编程计划订阅（[Z.ai](https://z.ai/manage-apikey/subscription) 国际版或 [bigmodel.cn](https://bigmodel.cn/coding-plan/personal/overview) 中国大陆）。实际端点取决于 `region` 设置，适合团队或高频编码场景。\n- **标准 API** — 按量付费，通过 GLM 开放平台访问，实际端点取决于 `region` 设置。",
+  "glm-copilot.config.apiMode.description": "使用 GLM 编程计划订阅，或按量付费的标准 API。两种模式都使用 `region` 对应的端点。\n\n编程计划密钥可从 [Z.ai](https://z.ai/manage-apikey/subscription)（国际版）或 [bigmodel.cn](https://bigmodel.cn/coding-plan/personal/overview)（中国大陆）获取。",
   "glm-copilot.config.apiMode.codingPlan.label": "编程计划",
   "glm-copilot.config.apiMode.codingPlan.description": "使用 GLM 编程计划订阅。端点取决于 `region`：国际版 → `api.z.ai/api/coding/paas/v4`，中国大陆 → `open.bigmodel.cn/api/coding/paas/v4`。",
   "glm-copilot.config.apiMode.standard.label": "标准 API",
   "glm-copilot.config.apiMode.standard.description": "通过 GLM 开放平台按量付费访问，实际端点由 `region` 设置决定。",
 
-  "glm-copilot.config.region.description": "**编程计划**和**标准 API** 使用的服务器区域，也适用于 GLM-5.3-Flash 图片分析。\n\n- **国际版**（Z.ai 账号）— 编程计划 `api.z.ai/api/coding/paas/v4`，标准 `api.z.ai/api/paas/v4`\n- **中国大陆**（智谱 AI 账号）— 编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 `open.bigmodel.cn/api/paas/v4`",
+  "glm-copilot.config.region.description": "聊天和 GLM-5.3-Flash 图片分析使用的服务器区域。\n\n- 国际版（Z.ai 账号）：编程计划 `api.z.ai/api/coding/paas/v4`，标准 API `api.z.ai/api/paas/v4`。\n- 中国大陆（智谱 AI 账号）：编程计划 `open.bigmodel.cn/api/coding/paas/v4`，标准 API `open.bigmodel.cn/api/paas/v4`。",
   "glm-copilot.config.region.international.label": "国际版 (z.ai)",
   "glm-copilot.config.region.china.label": "中国大陆 (bigmodel.cn)",
 
-  "glm-copilot.config.baseUrl.description": "覆盖 GLM API 基础 URL。设置后会直接使用此值，并忽略 `apiMode` 和 `region`。当前内置模型保持可见，旧版模型需要开启 showLegacyModels。自定义模型会替换相同 id 的内置定义。自定义端点不会自动更新推荐默认模型。图片回退也使用此端点和普通聊天密钥；扩展绝不会把图片改发到其他官方端点。",
+  "glm-copilot.config.baseUrl.description": "为聊天和图片分析设置自定义 GLM API 基础 URL。设置后忽略 `apiMode` 和 `region`，并跳过官方 API 模式筛选。旧版内置模型仍需开启 `showLegacyModels`。自定义模型会替换相同 ID 的内置模型。使用自定义端点时，需手动选择默认模型。图片分析也使用此端点和聊天密钥。",
 
-  "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 `0` 表示使用 API 默认值（不限制）。可用于控制费用。",
+  "glm-copilot.config.maxTokens.description": "每次请求的最大输出 token 数。设为 0 时使用 API 默认值，不额外设置上限。",
 
   "glm-copilot.config.maxRetries.description": "对瞬时失败（HTTP 429 限流和 5xx 服务器错误）的最大自动重试次数（不含首次请求）。设为 `0` 可关闭自动重试、失败时立即报错。重试采用指数退避，并遵循服务器返回的 `Retry-After`。",
 
-  "glm-copilot.config.modelIdOverrides.description": "重映射内置模型的 API ID。键为选择器中显示的模型 ID（如 `glm-4.7`），值为发送给 API 的 ID。适用于使用不同模型名称的代理或区域端点（如 bigmodel.cn）。要添加全新模型，请改用 `customModels`。",
-  "glm-copilot.config.customModels.description": "向选择器添加你自己的 GLM 模型。每个条目可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"nativeImageInput\": true }`。仅当端点能直接接收图片内容时才设置 `nativeImageInput`；否则附加图片会使用 GLM-5.3-Flash 回退。",
+  "glm-copilot.config.modelIdOverrides.description": "为代理或区域端点映射内置模型 ID。键为选择器中的 ID（如 `glm-4.7`），值为发送给 API 的 ID。添加模型请使用 `customModels`。",
+  "glm-copilot.config.customModels.description": "向选择器添加 GLM 模型。每项可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"nativeImageInput\": true }`。自定义模型在所有 API 模式下都会显示，请求发往当前端点。端点能直接接收图片时才设置 `nativeImageInput`；否则由 GLM-5.3-Flash 提供图片描述。",
 
-  "glm-copilot.config.thinking.description": "GLM 在回答前是否进行逐步推理。适用于没有独立思考强度设置的模型。GLM-5.2 使用关闭 / 高 / 最高；GLM-5.3 和 GLM-5.3-Flash 必须启用思考，并使用低 / 高 / 最高（默认为最高）。\n\n- **开启** — 在复杂编码与智能体任务上质量更高（速度较慢）。\n- **关闭** — 简单修改时响应更快。",
+  "glm-copilot.config.thinking.description": "为没有独立思考强度设置的模型开启或关闭推理。GLM-5.2 使用关闭 / 高 / 最高。GLM-5.3、Flash 和 FlashX 必须启用思考，使用低 / 高 / 最高，默认为最高。",
   "glm-copilot.config.thinking.enabled.label": "开启",
   "glm-copilot.config.thinking.disabled.label": "关闭",
 
-  "glm-copilot.config.visionPrompt.description": "当所选模型不能原生接收图片附件时，发送给 GLM-5.3-Flash 的分析指令。留空则使用内置提示词：转录可见的文本/代码，并描述界面、图示与图表，且不做主观推测。分析使用与聊天相同的端点和 API 密钥。修改后将在下一轮对话中重新分析图片。可运行 [`GLM: 编辑 Flash 图片分析提示词`](command:glm-copilot.openVisionPromptSettings) 直接打开。",
+  "glm-copilot.config.visionPrompt.description": "纯文本模型需要图片描述时，发送给 GLM-5.3-Flash 的指令。留空则使用内置提示词，转录可见文字和代码，并描述图片，不做猜测。分析使用聊天端点和 API 密钥。修改后会在下一轮对话重新分析图片。可运行 [`GLM: 编辑 Flash 图片分析提示词`](command:glm-copilot.openVisionPromptSettings) 打开。",
 
   "glm-copilot.config.debugLogging.description": "启用详细调试日志，输出到 GLM 输出频道。使用 [`GLM: 显示日志`](command:glm-copilot.showLogs) 查看。日志包含请求元数据，但不包含提示词文本。",
-  "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔（分钟），最小值为 1，最大值为 1440（24 小时）。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均可显示。仅在未配置 baseUrl 覆盖时生效。",
-  "glm-copilot.config.showUsageStatusBar.description": "是否显示 GLM 用量状态栏。编程计划用量和标准 API 余额在国际版（z.ai）和国内版（bigmodel.cn）区域均生效。仅在未配置 baseUrl 覆盖时可用。"
+  "glm-copilot.config.usageRefreshIntervalMinutes.description": "刷新 GLM 用量状态栏的间隔，单位为分钟，范围为 1 至 1440（24 小时）。支持国际版（z.ai）和中国大陆（bigmodel.cn）的编程计划用量及标准 API 余额。仅在未设置自定义 `baseUrl` 时可用。",
+  "glm-copilot.config.showUsageStatusBar.description": "显示 GLM 用量状态栏。支持国际版（z.ai）和中国大陆（bigmodel.cn）的编程计划用量及标准 API 余额。仅在未设置自定义 `baseUrl` 时可用。"
 }

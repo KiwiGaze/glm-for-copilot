@@ -1,12 +1,10 @@
-<!-- Thanks for contributing to GLM for GitHub Copilot Chat! Please fill in the sections below. -->
-
 ## Summary
 
 <!-- What does this pull request change, and why? -->
 
 ## Related issue
 
-<!-- Link the issue this closes, e.g. "Closes #123". For non-trivial changes, please open an
+<!-- Link the issue this closes, e.g. "Closes #123". For non-trivial changes, open an
      issue first so we can agree on the approach. -->
 
 ## Type of change

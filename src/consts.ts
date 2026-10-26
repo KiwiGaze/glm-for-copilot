@@ -147,7 +147,7 @@ export const MODELS: GLMModel[] = [
 		name: 'GLM-5.3',
 		family: 'glm',
 		version: '5.3',
-		detail: 'Default frontier coding model, 1M context',
+		detail: 'Default coding model, 1M context',
 		maxInputTokens: 1000000,
 		maxOutputTokens: 128000,
 		capabilities: {
@@ -163,7 +163,7 @@ export const MODELS: GLMModel[] = [
 		name: 'GLM-5.3-Flash',
 		family: 'glm',
 		version: '5.3',
-		detail: 'Fast multimodal model, 1M context',
+		detail: 'Multimodal model, 1M context',
 		maxInputTokens: 1000000,
 		maxOutputTokens: 128000,
 		capabilities: {
@@ -179,7 +179,7 @@ export const MODELS: GLMModel[] = [
 		name: 'GLM-5.3-FlashX',
 		family: 'glm',
 		version: '5.3',
-		detail: 'Faster multimodal model, 1M context',
+		detail: 'Multimodal model, 1M context',
 		maxInputTokens: 1000000,
 		maxOutputTokens: 128000,
 		capabilities: {

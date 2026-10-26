@@ -6,8 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for suggesting an improvement. Please describe the problem you want to solve, not
-        only the solution you have in mind.
+        Describe the problem you want to solve and how the proposed change would help.
   - type: textarea
     id: problem
     attributes:

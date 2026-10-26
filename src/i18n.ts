@@ -12,25 +12,25 @@ const en: Record<string, string> = {
 	// Model picker
 	'model.glm-4.7.detail': 'Legacy model',
 	'model.glm-4.7.tooltip':
-		'Legacy model. GLM-4.7 — 200K context, strong agentic coding and reasoning. Available on Coding Plan and Standard API.',
+		'GLM-4.7. Legacy model with a 200K-token context window. Available on Coding Plan and Standard API.',
 	'model.glm-5.detail': 'Legacy model',
-	'model.glm-5.tooltip': 'Legacy model. GLM-5 — 200K context, advanced reasoning and coding. Standard API only.',
+	'model.glm-5.tooltip': 'GLM-5. Legacy model with a 200K-token context window. Standard API only.',
 	'model.glm-5.1.detail': 'Legacy model',
-	'model.glm-5.1.tooltip': 'Legacy model. GLM-5.1 — latest GLM-5 series, 200K context. Standard API only.',
+	'model.glm-5.1.tooltip': 'GLM-5.1. Legacy model with a 200K-token context window. Standard API only.',
 	'model.glm-5.2.detail': 'Legacy model, 1M context',
 	'model.glm-5.2.tooltip':
-		'Legacy model. GLM-5.2 — coding model, 1M context, selectable thinking effort. Available on Coding Plan and Standard API.',
-	'model.glm-5.3.detail': 'Default frontier coding model, 1M context',
+		'GLM-5.2. Legacy model with a 1M-token context window and selectable thinking effort. Available on Coding Plan and Standard API.',
+	'model.glm-5.3.detail': 'Default coding model, 1M context',
 	'model.glm-5.3.tooltip':
-		'GLM-5.3 — default frontier coding model, 1M context, with mandatory Low, High, or Max thinking effort (Max by default). Coding Plan only.',
-	'model.glm-5.3-flash.detail': 'Fast multimodal model, 1M context',
+		'GLM-5.3. Default coding model with a 1M-token context window. Thinking is always on; choose Low, High, or Max effort (Max by default). Coding Plan only.',
+	'model.glm-5.3-flash.detail': 'Multimodal model, 1M context',
 	'model.glm-5.3-flash.tooltip':
-		'GLM-5.3-Flash — fast multimodal model, 1M context, native image input, and mandatory Low, High, or Max thinking effort (Max by default). Available on Coding Plan and Standard API.',
-	'model.glm-5.3-flashx.detail': 'Faster multimodal model, 1M context',
+		'GLM-5.3-Flash. 1M-token context window and native image input. Thinking is always on; choose Low, High, or Max effort (Max by default). Available on Coding Plan and Standard API.',
+	'model.glm-5.3-flashx.detail': 'Multimodal model, 1M context',
 	'model.glm-5.3-flashx.tooltip':
-		'GLM-5.3-FlashX — faster multimodal model, 1M context, native image input, and mandatory Low, High, or Max thinking effort (Max by default). Standard API only.',
+		'GLM-5.3-FlashX. 1M-token context window and native image input. Thinking is always on; choose Low, High, or Max effort (Max by default). Standard API only.',
 	'model.glm-4.5-air.detail': 'Legacy model',
-	'model.glm-4.5-air.tooltip': 'Legacy model. GLM-4.5 Air — lightweight, fast, and low-cost. Available on both plans.',
+	'model.glm-4.5-air.tooltip': 'GLM-4.5 Air. Legacy model with a 128K-token context window. Available on Coding Plan and Standard API.',
 	'model.custom.detail': 'Custom model',
 
 	// Auth
@@ -53,13 +53,13 @@ const en: Record<string, string> = {
 	// Thinking effort control
 	'effort.title': 'Thinking Effort',
 	'effort.none.label': 'None',
-	'effort.none.desc': 'No reasoning — fastest, lowest quota',
+	'effort.none.desc': 'Reasoning disabled',
 	'effort.low.label': 'Low',
-	'effort.low.desc': 'Light reasoning — faster responses with lower quota use',
+	'effort.low.desc': 'Lower reasoning effort',
 	'effort.high.label': 'High',
-	'effort.high.desc': 'Balanced reasoning (recommended)',
+	'effort.high.desc': 'Higher reasoning effort',
 	'effort.max.label': 'Max',
-	'effort.max.desc': 'Deepest reasoning — best for hard coding, uses more quota',
+	'effort.max.desc': 'Maximum reasoning effort',
 
 	// Request limits
 	'request.toolsLimitExceeded':
@@ -201,27 +201,27 @@ const zh: Record<string, string> = {
 	'models.settings': '旧版模型设置',
 	'models.customEndpoint': '请在 Chat 或 Copilot CLI 中选择模型。自定义端点或替换的模型定义需要手动选择默认模型。',
 	'models.defaultFailed': '无法更新 chat.defaultModel。请检查组织策略，以及设置文件是否可写。',
-	'models.defaultSaved': 'Chat 和 Copilot CLI 的新对话将默认使用 {0}（入口支持时）。已有对话保留原选择。更改 API 模式时 GLM 会更新此默认值；手动修改 chat.defaultModel 后将尊重你的设置。',
+	'models.defaultSaved': 'Chat 和 Copilot CLI 支持时，新对话默认使用 {0}。已有对话保留原选择。更改 API 模式时，GLM 会更新此默认值；手动修改 chat.defaultModel 后，以你的设置为准。',
 	'models.defaultOverridden': '已保存 {0} 的推荐设置，但默认模型受更高优先级设置控制。请检查 chat.defaultModel。',
 	'model.glm-4.7.detail': '旧版模型',
-	'model.glm-4.7.tooltip': '旧版模型。GLM-4.7 — 20 万上下文，强大的智能体编程与推理。编程计划和标准 API 均可用。',
+	'model.glm-4.7.tooltip': 'GLM-4.7，旧版模型，20 万 token 上下文。编程计划和标准 API 均可用。',
 	'model.glm-5.detail': '旧版模型',
-	'model.glm-5.tooltip': '旧版模型。GLM-5 — 20 万上下文，先进的推理与编程。仅标准 API 可用。',
+	'model.glm-5.tooltip': 'GLM-5，旧版模型，20 万 token 上下文。仅标准 API 可用。',
 	'model.glm-5.1.detail': '旧版模型',
-	'model.glm-5.1.tooltip': '旧版模型。GLM-5.1 — 最新 GLM-5 系列，20 万上下文。仅标准 API 可用。',
+	'model.glm-5.1.tooltip': 'GLM-5.1，旧版模型，20 万 token 上下文。仅标准 API 可用。',
 	'model.glm-5.2.detail': '旧版模型，100 万上下文',
-	'model.glm-5.2.tooltip': '旧版模型。GLM-5.2 — GLM 编程模型，100 万上下文，可选思考强度。编程计划和标准 API 均可用。',
-	'model.glm-5.3.detail': '默认前沿编程模型，100 万上下文',
+	'model.glm-5.2.tooltip': 'GLM-5.2，旧版模型，100 万 token 上下文，可选思考强度。编程计划和标准 API 均可用。',
+	'model.glm-5.3.detail': '默认编程模型，100 万上下文',
 	'model.glm-5.3.tooltip':
-		'GLM-5.3 — 默认前沿编程模型，100 万上下文，必须启用低、高或最高思考强度（默认为最高）。仅编程计划可用。',
-	'model.glm-5.3-flash.detail': '快速多模态模型，100 万上下文',
+		'GLM-5.3，默认编程模型，100 万 token 上下文。思考始终开启，可选低、高或最高强度，默认为最高。仅编程计划可用。',
+	'model.glm-5.3-flash.detail': '多模态模型，100 万上下文',
 	'model.glm-5.3-flash.tooltip':
-		'GLM-5.3-Flash — 快速多模态模型，100 万上下文，原生图片输入，必须启用低、高或最高思考强度（默认为最高）。编程计划和标准 API 均可用。',
-	'model.glm-5.3-flashx.detail': '更快的多模态模型，100 万上下文',
+		'GLM-5.3-Flash，100 万 token 上下文，直接接收图片。思考始终开启，可选低、高或最高强度，默认为最高。编程计划和标准 API 均可用。',
+	'model.glm-5.3-flashx.detail': '多模态模型，100 万上下文',
 	'model.glm-5.3-flashx.tooltip':
-		'GLM-5.3-FlashX — 更快的多模态模型，100 万上下文，原生图片输入，必须启用低、高或最高思考强度（默认为最高）。仅标准 API 可用。',
+		'GLM-5.3-FlashX，100 万 token 上下文，直接接收图片。思考始终开启，可选低、高或最高强度，默认为最高。仅标准 API 可用。',
 	'model.glm-4.5-air.detail': '旧版模型',
-	'model.glm-4.5-air.tooltip': '旧版模型。GLM-4.5 Air — 轻量、快速、低成本。两种计划均可用。',
+	'model.glm-4.5-air.tooltip': 'GLM-4.5 Air，旧版模型，12.8 万 token 上下文。编程计划和标准 API 均可用。',
 	'model.custom.detail': '自定义模型',
 
 	'auth.apiKeyRequiredDetail': '请运行“GLM: Set API Key”进行配置。',
@@ -236,17 +236,17 @@ const zh: Record<string, string> = {
 	'thinking.on': '开启',
 	'thinking.off': '关闭',
 	'thinking.on.desc': '启用逐步推理（推荐）',
-	'thinking.off.desc': '关闭推理以获得更快响应',
+	'thinking.off.desc': '关闭逐步推理',
 
 	'effort.title': '思考强度',
 	'effort.none.label': '关闭',
-	'effort.none.desc': '不进行推理——最快、消耗最低',
+	'effort.none.desc': '关闭推理',
 	'effort.low.label': '低',
-	'effort.low.desc': '轻量推理——响应更快、额度消耗更低',
+	'effort.low.desc': '较低推理强度',
 	'effort.high.label': '高',
-	'effort.high.desc': '均衡推理（推荐）',
+	'effort.high.desc': '较高推理强度',
 	'effort.max.label': '最高',
-	'effort.max.desc': '最深入的推理——适合复杂编程，消耗更多额度',
+	'effort.max.desc': '最高推理强度',
 
 	'request.toolsLimitExceeded':
 		'GLM 单次请求最多支持 {0} 个工具，但本次请求包含 {1} 个。请使用 VS Code 的“配置工具”关闭不常用的工具。',
