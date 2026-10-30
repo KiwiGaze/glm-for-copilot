@@ -1,12 +1,11 @@
-# GLM API Reference
+# GLM API reference
 
-Reference for the GLM (Zhipu / Z.ai) API surface this extension targets. Captured
-from the Z.AI and BigModel docs (August 2026); the API mechanics here are stable.
+GLM (Zhipu / Z.ai) API formats used by this extension. Based on the Z.AI and BigModel
+docs captured in August 2026.
 
 For the current list of model ids, context windows, and capabilities shown in the
 Copilot Chat model picker, see the [Models table in the README](../README.md#models)
-and the `glm-copilot.MODELS` constant in `src/consts.ts` — those are the source of
-truth and evolve as Z.ai ships new models.
+and the `MODELS` constant in [`src/consts.ts`](../src/consts.ts).
 
 ## Authentication
 
@@ -30,11 +29,10 @@ Append `/chat/completions` to any base URL below.
 | Standard | International | `https://api.z.ai/api/paas/v4` |
 | Standard | Mainland China | `https://open.bigmodel.cn/api/paas/v4` |
 
-The Coding Plan endpoint is restricted to coding scenarios. The `glm-copilot.baseUrl`
-setting overrides all of the above and is used verbatim (useful for proxies). Because
-the extension cannot infer a compatible endpoint's capabilities, a custom base URL
-also keeps every built-in model visible instead of applying official API-mode filters,
-unless a custom model with the same id replaces its built-in definition.
+The Coding Plan endpoint is restricted to coding scenarios. For proxies or other compatible
+APIs, `glm-copilot.baseUrl` overrides these endpoints. A custom base URL skips official
+API-mode filtering; older built-in models still require `glm-copilot.showLegacyModels`.
+Custom models replace built-in definitions with the same id.
 
 ## Streaming
 
@@ -158,10 +156,10 @@ sent back as `role: "tool"` messages with the matching `tool_call_id`.
 
 | Mode / Region | Where to get a key |
 | --- | --- |
-| Coding Plan — International | <https://z.ai/manage-apikey/subscription> |
-| Coding Plan — Mainland China | <https://bigmodel.cn/coding-plan/personal/overview> |
-| Standard — International | <https://z.ai/manage-apikey/apikey-list> |
-| Standard — Mainland China | <https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys> |
+| Coding Plan, International | <https://z.ai/manage-apikey/subscription> |
+| Coding Plan, Mainland China | <https://bigmodel.cn/coding-plan/personal/overview> |
+| Standard, International | <https://z.ai/manage-apikey/apikey-list> |
+| Standard, Mainland China | <https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys> |
 
 The `GLM: Get API Key` command opens the correct page for the active
 `apiMode` / `region`.

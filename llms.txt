@@ -1,34 +1,37 @@
 # GLM Models for GitHub Copilot Chat
 
-> A Visual Studio Code extension that adds GLM (Z.ai / Zhipu) models to the GitHub Copilot Chat
-> model picker using your own API key (BYOK). It registers GLM-5.3 (a 1M-context Coding Plan model
-> contributed as the default for new chats on VS Code 1.127+ when neither the user nor organization
-> sets `chat.defaultModel`) plus the multimodal GLM-5.3-Flash and GLM-5.3-FlashX,
-> GLM-5.2, GLM-5.1, GLM-5, GLM-4.7, and GLM-4.5 Air through the
-> native VS Code Language Model Provider API, so they
-> appear alongside GPT and Claude in the picker you already use — with agent mode, tool calling,
-> and thinking (reasoning) mode all working out of the box.
+> A VS Code extension for using GLM models in GitHub Copilot Chat with your own API key.
+> Supports image input, agent mode, tool calling, and streamed thinking.
 
-Key facts:
+Published as `yijiazhen-qi.glm-for-github-copilot-chat` under the MIT license. Requires VS Code
+1.127 or later. The extension implements `vscode.LanguageModelChatProvider` and streams
+OpenAI-compatible SSE from the GLM API. It uses the VS Code API and Node.js built-ins, with
+no runtime dependencies.
 
-- **Type:** VS Code extension (Marketplace), published as `yijiazhen-qi.glm-for-github-copilot-chat`.
-- **What it does:** lets you use GLM models inside GitHub Copilot Chat without replacing Copilot's UI.
-- **How it works:** implements `vscode.LanguageModelChatProvider`; streams OpenAI-compatible SSE from the GLM API.
-- **Dual API:** choose your **GLM Coding Plan** subscription or the pay-as-you-go **Standard API** — each available International (`z.ai`) or Mainland China (`bigmodel.cn`).
-- **BYOK and secure:** your API key is stored in the OS keychain via VS Code `SecretStorage`; the extension never writes it to `settings.json`.
-- **Thinking mode:** GLM step-by-step reasoning streams live as a Thinking block. GLM-5.3 requires thinking, offers Low / High / Max effort, and defaults to Max.
-- **Image input:** GLM-5.3-Flash and FlashX receive images natively; FlashX is Standard-API-only. Text-only models use a Flash description as untrusted visual context. Both paths use the configured endpoint and chat key; no MCP server, local package, toggle, or separate Vision key is required.
-- **Zero runtime dependencies:** the extension uses only the VS Code API and Node.js built-ins.
-- **License:** MIT.
+Coding Plan and Standard API are available in the International (`z.ai`) and Mainland China
+(`bigmodel.cn`) regions. GLM-5.3 is Coding Plan only. Flash is available on both API modes;
+FlashX is Standard API only. GLM-5.2 and earlier are available through `glm-copilot.showLegacyModels`.
+
+For new Chat and Copilot CLI conversations, the extension recommends GLM-5.3 on Coding Plan
+and GLM-5.3-Flash on Standard API. Explicit user and organization defaults take precedence.
+Existing conversations keep their selected model.
+
+GLM-5.3 and both Flash models have 1M-token context windows and require thinking. Low, High,
+and Max effort are available, with Max as the default. Flash and FlashX receive images
+directly. Text-only models receive a Flash description as untrusted visual context. Both
+requests use the configured endpoint and chat key.
+
+`GLM: Set API Key` stores the key in VS Code `SecretStorage` (the OS keychain). A settings
+fallback exists for CI and automation. Keep real keys out of workspace settings.
 
 ## Documentation
 
 - [README](README.md): installation, features, settings, and the model table.
-- [Models and settings](README.md#models): which GLM models are available per API mode, and all configuration options.
+- [Models](README.md#models): availability and capabilities per API mode.
+- [Settings](README.md#settings): configuration options.
 - [Image input](README.md#image-input): native GLM-5.3-Flash/FlashX images and text-model fallback.
 - [Coding Plan vs Standard API](README.md#coding-plan-vs-standard-api): endpoint routing and when to use each.
 - [Changelog](CHANGELOG.md): release history.
-- [Contributing guide](CONTRIBUTING.md): project layout, setup, and development conventions.
 
 ## Contributing
 

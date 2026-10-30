@@ -1,7 +1,7 @@
 {
 	"name": "glm-for-github-copilot-chat",
 	"displayName": "GLM Models for GitHub Copilot Chat",
-	"description": "Bring Z.ai / Zhipu GLM models into GitHub Copilot Chat with visible thinking and GLM-5.3-Flash/FlashX image input.",
+	"description": "Use GLM models in GitHub Copilot Chat with your own API key. Supports image input, tool calling, and streamed thinking.",
 	"icon": "resources/icon.png",
 	"version": "0.4.4",
 	"publisher": "yijiazhen-qi",

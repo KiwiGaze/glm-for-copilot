@@ -1,44 +1,37 @@
 # Contributing to GLM Models for GitHub Copilot Chat
 
-Thanks for your interest in improving **GLM Models for GitHub Copilot Chat** — a VS Code extension that
-brings GLM (Z.ai / Zhipu) models into the GitHub Copilot Chat model picker. Contributions of
-all kinds are welcome: bug reports, feature requests, documentation fixes, and code.
+You can contribute bug reports, feature requests, documentation, or code. For non-trivial code
+changes, open an issue first to agree on the approach.
 
-This document explains how to set up the project, the conventions we follow, and how changes
-get reviewed and merged.
+## Code of conduct
 
-## Code of Conduct
-
-This project is governed by our [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you
-are expected to uphold it. Please report unacceptable behaviour through the channels listed
-there.
+Follow the [Code of Conduct](CODE_OF_CONDUCT.md). It also lists the channels for reporting
+unacceptable behaviour.
 
 ## Ways to contribute
 
-- **Report a bug** — open a [Bug report](https://github.com/KiwiGaze/glm-for-copilot/issues/new?template=bug_report.yml).
-- **Request a feature** — open a [Feature request](https://github.com/KiwiGaze/glm-for-copilot/issues/new?template=feature_request.yml).
-- **Improve the docs** — typos, unclear wording, and missing details are all fair game.
-- **Submit code** — fix a bug or build a feature. For anything non-trivial, please open an
-  issue first so we can agree on the approach before you invest time.
+- [Report a bug](https://github.com/KiwiGaze/glm-for-copilot/issues/new?template=bug_report.yml).
+- [Request a feature](https://github.com/KiwiGaze/glm-for-copilot/issues/new?template=feature_request.yml).
+- Fix typos, unclear instructions, or missing documentation.
+- Submit a bug fix or feature.
 
 ## Project layout
 
-The implementation is plain TypeScript with **zero runtime dependencies**. Key directories:
+The extension is written in TypeScript and has no runtime dependencies.
 
-- `src/extension.ts` — activation entry point.
-- `src/client/` — OpenAI-compatible SSE streaming client for the GLM API.
-- `src/provider/` — the `vscode.LanguageModelChatProvider` implementation.
-- `src/runtime/` — lifecycle, command registration, onboarding.
-- `src/endpoint.ts`, `src/config.ts`, `src/consts.ts` — endpoint routing and settings.
+- `src/extension.ts` is the activation entry point.
+- `src/client/` handles OpenAI-compatible SSE streaming from the GLM API.
+- `src/provider/` implements `vscode.LanguageModelChatProvider`.
+- `src/runtime/` handles lifecycle, commands, and setup.
+- `src/endpoint.ts`, `src/config.ts`, and `src/consts.ts` define endpoint routing and settings.
 
 ## Development setup
 
 ### Prerequisites
 
 - [Node.js](https://nodejs.org) 20 or later.
-- [pnpm](https://pnpm.io) (this repo uses pnpm; do not use `npm` or `yarn` — it will corrupt
-  the lockfile).
-- VS Code 1.116 or later.
+- [pnpm](https://pnpm.io). Use pnpm to keep dependencies consistent with the lockfile.
+- VS Code 1.127 or later, as specified in `package.json`.
 
 ### Install and build
 
@@ -50,8 +43,8 @@ pnpm exec tsc -p ./     # type-check and compile to out/
 ### Run the extension
 
 1. Open the repository in VS Code.
-2. Press <kbd>F5</kbd> to launch an **Extension Development Host** window.
-3. In that window, run **GLM: Set API Key** and pick a GLM model from the Copilot Chat picker.
+2. Press <kbd>F5</kbd> to launch an Extension Development Host window.
+3. In that window, run `GLM: Set API Key` and pick a GLM model from the Copilot Chat picker.
 
 ### Package a VSIX
 
@@ -61,17 +54,13 @@ pnpm exec vsce package --no-dependencies -o dist/
 
 ## Coding conventions
 
-Please keep changes consistent with the existing code:
-
-- **TypeScript, explicit types.** No `any`, no dead code.
-- **No inline comments explaining logic.** If code needs an inline explanation, refactor it to
-  be clearer. Public docstrings and type contracts are fine; explain the *why* in the commit
-  message and pull request description instead.
-- **Surgical changes.** Touch only what the task needs and preserve the surrounding style.
-- **Keep it dependency-free.** This extension ships with no runtime dependencies; please do not
-  add any without discussing it in an issue first.
-- **Localization.** User-facing strings live in `package.nls.json` / `package.nls.zh-cn.json`
-  and `src/i18n.ts`. Add both English and Simplified Chinese where practical.
+- Use explicit TypeScript types. Avoid `any` and dead code.
+- Write code that can be read without inline logic comments. Public docstrings and type
+  contracts are fine. Explain design decisions in the commit message and PR description.
+- Keep changes focused on the task and preserve the surrounding style.
+- Discuss new runtime dependencies in an issue before adding them.
+- Add user-facing strings in English and Simplified Chinese where practical. They live in
+  `package.nls.json`, `package.nls.zh-cn.json`, and `src/i18n.ts`.
 
 ## Commit messages
 
@@ -87,9 +76,6 @@ Please keep changes consistent with the existing code:
    pnpm exec vsce package --no-dependencies -o dist/   # must package cleanly
    ```
 3. Open a pull request against `main` and fill in the template.
-4. **Continuous integration must pass.** Every PR runs type-checking and packaging in CI.
-5. **A maintainer review is required.** All pull requests — including those from forks — require
-   review and approval from a [code owner](.github/CODEOWNERS) before they can be merged. Pull
-   requests are never merged automatically.
-
-We aim to review pull requests promptly. Thanks for helping make the extension better.
+4. Wait for type-checking and packaging to pass in CI.
+5. Get approval from a [code owner](.github/CODEOWNERS) before merging. This applies to all
+   pull requests, including forks. Pull requests are not merged automatically.

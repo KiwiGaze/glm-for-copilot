@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a bug report. Please fill in the details below so we
-        can reproduce and fix the issue.
+        Describe what happened and how to reproduce it. Remove API keys and private content
+        from logs and screenshots.
   - type: checkboxes
     id: preflight
     attributes:
@@ -61,7 +61,7 @@ body:
       label: Logs
       description: >
         Enable `glm-copilot.debugLogging`, reproduce, then paste the output of
-        **GLM: Show Logs**. Remove your API key and any private content first.
+        `GLM: Show Logs`. Remove your API key and any private content first.
       render: shell
   - type: input
     id: versions

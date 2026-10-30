@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Questions and discussion
     url: https://github.com/KiwiGaze/glm-for-copilot/discussions
-    about: Ask "how do I…" questions and discuss ideas here.
+    about: Ask setup or usage questions and discuss ideas.
   - name: GLM API documentation
     url: https://docs.z.ai
-    about: For GLM API keys, billing, Coding Plan, and model availability (handled by Z.ai, not this extension).
+    about: Z.ai documentation for API keys, billing, Coding Plan, and model availability.
