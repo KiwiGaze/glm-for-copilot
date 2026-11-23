@@ -96,24 +96,24 @@ describe('prepareChatRequest GLM-5.3 thinking', () => {
 	});
 });
 
-describe('prepareChatRequest GLM-5.3-FlashX', () => {
+describe.each(['glm-5.3-flashx', 'glm-5.4'])('prepareChatRequest %s', (id) => {
 	beforeEach(() => {
 		settings.clear();
 		settings.set('thinking', 'disabled');
 	});
 
-	it('sends the FlashX API id with mandatory thinking and selected effort', async () => {
+	it('sends the selected API id with mandatory thinking and selected effort', async () => {
 		const prepared = await prepareChatRequest({
 			authManager: AUTH_MANAGER,
 			extensionVersion: '0.4.2',
-			modelInfo: { ...MODEL_INFO, id: 'glm-5.3-flashx', name: 'GLM-5.3-FlashX' },
+			modelInfo: { ...MODEL_INFO, id },
 			messages: [],
 			options: optionsWithEffort('low'),
 			token: TOKEN,
 		});
 
 		expect(prepared.request).toMatchObject({
-			model: 'glm-5.3-flashx',
+			model: id,
 			thinking: { type: 'enabled' },
 			reasoning_effort: 'low',
 		});

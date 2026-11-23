@@ -53,23 +53,23 @@ describe('listProviderModels', () => {
 		expect(getRecommendedModel()).toBeUndefined();
 	});
 
-	it('offers GLM-5.3 on the Coding Plan', () => {
+	it.each(['glm-5.3', 'glm-5.4'])('offers %s on the Coding Plan', (id) => {
 		settings.set('apiMode', 'coding-plan');
 
-		expect(listProviderModels().map((model) => model.id)).toContain('glm-5.3');
+		expect(listProviderModels().map((model) => model.id)).toContain(id);
 	});
 
-	it('does not offer GLM-5.3 on the Standard API', () => {
+	it.each(['glm-5.3', 'glm-5.4'])('hides %s on the Standard API', (id) => {
 		settings.set('apiMode', 'standard');
 
-		expect(listProviderModels().map((model) => model.id)).not.toContain('glm-5.3');
+		expect(listProviderModels().map((model) => model.id)).not.toContain(id);
 	});
 
-	it('offers GLM-5.3 through a custom endpoint in Standard API mode', () => {
+	it.each(['glm-5.3', 'glm-5.4'])('offers %s through a custom endpoint in Standard API mode', (id) => {
 		settings.set('apiMode', 'standard');
 		settings.set('baseUrl', 'https://proxy.example.com/v4');
 
-		expect(listProviderModels().map((model) => model.id)).toContain('glm-5.3');
+		expect(listProviderModels().map((model) => model.id)).toContain(id);
 	});
 
 	it.each(['coding-plan', 'standard'])('offers GLM-5.3-Flash in %s mode', (apiMode) => {

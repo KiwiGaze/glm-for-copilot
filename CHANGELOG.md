@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Add GLM-5.4 to the Coding Plan model picker with native image attachments, tool calling, and selectable thinking effort.
+
 ## 0.4.4
 
 - Fix default-model matching across native Chat and Copilot CLI. Recommend GLM-5.3 for Coding Plan and GLM-5.3-Flash for Standard API. Explicit user and organization defaults take precedence.

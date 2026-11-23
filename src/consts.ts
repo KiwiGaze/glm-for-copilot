@@ -138,10 +138,26 @@ export const URI_PATHS = {
 } as const;
 
 const GLM_5_2_EFFORT: ThinkingEffortSpec = { levels: ['none', 'high', 'max'], default: 'high' };
-const GLM_5_3_EFFORT: ThinkingEffortSpec = { levels: ['low', 'high', 'max'], default: 'max' };
+const ALWAYS_ON_EFFORT: ThinkingEffortSpec = { levels: ['low', 'high', 'max'], default: 'max' };
 
 /** Built-in GLM models exposed through the language model provider. */
 export const MODELS: GLMModel[] = [
+	{
+		id: 'glm-5.4',
+		name: 'GLM-5.4',
+		family: 'glm',
+		version: '5.4',
+		detail: 'Coding model with native image input',
+		maxInputTokens: 1000000,
+		maxOutputTokens: 128000,
+		capabilities: {
+			toolCalling: DEFAULT_TOOLS_LIMIT,
+			thinking: true,
+			nativeImageInput: true,
+			thinkingEffort: ALWAYS_ON_EFFORT,
+		},
+		availableIn: ['coding-plan'],
+	},
 	{
 		id: 'glm-5.3',
 		name: 'GLM-5.3',
@@ -154,7 +170,7 @@ export const MODELS: GLMModel[] = [
 			toolCalling: DEFAULT_TOOLS_LIMIT,
 			thinking: true,
 			nativeImageInput: false,
-			thinkingEffort: GLM_5_3_EFFORT,
+			thinkingEffort: ALWAYS_ON_EFFORT,
 		},
 		availableIn: ['coding-plan'],
 	},
@@ -170,7 +186,7 @@ export const MODELS: GLMModel[] = [
 			toolCalling: DEFAULT_TOOLS_LIMIT,
 			thinking: true,
 			nativeImageInput: true,
-			thinkingEffort: GLM_5_3_EFFORT,
+			thinkingEffort: ALWAYS_ON_EFFORT,
 		},
 		availableIn: ['coding-plan', 'standard'],
 	},
@@ -186,7 +202,7 @@ export const MODELS: GLMModel[] = [
 			toolCalling: DEFAULT_TOOLS_LIMIT,
 			thinking: true,
 			nativeImageInput: true,
-			thinkingEffort: GLM_5_3_EFFORT,
+			thinkingEffort: ALWAYS_ON_EFFORT,
 		},
 		availableIn: ['standard'],
 	},

@@ -24,7 +24,7 @@
   "glm-copilot.walkthrough.showModels.description": "为 Chat 和 Copilot CLI 的新对话选择推荐模型。已有对话保留原选择。\n[使用推荐默认模型](command:glm-copilot.useRecommendedModel)\n[打开语言模型](command:workbench.action.chat.manage)",
 
   "glm-copilot.walkthrough.useImages.title": "使用图片输入",
-  "glm-copilot.walkthrough.useImages.description": "在聊天中附加图片。Flash 和 FlashX 直接接收图片，纯文本模型通过 Flash 获取图片描述。\n[编辑图片分析提示词](command:glm-copilot.openVisionPromptSettings)",
+  "glm-copilot.walkthrough.useImages.description": "在聊天中附加图片。GLM-5.4、Flash 和 FlashX 直接接收图片，纯文本模型通过 Flash 获取图片描述。\n[编辑图片分析提示词](command:glm-copilot.openVisionPromptSettings)",
 
   "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
@@ -47,7 +47,7 @@
   "glm-copilot.config.modelIdOverrides.description": "为代理或区域端点映射内置模型 ID。键为选择器中的 ID（如 `glm-4.7`），值为发送给 API 的 ID。添加模型请使用 `customModels`。",
   "glm-copilot.config.customModels.description": "向选择器添加 GLM 模型。每项可以是模型 ID 字符串（如 `\"glm-4.7\"`），也可以是对象，如 `{ \"id\": \"my-model\", \"name\": \"My Model\", \"nativeImageInput\": true }`。自定义模型在所有 API 模式下都会显示，请求发往当前端点。端点能直接接收图片时才设置 `nativeImageInput`；否则由 GLM-5.3-Flash 提供图片描述。",
 
-  "glm-copilot.config.thinking.description": "为没有独立思考强度设置的模型开启或关闭推理。GLM-5.2 使用关闭 / 高 / 最高。GLM-5.3、Flash 和 FlashX 必须启用思考，使用低 / 高 / 最高，默认为最高。",
+  "glm-copilot.config.thinking.description": "为没有独立思考强度设置的模型开启或关闭推理。GLM-5.2 使用关闭 / 高 / 最高。扩展会为 GLM-5.4、GLM-5.3、Flash 和 FlashX 启用思考，强度可选低 / 高 / 最高，默认为最高。",
   "glm-copilot.config.thinking.enabled.label": "开启",
   "glm-copilot.config.thinking.disabled.label": "关闭",
 

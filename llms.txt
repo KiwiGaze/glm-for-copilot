@@ -9,7 +9,7 @@ OpenAI-compatible SSE from the GLM API. It uses the VS Code API and Node.js buil
 no runtime dependencies.
 
 Coding Plan and Standard API are available in the International (`z.ai`) and Mainland China
-(`bigmodel.cn`) regions. GLM-5.3 is Coding Plan only. Flash is available on both API modes;
+(`bigmodel.cn`) regions. GLM-5.4 and GLM-5.3 are available on Coding Plan. Flash is available on both API modes;
 FlashX is Standard API only. GLM-5.2 and earlier are available through `glm-copilot.showLegacyModels`.
 
 For new Chat and Copilot CLI conversations, the extension recommends GLM-5.3 on Coding Plan
@@ -17,7 +17,7 @@ and GLM-5.3-Flash on Standard API. Explicit user and organization defaults take 
 Existing conversations keep their selected model.
 
 GLM-5.3 and both Flash models have 1M-token context windows and require thinking. Low, High,
-and Max effort are available, with Max as the default. Flash and FlashX receive images
+and Max effort are available, with Max as the default. GLM-5.4, Flash, and FlashX receive images
 directly. Text-only models receive a Flash description as untrusted visual context. Both
 requests use the configured endpoint and chat key.
 
@@ -29,7 +29,7 @@ fallback exists for CI and automation. Keep real keys out of workspace settings.
 - [README](README.md): installation, features, settings, and the model table.
 - [Models](README.md#models): availability and capabilities per API mode.
 - [Settings](README.md#settings): configuration options.
-- [Image input](README.md#image-input): native GLM-5.3-Flash/FlashX images and text-model fallback.
+- [Image input](README.md#image-input): native GLM-5.4 and Flash image input and text-model fallback.
 - [Coding Plan vs Standard API](README.md#coding-plan-vs-standard-api): endpoint routing and when to use each.
 - [Changelog](CHANGELOG.md): release history.
 
