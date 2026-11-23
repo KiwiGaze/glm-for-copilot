@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## 0.4.5
 
-- Add GLM-5.4 to the Coding Plan model picker with native image attachments, tool calling, and selectable thinking effort.
+- Add GLM-5.4 to the Coding Plan model picker. It accepts PNG and JPEG attachments directly and supports tool calling. Choose Low, High, or Max thinking effort. Max is the default.
 
 ## 0.4.4
 
