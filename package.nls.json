@@ -24,7 +24,7 @@
   "glm-copilot.walkthrough.showModels.description": "Use the recommended model for new Chat and Copilot CLI conversations. Existing conversations keep their selection.\n[Use Recommended Default Model](command:glm-copilot.useRecommendedModel)\n[Open Language Models](command:workbench.action.chat.manage)",
 
   "glm-copilot.walkthrough.useImages.title": "Use image input",
-  "glm-copilot.walkthrough.useImages.description": "Attach images in chat. Flash and FlashX accept them directly. Text-only models receive a description from Flash.\n[Edit image analysis prompt](command:glm-copilot.openVisionPromptSettings)",
+  "glm-copilot.walkthrough.useImages.description": "Attach images in chat. GLM-5.4 and both Flash models accept them directly. Text-only models receive a description from Flash.\n[Edit image analysis prompt](command:glm-copilot.openVisionPromptSettings)",
 
   "glm-copilot.config.title": "GLM Models for GitHub Copilot Chat",
 
@@ -47,7 +47,7 @@
   "glm-copilot.config.modelIdOverrides.description": "Remap a built-in model id for a proxy or regional endpoint. Keys are picker ids (e.g. `glm-4.7`); values are the ids sent to the API. Use `customModels` to add models.",
   "glm-copilot.config.customModels.description": "Add your own GLM models to the picker. Each entry is either a model id string (e.g. `\"glm-4.7\"`) or an object such as `{ \"id\": \"my-model\", \"name\": \"My Model\", \"nativeImageInput\": true }`. Custom models always appear regardless of API Mode and are sent to the active endpoint. Set `nativeImageInput` only when the endpoint accepts image content directly; otherwise attached images use GLM-5.3-Flash fallback.",
 
-  "glm-copilot.config.thinking.description": "Enable or disable reasoning for models without a per-model Thinking Effort control. GLM-5.2 uses None / High / Max. GLM-5.3, Flash, and FlashX require thinking and use Low / High / Max (Max by default).",
+  "glm-copilot.config.thinking.description": "Enable or disable reasoning for models without a per-model Thinking Effort control. GLM-5.2 uses None / High / Max. For GLM-5.4, GLM-5.3, Flash, and FlashX, the extension keeps thinking enabled and offers Low / High / Max (Max by default).",
   "glm-copilot.config.thinking.enabled.label": "On",
   "glm-copilot.config.thinking.disabled.label": "Off",
 

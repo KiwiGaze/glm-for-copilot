@@ -1,7 +1,7 @@
 # GLM API reference
 
 GLM (Zhipu / Z.ai) API formats used by this extension. Based on the Z.AI and BigModel
-docs captured in August 2026.
+docs and model announcements.
 
 For the current list of model ids, context windows, and capabilities shown in the
 Copilot Chat model picker, see the [Models table in the README](../README.md#models)
@@ -45,7 +45,12 @@ Streaming is OpenAI-compatible server-sent events:
 - Usage: top-level `usage` object, emitted in the final streaming chunk before
   `data: [DONE]`. The extension opts in with `stream_options: { include_usage: true }`.
 
-## GLM-5.3-Flash and FlashX multimodal input
+## Native image input
+
+GLM-5.4 accepts user images on the Coding Plan. The extension sends the selected
+model ID `glm-5.4` and uses the same user-message image format shown below.
+The picker currently uses GLM-5.3's token budgets and reasoning controls for 5.4.
+[GLM-5.4 launch announcement](https://x.com/Zai_org/status/2124719658074825004) · [Coding Plan model metadata](https://github.com/anomalyco/models.dev/pull/14293)
 
 The International [Z.AI model guide](https://docs.z.ai/guides/vlm/glm-5.3-flash)
 and Mainland China [BigModel model guide](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash/)
@@ -75,7 +80,7 @@ per request. It does not log Base64 payloads.
 
 The output uses the same Chat Completion and SSE shapes as text models: final text in
 `content`, optional reasoning in `reasoning_content`, and optional `tool_calls`. The
-models require `thinking: { "type": "enabled" }`; supported `reasoning_effort`
+Flash models require `thinking: { "type": "enabled" }`; supported `reasoning_effort`
 values are `low`, `high`, and `max`, with `max` used by default. The model-specific
 guide describes their text limits as matching GLM-5.3, so the extension currently
 advertises a 128K maximum output for each.

@@ -53,13 +53,12 @@ describe('toChatInfo', () => {
 		});
 	});
 
-	it('advertises GLM-5.3-Flash as a native multimodal model', () => {
-		const model = MODELS.find((candidate) => candidate.id === 'glm-5.3-flash');
+	it.each(['glm-5.3-flash', 'glm-5.4'])('advertises %s as a native multimodal model', (id) => {
+		const model = MODELS.find((candidate) => candidate.id === id);
 
 		expect(model).toMatchObject({
 			maxInputTokens: 1_000_000,
 			maxOutputTokens: 128_000,
-			availableIn: ['coding-plan', 'standard'],
 			capabilities: {
 				nativeImageInput: true,
 				thinking: true,

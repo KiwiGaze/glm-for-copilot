@@ -20,6 +20,8 @@ const en: Record<string, string> = {
 	'model.glm-5.2.detail': 'Legacy model, 1M context',
 	'model.glm-5.2.tooltip':
 		'GLM-5.2. Legacy model with a 1M-token context window and selectable thinking effort. Available on Coding Plan and Standard API.',
+	'model.glm-5.4.detail': 'Coding model with native image input',
+	'model.glm-5.4.tooltip': 'GLM-5.4 accepts text and images on the GLM Coding Plan.',
 	'model.glm-5.3.detail': 'Default coding model, 1M context',
 	'model.glm-5.3.tooltip':
 		'GLM-5.3. Default coding model with a 1M-token context window. Thinking is always on; choose Low, High, or Max effort (Max by default). Coding Plan only.',
@@ -211,6 +213,8 @@ const zh: Record<string, string> = {
 	'model.glm-5.1.tooltip': 'GLM-5.1，旧版模型，20 万 token 上下文。仅标准 API 可用。',
 	'model.glm-5.2.detail': '旧版模型，100 万上下文',
 	'model.glm-5.2.tooltip': 'GLM-5.2，旧版模型，100 万 token 上下文，可选思考强度。编程计划和标准 API 均可用。',
+	'model.glm-5.4.detail': '支持原生图片输入的编程模型',
+	'model.glm-5.4.tooltip': 'GLM-5.4 支持文本和图片输入，可通过 GLM 编程计划使用。',
 	'model.glm-5.3.detail': '默认编程模型，100 万上下文',
 	'model.glm-5.3.tooltip':
 		'GLM-5.3，默认编程模型，100 万 token 上下文。思考始终开启，可选低、高或最高强度，默认为最高。仅编程计划可用。',

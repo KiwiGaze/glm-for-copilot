@@ -1,6 +1,6 @@
 # GLM Models for GitHub Copilot Chat
 
-[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.4.4-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
+[![VS Marketplace Version](https://img.shields.io/badge/Marketplace-0.4.5-1f6feb)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![VS Marketplace Installs](https://vsmarketplacebadges.dev/installs-short/yijiazhen-qi.glm-for-github-copilot-chat.svg)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![Install from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install-007ACC)](https://marketplace.visualstudio.com/items?itemName=yijiazhen-qi.glm-for-github-copilot-chat)
 [![CI](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/KiwiGaze/glm-for-copilot/actions/workflows/ci.yml)
@@ -10,14 +10,14 @@
   <img src="docs/glm-composer-light.png" alt="GLM-5.2 selected in the Copilot Chat composer in light theme, with Thinking Effort set to Max" width="420">
 </p>
 
-Use GLM models in GitHub Copilot Chat with your own API key. The extension adds GLM-5.3, GLM-5.3-Flash, and GLM-5.3-FlashX to the model picker and supports image input, agent mode, tool calling, and thinking. GLM-5.2 and earlier are available in settings.
+Use GLM models in GitHub Copilot Chat with your own API key. The extension adds GLM-5.4, GLM-5.3, GLM-5.3-Flash, and GLM-5.3-FlashX to the model picker and supports image input, agent mode, tool calling, and thinking. GLM-5.2 and earlier are available in settings.
 
 > This is an unofficial extension with no affiliation, endorsement, or sponsorship from Zhipu AI, Z.AI, GitHub, or Microsoft. "GLM", "Copilot", and "Visual Studio Code" are trademarks of their respective owners. You supply the API key and pay for GLM usage.
 
 ## Features
 
 - GLM-5.3 and both Flash models have 1M-token context windows. Thinking streams into Copilot's thinking UI. The Thinking Effort control offers Low / High / Max, defaults to Max, and keeps thinking enabled. You can switch models during a conversation and keep its history.
-- Use a GLM Coding Plan subscription or the pay-as-you-go Standard API in either the International (`z.ai`) or Mainland China (`bigmodel.cn`) region. GLM-5.3 is Coding Plan only; FlashX is Standard API only. Flash is available on both. See [Coding Plan vs Standard API](#coding-plan-vs-standard-api).
+- Use a GLM Coding Plan subscription or the pay-as-you-go Standard API in either the International (`z.ai`) or Mainland China (`bigmodel.cn`) region. GLM-5.4 and GLM-5.3 are available on Coding Plan. FlashX is available on Standard API. Flash is available on both. See [Coding Plan vs Standard API](#coding-plan-vs-standard-api).
 - Check usage in the status bar or with `GLM: Show Usage Details`. Coding Plan shows session (5-hour) and weekly (7-day) token limits, monthly web searches, and reset countdowns. Standard API shows cash balance and token packages. The status bar turns red when quota reaches 100% or balance reaches 0. Both regions are supported when no custom `baseUrl` is set.
 
 <p align="center">
@@ -26,7 +26,7 @@ Use GLM models in GitHub Copilot Chat with your own API key. The extension adds 
 
 - Store your key with `GLM: Set API Key`, which uses VS Code `SecretStorage` (the OS keychain on macOS, Windows, and Linux). A settings fallback exists for CI or automation. Keep real keys out of workspace settings.
 - Add other GLM models through [`glm-copilot.customModels`](#settings), including models served by a proxy or custom endpoint.
-- Paste images into chat. Flash and FlashX accept them directly; text-only models receive a description from Flash. See [Image input](#image-input).
+- Paste images into chat. GLM-5.4 and both Flash models accept them directly. Text-only models receive a description from Flash. See [Image input](#image-input).
 
 The extension uses the VS Code Language Model Provider API and Node.js built-ins. It has no runtime dependencies.
 
@@ -65,6 +65,7 @@ Use `GLM: Set API Key` or `GLM: Clear API Key` to update or remove the key later
 
 | Model | Model type | Context | Max output | Available on official endpoints | Images | Tools | Thinking |
 |---|---|---|---|---|---|---|---|
+| GLM-5.4 | Multimodal coding model | 1M | 128K | Coding Plan | Native | Yes | Low / High / Max |
 | GLM-5.3 | Default coding model | 1M | 128K | Coding Plan only | Via Flash | Yes | Always on (Low / High / Max) |
 | GLM-5.3-Flash | Multimodal | 1M | 128K | Coding Plan + Standard | Native | Yes | Always on (Low / High / Max) |
 | GLM-5.3-FlashX | Multimodal | 1M | 128K | Standard only | Native | Yes | Always on (Low / High / Max) |
@@ -74,7 +75,9 @@ Use `GLM: Set API Key` or `GLM: Clear API Key` to update or remove the key later
 | GLM-4.7 | Legacy | 200K | 128K | Coding Plan + Standard | Via Flash | Yes | Yes |
 | GLM-4.5 Air | Legacy | 128K | 96K | Coding Plan + Standard | Via Flash | Yes | Yes |
 
-New installations show the current models: GLM-5.3 and GLM-5.3-Flash on Coding Plan, or GLM-5.3-Flash and GLM-5.3-FlashX on Standard API. GLM-5.2 and earlier are available through `glm-copilot.showLegacyModels`. Existing installations retain legacy access on upgrade so saved conversations can still use those models. Turning the setting off can make an old conversation's model unavailable. Explicit `customModels` remain visible, including older models.
+GLM-5.4 launched with vision on Coding Plan. The extension currently uses the GLM-5.3 token budgets, tool calling and thinking settings for 5.4, including Max effort by default. [Launch announcement](https://x.com/Zai_org/status/2124719658074825004) · [Coding Plan model metadata](https://github.com/anomalyco/models.dev/pull/14293)
+
+New installations show GLM-5.4, GLM-5.3, and GLM-5.3-Flash on Coding Plan, or GLM-5.3-Flash and GLM-5.3-FlashX on Standard API. GLM-5.2 and earlier are available through `glm-copilot.showLegacyModels`. Existing installations retain legacy access on upgrade so saved conversations can still use those models. Turning the setting off can make an old conversation's model unavailable. Explicit `customModels` remain visible, including older models.
 
 GLM recommends GLM-5.3 for Coding Plan and GLM-5.3-Flash for Standard API in new Chat and Copilot CLI conversations. An explicit user or organization `chat.defaultModel` setting takes precedence. If no explicit default exists and the extension's built-in default does not match your API mode, GLM sets the matching default in workspace settings, or user settings in an empty window. It updates defaults it wrote when API mode changes; editing the setting yourself stops those updates. Existing conversations keep their selected model.
 
@@ -91,7 +94,7 @@ A custom `baseUrl` skips the official API-mode availability filter, but still re
 | `glm-copilot.baseUrl` | *(empty)* | Override the GLM API base URL for chat and Flash image analysis. Overrides `apiMode` and `region` and skips official API-mode model filtering. Images use this endpoint too. |
 | `glm-copilot.maxTokens` | `0` | Maximum output tokens per request. `0` means no explicit limit (uses API default). |
 | `glm-copilot.maxRetries` | `3` | Automatic retries for transient chat failures (HTTP `429`/`5xx`), not counting the first attempt. `0` disables retries (fail fast). Range 0–10. Backoff honors the server's `Retry-After`. |
-| `glm-copilot.thinking` | `enabled` | Enable or disable reasoning for models without a per-model Thinking Effort picker. GLM-5.2 uses None / High / Max; GLM-5.3, Flash, and FlashX require thinking and use Low / High / Max, defaulting to Max. |
+| `glm-copilot.thinking` | `enabled` | Enable or disable reasoning for models without a per-model Thinking Effort picker. GLM-5.2 uses None / High / Max; For GLM-5.4, GLM-5.3, Flash, and FlashX, the extension keeps thinking enabled and offers Low / High / Max, defaulting to Max. |
 | `glm-copilot.visionPrompt` | *(empty)* | Instruction sent to GLM-5.3-Flash when a text-only model needs image analysis. Empty uses the built-in neutral description prompt. Changing it invalidates the in-memory analysis cache. |
 | `glm-copilot.showLegacyModels` | `false` | Show GLM-5.2 and earlier. Existing installations retain access on upgrade. |
 | `glm-copilot.customModels` | `[]` | Add your own models. Array of model id strings or objects: `{ id, name?, maxInputTokens?, maxOutputTokens?, toolCalling?, thinking?, nativeImageInput? }`. `nativeImageInput` defaults to `false`. |
@@ -129,7 +132,7 @@ For a personal Coding Plan, `GLM: Show Usage Details` also shows 5-hour reset ca
 
 Paste or attach PNG and JPEG images directly in Copilot Chat. No MCP server, local package, toggle, or separate Vision key is required.
 
-GLM-5.3-Flash and FlashX receive text and images in their original order. For text-only models, the extension sends each image group to Flash first, then passes the description to the selected model as untrusted visual data. Text found in an image is context, never authorization or a tool instruction.
+GLM-5.4, GLM-5.3-Flash, and FlashX receive text and images in their original order. For text-only models, the extension sends each image group to Flash first, then passes the description to the selected model as untrusted visual data. Text found in an image is context, never authorization or a tool instruction.
 
 Both requests use the active `baseUrl` and chat API key. A custom endpoint must serve a compatible `glm-5.3-flash` model. Image analysis uses that endpoint too.
 
